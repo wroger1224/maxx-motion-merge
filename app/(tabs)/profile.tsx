@@ -1,40 +1,144 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, ActivityIndicator, Alert, View, ScrollView, ImageBackground, Text, TouchableOpacity, Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useAuth } from '@/lib/auth';
+import { useIsFocused } from '@react-navigation/native';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { Image } from 'react-native';
 
-// Mock data for profile
-const userProfile = {
-  name: 'You',
-  joined: '2024-04-01T00:00:00Z',
-  totalMinutes: 310,
-  rank: 2,
-  contribution_percentage: '11.7%',
-  avatar_url: 'https://ui-avatars.com/api/?name=YO&background=4CAF50',
-  activities: [
-    { id: '1', type: 'Running', date: 'Apr 15, 2024', minutes: 45 },
-    { id: '2', type: 'Strength Training', date: 'Apr 13, 2024', minutes: 60 },
-    { id: '3', type: 'Cycling', date: 'Apr 11, 2024', minutes: 30 },
-    { id: '4', type: 'Yoga', date: 'Apr 8, 2024', minutes: 45 },
-    { id: '5', type: 'Swimming', date: 'Apr 5, 2024', minutes: 60 },
-  ],
-  teams: [
-    { id: 'mm3', name: 'Move Masters', role: 'Member', joinedDate: 'Apr 1, 2024' }
-  ],
-  events: [
-    { id: 'e1', name: 'April Fitness Challenge', status: 'Active', progress: '45%' },
-    { id: 'e2', name: 'Spring Marathon', status: 'Upcoming', date: 'May 10, 2024' }
-  ]
+type UserActivity = {
+  id: string;
+  activity_type: string;
+  activity_date: string;
+  activity_minutes: number;
+  activity_type_emoji?: string;
+};
+
+type Team = {
+  id: string;
+  team_name: string;
+  joined_at: string;
+  role?: string;
+};
+
+type Event = {
+  id: string;
+  name: string;
+  status: string;
+  start_date: string;
+  end_date: string;
+  progress?: string;
+};
+
+type UserProfile = {
+  id: string;
+  full_name: string;
+  avatar_url: string | null;
+  created_at: string;
 };
 
 export default function ProfileScreen() {
+  const { user } = useAuth();
+  const isFocused = useIsFocused();
   const [loading, setLoading] = useState(false);
+  const [activities, setActivities] = useState<UserActivity[]>([]);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
   const [activeTab, setActiveTab] = useState<'activities' | 'teams' | 'events'>('activities');
+
+  useEffect(() => {
+    if (user) {
+      fetchUserProfile();
+      fetchUserTeams();
+      fetchUserEvents();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user && isFocused) {
+      fetchUserActivities();
+    }
+  }, [user, isFocused]);
+
+  const fetchUserProfile = async () => {
+    if (!user) return;
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, full_name, avatar_url, created_at')
+      .eq('id', user.id)
+      .single();
+    if (!error && data) setProfile(data);
+    setLoading(false);
+  };
+
+  const fetchUserTeams = async () => {
+    if (!user) return;
+    const { data, error } = await supabase
+      .from('team_members')
+      .select('joined_at, teams(id, team_name)')
+      .eq('user_id', user.id);
+    if (!error && data) {
+      setTeams(
+        data.map((tm: any) => ({
+          id: tm.teams.id,
+          team_name: tm.teams.team_name,
+          joined_at: tm.joined_at,
+        }))
+      );
+    }
+  };
+
+  const fetchUserEvents = async () => {
+    if (!user) return;
+    const { data, error } = await supabase
+      .from('event_registrations')
+      .select('events(id, name, status, start_date, end_date)')
+      .eq('user_id', user.id);
+    if (!error && data) {
+      setEvents(
+        data.map((er: any) => ({
+          id: er.events.id,
+          name: er.events.name,
+          status: er.events.status,
+          start_date: er.events.start_date,
+          end_date: er.events.end_date,
+        }))
+      );
+    }
+  };
+
+  const fetchUserActivities = async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('activities')
+        .select(`
+          *,
+          event:event_id (
+            name
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('activity_date', { ascending: false });
+      console.log('Profile activities:', data, error);
+      if (error) throw error;
+      setActivities(data || []);
+    } catch (err) {
+      console.error('Error fetching user activities:', err);
+      Alert.alert('Error', 'Failed to load your activities');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -63,17 +167,17 @@ export default function ProfileScreen() {
     }
   };
 
-  const ActivityCard = ({ activity }: { activity: typeof userProfile.activities[0] }) => (
+  const ActivityCard = ({ activity }: { activity: UserActivity }) => (
     <ThemedView style={styles.activityCard}>
       <View style={styles.activityIconContainer}>
         <ThemedText style={styles.activityIcon}>
-          {activity.type.charAt(0)}
+          {activity.activity_type_emoji || activity.activity_type.charAt(0)}
         </ThemedText>
       </View>
       <View style={styles.activityInfo}>
-        <ThemedText style={styles.activityTitle}>{activity.type}</ThemedText>
+        <ThemedText style={styles.activityTitle}>{activity.activity_type}</ThemedText>
         <ThemedText style={styles.activityDetails}>
-          {activity.date} • {activity.minutes} minutes
+          {new Date(activity.activity_date).toLocaleDateString()} • {activity.activity_minutes} minutes
         </ThemedText>
       </View>
       <TouchableOpacity style={styles.editButton}>
@@ -82,23 +186,23 @@ export default function ProfileScreen() {
     </ThemedView>
   );
 
-  const TeamCard = ({ team }: { team: typeof userProfile.teams[0] }) => (
+  const TeamCard = ({ team }: { team: Team }) => (
     <ThemedView style={styles.teamCard}>
       <View style={styles.teamIconContainer}>
         <ThemedText style={styles.teamIcon}>
-          {team.name.split(' ').map(n => n[0]).join('')}
+          {team.team_name.split(' ').map((n: string) => n[0]).join('')}
         </ThemedText>
       </View>
       <View style={styles.teamInfo}>
-        <ThemedText style={styles.teamName}>{team.name}</ThemedText>
+        <ThemedText style={styles.teamName}>{team.team_name}</ThemedText>
         <ThemedText style={styles.teamDetails}>
-          {team.role} • Joined {team.joinedDate}
+          Joined {new Date(team.joined_at).toLocaleDateString()}
         </ThemedText>
       </View>
     </ThemedView>
   );
 
-  const EventCard = ({ event }: { event: typeof userProfile.events[0] }) => (
+  const EventCard = ({ event }: { event: Event }) => (
     <ThemedView style={styles.eventCard}>
       <View style={styles.eventHeader}>
         <ThemedText style={styles.eventTitle}>{event.name}</ThemedText>
@@ -110,7 +214,7 @@ export default function ProfileScreen() {
         </View>
       </View>
       <ThemedText style={styles.eventDetails}>
-        {'progress' in event ? `Progress: ${event.progress}` : `Date: ${event.date}`}
+        {`From ${new Date(event.start_date).toLocaleDateString()} to ${new Date(event.end_date).toLocaleDateString()}`}
       </ThemedText>
     </ThemedView>
   );
@@ -142,29 +246,19 @@ export default function ProfileScreen() {
 
       <ThemedView style={styles.profileCard}>
         <View style={styles.profileHeader}>
-          <View style={styles.profileAvatar}>
-            <Text style={styles.profileAvatarText}>YO</Text>
-          </View>
+          <Image
+            source={{
+              uri:
+                (profile && (profile.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=random`)) ||
+                'https://ui-avatars.com/api/?name=User&background=random'
+            }}
+            style={styles.profileAvatar}
+          />
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{userProfile.name}</Text>
+            <Text style={styles.profileName}>{profile?.full_name || 'User'}</Text>
             <Text style={styles.profileDetails}>
-              Member since {new Date(userProfile.joined).toLocaleDateString('en-US', {
-                month: 'long',
-                day: 'numeric',
-                year: 'numeric'
-              })}
+              Member since {profile ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : ''}
             </Text>
-            <View style={styles.badgeContainer}>
-              <View style={styles.rankBadge}>
-                <Text style={styles.rankText}>Rank #{userProfile.rank}</Text>
-              </View>
-              <View style={styles.minutesBadge}>
-                <Text style={styles.minutesText}>{userProfile.totalMinutes} mins</Text>
-              </View>
-              <View style={styles.contributionBadge}>
-                <Text style={styles.contributionText}>{userProfile.contribution_percentage}</Text>
-              </View>
-            </View>
           </View>
         </View>
       </ThemedView>
@@ -204,9 +298,15 @@ export default function ProfileScreen() {
                 <ThemedText style={styles.sectionTitle}>Activity History</ThemedText>
               </View>
 
-              {userProfile.activities.map(activity => (
-                <ActivityCard key={activity.id} activity={activity} />
-              ))}
+              {loading ? (
+                <ActivityIndicator size="large" color="#2196F3" />
+              ) : activities.length === 0 ? (
+                <ThemedText style={styles.emptyStateText}>No activities logged yet</ThemedText>
+              ) : (
+                activities.map(activity => (
+                  <ActivityCard key={activity.id} activity={activity} />
+                ))
+              )}
             </View>
           )}
 
@@ -216,9 +316,13 @@ export default function ProfileScreen() {
                 <ThemedText style={styles.sectionTitle}>My Teams</ThemedText>
               </View>
 
-              {userProfile.teams.map(team => (
-                <TeamCard key={team.id} team={team} />
-              ))}
+              {teams.length === 0 ? (
+                <ThemedText style={styles.emptyStateText}>No teams joined yet</ThemedText>
+              ) : (
+                teams.map(team => (
+                  <TeamCard key={team.id} team={team} />
+                ))
+              )}
             </View>
           )}
 
@@ -228,9 +332,13 @@ export default function ProfileScreen() {
                 <ThemedText style={styles.sectionTitle}>Events</ThemedText>
               </View>
 
-              {userProfile.events.map(event => (
-                <EventCard key={event.id} event={event} />
-              ))}
+              {events.length === 0 ? (
+                <ThemedText style={styles.emptyStateText}>No events registered yet</ThemedText>
+              ) : (
+                events.map(event => (
+                  <EventCard key={event.id} event={event} />
+                ))
+              )}
             </View>
           )}
         </View>
@@ -337,11 +445,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 16,
   },
-  profileAvatarText: {
-    color: 'white',
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
   profileInfo: {
     flex: 1,
   },
@@ -355,45 +458,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginBottom: 8,
-  },
-  badgeContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 4,
-    gap: 8,
-  },
-  rankBadge: {
-    backgroundColor: '#FFF5F5',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 16,
-  },
-  rankText: {
-    color: '#C41E3A',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  minutesBadge: {
-    backgroundColor: '#E3F2FD',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 16,
-  },
-  minutesText: {
-    color: '#2196F3',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  contributionBadge: {
-    backgroundColor: '#E8F5E9',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 16,
-  },
-  contributionText: {
-    color: '#4CAF50',
-    fontSize: 12,
-    fontWeight: '600',
   },
   tabContainer: {
     flexDirection: 'row',
@@ -582,5 +646,10 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: 'bold',
     marginLeft: 8,
+  },
+  emptyStateText: {
+    color: '#666',
+    fontSize: 16,
+    textAlign: 'center',
   },
 }); 

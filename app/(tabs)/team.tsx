@@ -5,6 +5,7 @@ import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated'
 import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
+import { useIsFocused } from '@react-navigation/native';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -86,6 +87,11 @@ export default function TeamScreen() {
   const [goalEditModalVisible, setGoalEditModalVisible] = useState(false);
   const [newGoalValue, setNewGoalValue] = useState('');
 
+  const [selectedMemberActivityCount, setSelectedMemberActivityCount] = useState<number | null>(null);
+  const [isMemberActivityCountLoading, setIsMemberActivityCountLoading] = useState(false);
+
+  const isFocused = useIsFocused();
+
   // Fetch user's team from active or upcoming event
   useEffect(() => {
     if (user) {
@@ -146,6 +152,13 @@ export default function TeamScreen() {
 
     return () => clearTimeout(debounceTimeout);
   }, [searchQuery, teamMembers]);
+
+  useEffect(() => {
+    if (userTeam && isFocused) {
+      fetchTeamMembers();
+      fetchTeamStats();
+    }
+  }, [userTeam, isFocused]);
 
   // Fetch user's team and event
   const fetchUserTeamAndEvent = async () => {
@@ -328,25 +341,31 @@ export default function TeamScreen() {
         return;
       }
 
-      // Get activities for all team members
+      // Get activities for all current team members only
+      const memberUserIds = members.map(m => m.user_id);
       const { data: activities, error: activitiesError } = await supabase
         .from('activities')
         .select('user_id, activity_minutes')
-        .eq('event_id', userTeam.event_id);
+        .eq('event_id', userTeam.event_id)
+        .in('user_id', memberUserIds);
 
       if (activitiesError) {
         console.error('Error fetching activities:', activitiesError);
       }
 
+      console.log('Activities fetched for team:', activities);
+
       // Calculate minutes for each member
       const memberMinutes: { [key: string]: number } = {};
-
       activities?.forEach(activity => {
         memberMinutes[activity.user_id] = (memberMinutes[activity.user_id] || 0) + activity.activity_minutes;
       });
 
+      console.log('Member minutes:', memberMinutes);
+
       // Calculate total minutes for the team
       const totalMinutes = Object.values(memberMinutes).reduce((sum, minutes) => sum + minutes, 0);
+      console.log('Total minutes calculated:', totalMinutes);
       setTotalTeamMinutes(totalMinutes);
 
       // Map members with their minutes and calculate contribution percentage
@@ -408,9 +427,53 @@ export default function TeamScreen() {
         ? Math.round(totalTeamMinutes / teamMembers.length)
         : 0;
 
-      // Calculate weekly growth (mock data for now)
-      // In a real implementation, you would compare activity from current week vs previous week
-      const weeklyGrowth = 15;
+      // Calculate weekly growth
+      let weeklyGrowth = 0;
+      try {
+        // Get event start date
+        const eventStart = new Date(userEvent?.start_date || new Date());
+        const today = new Date();
+        // Find the start of the current week (Monday)
+        const currentWeekStart = new Date(today);
+        currentWeekStart.setDate(today.getDate() - today.getDay() + 1); // Monday
+        currentWeekStart.setHours(0, 0, 0, 0);
+        // Find the start of the previous week
+        const prevWeekStart = new Date(currentWeekStart);
+        prevWeekStart.setDate(currentWeekStart.getDate() - 7);
+        // End of previous week (Sunday)
+        const prevWeekEnd = new Date(currentWeekStart);
+        prevWeekEnd.setDate(currentWeekStart.getDate() - 1);
+        prevWeekEnd.setHours(23, 59, 59, 999);
+        // Get all team member user_ids
+        const memberUserIds = teamMembers.map(m => m.user_id);
+        // Query activities for current week
+        const { data: currentWeekActivities } = await supabase
+          .from('activities')
+          .select('activity_minutes, activity_date, user_id')
+          .eq('event_id', userTeam.event_id)
+          .in('user_id', memberUserIds)
+          .gte('activity_date', currentWeekStart.toISOString().split('T')[0])
+          .lte('activity_date', today.toISOString().split('T')[0]);
+        const currentWeekMinutes = currentWeekActivities?.reduce((sum, a) => sum + a.activity_minutes, 0) || 0;
+        // Query activities for previous week
+        const { data: prevWeekActivities } = await supabase
+          .from('activities')
+          .select('activity_minutes, activity_date, user_id')
+          .eq('event_id', userTeam.event_id)
+          .in('user_id', memberUserIds)
+          .gte('activity_date', prevWeekStart.toISOString().split('T')[0])
+          .lte('activity_date', prevWeekEnd.toISOString().split('T')[0]);
+        const prevWeekMinutes = prevWeekActivities?.reduce((sum, a) => sum + a.activity_minutes, 0) || 0;
+        // Calculate growth
+        if (prevWeekMinutes === 0) {
+          weeklyGrowth = currentWeekMinutes > 0 ? 100 : 0;
+        } else {
+          weeklyGrowth = Math.round(((currentWeekMinutes - prevWeekMinutes) / prevWeekMinutes) * 100);
+        }
+      } catch (err) {
+        console.error('Error calculating weekly growth:', err);
+        weeklyGrowth = 0;
+      }
 
       setTeamStats({
         totalMinutes: totalTeamMinutes,
@@ -508,9 +571,17 @@ export default function TeamScreen() {
     };
   };
 
-  const handleMemberPress = (member: TeamMember) => {
+  const handleMemberPress = async (member: TeamMember) => {
     setSelectedMember(member);
     setIsModalVisible(true);
+    setIsMemberActivityCountLoading(true);
+    // Fetch activity count for this member
+    const { count, error } = await supabase
+      .from('activities')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', member.user_id);
+    setSelectedMemberActivityCount(count || 0);
+    setIsMemberActivityCountLoading(false);
   };
 
   const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -574,7 +645,7 @@ export default function TeamScreen() {
 
   // Calculate progress percentage
   const progressPercentage = userTeam && teamStats.targetMinutes > 0
-    ? Math.min(100, (teamStats.totalMinutes / teamStats.targetMinutes) * 100)
+    ? Math.min(100, (totalTeamMinutes / teamStats.targetMinutes) * 100)
     : 0;
 
   return (
@@ -633,7 +704,7 @@ export default function TeamScreen() {
                   <View style={styles.progressContainer}>
                     <View style={[styles.progressBar, { width: `${progressPercentage}%` }]} />
                     <ThemedText style={styles.progressText}>
-                      {teamStats.totalMinutes} / {teamStats.targetMinutes} minutes
+                      {totalTeamMinutes} / {teamStats.targetMinutes} minutes
                     </ThemedText>
                   </View>
                 </View>
@@ -689,7 +760,9 @@ export default function TeamScreen() {
                     <ThemedText style={styles.statLabel}>Active Members</ThemedText>
                   </View>
                   <View style={styles.statCard}>
-                    <ThemedText style={styles.statValue}>+{teamStats.weeklyGrowth}%</ThemedText>
+                    <ThemedText style={styles.statValue}>
+                      {teamStats.weeklyGrowth > 0 ? `+${teamStats.weeklyGrowth}%` : `${teamStats.weeklyGrowth}%`}
+                    </ThemedText>
                     <ThemedText style={styles.statLabel}>Weekly Growth</ThemedText>
                   </View>
                 </View>
@@ -787,7 +860,7 @@ export default function TeamScreen() {
           joined_at: selectedMember.joined_at,
           rank: selectedMember.rank,
           total_minutes: selectedMember.total_minutes,
-          activities_logged: Math.floor(selectedMember.total_minutes / 30), // Approximation
+          activities_logged: isMemberActivityCountLoading || selectedMemberActivityCount == null ? 0 : selectedMemberActivityCount,
           current_milestone: `${Math.floor(selectedMember.total_minutes / 100) * 100} minutes`,
           contribution_percentage: selectedMember.contribution_percentage,
           avatar_url: selectedMember.avatar_url || '',
