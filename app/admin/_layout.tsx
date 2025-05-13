@@ -4,6 +4,7 @@ import { useUser } from '../../contexts/UserContext';
 import { router } from 'expo-router';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
+import { AdminNav } from '@/components/AdminNav';
 
 export default function AdminLayout() {
   const { userProfile, loading } = useUser();
@@ -30,22 +31,32 @@ export default function AdminLayout() {
   }
 
   return (
-    <Stack>
-      <Stack.Screen 
-        name="setup" 
-        options={{ 
-          title: "Setup",
-          headerBackTitle: "Back" 
-        }} 
-      />
-      <Stack.Screen 
-        name="reports" 
-        options={{ 
-          title: "Reports",
-          headerBackTitle: "Back" 
-        }} 
-      />
-    </Stack>
+    <>
+      <AdminNav />
+      <Stack>
+        <Stack.Screen 
+          name="setup" 
+          options={{ 
+            title: "Setup",
+            headerBackTitle: "Back" 
+          }} 
+        />
+        <Stack.Screen 
+          name="reports" 
+          options={{ 
+            title: "Reports",
+            headerBackTitle: "Back" 
+          }} 
+        />
+        <Stack.Screen 
+          name="activity-types" 
+          options={{ 
+            title: "Activity Types",
+            headerBackTitle: "Back" 
+          }} 
+        />
+      </Stack>
+    </>
   );
 }
 
