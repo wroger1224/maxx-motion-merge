@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, TouchableOpacity, ScrollView, ImageBackground, Text, ActivityIndicator, Modal } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, ScrollView, ImageBackground, Text, ActivityIndicator, Modal, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -1070,6 +1070,8 @@ function getOrdinal(n: number): string {
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 
+const isMobile = Dimensions.get('window').width < 500;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -1184,6 +1186,8 @@ const styles = StyleSheet.create({
   },
   filterRow: {
     flexDirection: 'row',
+		justifyContent: 'center',
+		flexWrap: 'wrap',
     padding: 16,
     gap: 8,
   },
@@ -1208,7 +1212,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     backgroundColor: '#2196F3',
-    marginLeft: 'auto',
+    marginLeft: isMobile ? undefined : 'auto',
   },
   refreshButtonText: {
     color: '#fff',

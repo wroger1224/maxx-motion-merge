@@ -8,7 +8,9 @@ import { supabase } from '@/lib/supabase';
 import { useUser } from '@/contexts/UserContext';
 import { useRouter } from 'expo-router';
 
-const BADGE_SIZE = (Dimensions.get('window').width - 48) / 3;
+const WIDTH = Dimensions.get('window').width;
+const BADGE_SIZE = WIDTH > 768 ? (WIDTH - 48) / 3 : WIDTH - 48;
+const NUM_COLUMNS = WIDTH > 768 ? 3 : 1;
 const BADGE_PADDING = 6;
 const GRID_PADDING = 16;
 
@@ -514,7 +516,8 @@ export default function AchievementsScreen() {
         friction: 5,
         useNativeDriver: true,
       }).start();
-      setSelectedBadge({ ...item, isUnlocked, progress });
+
+			setSelectedBadge({ ...item, isUnlocked, progress });
     };
 
     const categoryColor = getCategoryColor(item.category);
@@ -695,7 +698,7 @@ export default function AchievementsScreen() {
             data={badges}
             renderItem={renderBadge}
             keyExtractor={item => item.id}
-            numColumns={3}
+            numColumns={ NUM_COLUMNS }
             scrollEnabled={false}
             contentContainerStyle={styles.badgesGrid}
           />
@@ -830,8 +833,9 @@ const styles = StyleSheet.create({
   },
   streakFlamesContainer: {
     flexDirection: 'row',
+		flexWrap: 'wrap',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: WIDTH > 500 ? 'space-between' : 'flex-start',
     marginVertical: 8,
     width: '100%',
   },
@@ -1155,7 +1159,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   badgesGrid: {
-    flexDirection: 'row',
+		flex: 1,
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     paddingHorizontal: BADGE_PADDING,

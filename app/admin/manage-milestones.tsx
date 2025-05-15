@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator, FlatList } from 'react-native';
+import { StyleSheet, View, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator, FlatList, Dimensions } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useUser } from '../../contexts/UserContext';
@@ -358,6 +358,7 @@ export default function ManageMilestonesScreen() {
   );
 }
 
+const isMobile = Dimensions.get('window').width < 500;
 const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
@@ -453,6 +454,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   milestoneInputGroup: {
+		flexWrap: 'wrap',
     flex: 1,
     flexDirection: 'row',
   },
@@ -465,7 +467,7 @@ const styles = StyleSheet.create({
   },
   minutesInput: {
     flex: 1,
-    marginRight: 10,
+    marginRight: isMobile ? 0 : 10,
   },
   nameInput: {
     flex: 2,
