@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, FlatList, Animated, TouchableOpacity, Modal, Dimensions, Platform, Image, ImageBackground, ScrollView } from 'react-native';
+import { StyleSheet, View, Text, FlatList, Animated, TouchableOpacity, Modal, Dimensions, Platform, Image, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import Constants from 'expo-constants';
@@ -7,6 +7,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { useUser } from '@/contexts/UserContext';
 import { useRouter } from 'expo-router';
+import { ResponsiveHeader } from '@/components/ui/responsiveHeader';
 
 const WIDTH = Dimensions.get('window').width;
 const BADGE_SIZE = WIDTH > 768 ? (WIDTH - 48) / 3 : WIDTH - 48;
@@ -653,10 +654,8 @@ export default function AchievementsScreen() {
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      <ImageBackground
+      <ResponsiveHeader
         source={require('@/assets/images/gym-equipment.png')}
-        style={styles.headerBackground}
-        resizeMode="cover"
       >
         <LinearGradient
           colors={['rgba(196, 30, 58, 0.9)', 'rgba(128, 128, 128, 0.85)']}
@@ -674,7 +673,7 @@ export default function AchievementsScreen() {
             <Text style={styles.tagline}>Track your motion. Reach your potential.</Text>
           </View>
         </LinearGradient>
-      </ImageBackground>
+      </ResponsiveHeader>
 
       <View style={styles.streakContainer}>
         <View style={styles.streakIconContainer}>
@@ -747,9 +746,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F5F5',
     paddingTop: Constants.statusBarHeight,
-  },
-  headerBackground: {
-    height: 300,
   },
   headerOverlay: {
     flex: 1,

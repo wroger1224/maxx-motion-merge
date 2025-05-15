@@ -1,11 +1,12 @@
 import React from 'react';
-import { StyleSheet, View, TouchableOpacity, ScrollView, Text, ImageBackground } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, ScrollView, Text} from 'react-native';
 import { useEffect } from 'react';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { useAuth } from '@/lib/auth';
 import { useUser } from '@/contexts/UserContext';
 import { LinearGradient } from 'expo-linear-gradient';
+import { ResponsiveHeader } from '@/components/ui/responsiveHeader';
 
 // Team interface for leaderboard
 interface Team {
@@ -122,10 +123,8 @@ export default function DashboardScreen() {
 
   return (
     <View style={styles.container}>
-      <ImageBackground
+      <ResponsiveHeader
         source={require('@/assets/images/gym-equipment.png')}
-        style={styles.headerBackground}
-        resizeMode="cover"
       >
         <LinearGradient
           colors={['rgba(196, 30, 58, 0.9)', 'rgba(128, 128, 128, 0.85)']}
@@ -140,7 +139,7 @@ export default function DashboardScreen() {
             <ThemedText style={styles.tagline}>Track your motion. Reach your potential.</ThemedText>
           </View>
         </LinearGradient>
-      </ImageBackground>
+      </ResponsiveHeader>
 
       <ScrollView style={styles.scrollContent}>
         <ThemedView style={styles.section}>
@@ -254,9 +253,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     flex: 1,
     backgroundColor: '#fff',
-  },
-  headerBackground: {
-    height: 300,
   },
   headerOverlay: {
     flex: 1,

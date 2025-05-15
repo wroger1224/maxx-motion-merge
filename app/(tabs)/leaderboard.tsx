@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, TouchableOpacity, ScrollView, ImageBackground, Text, ActivityIndicator, Modal, Dimensions } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, ScrollView, Text, ActivityIndicator, Modal, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -11,6 +11,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import ActivityItem from '@/components/ActivityItem';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { ResponsiveHeader } from '@/components/ui/responsiveHeader';
 
 interface TeamRankingItemProps {
   rank: number;
@@ -736,10 +737,8 @@ export default function LeaderboardScreen() {
 
   return (
     <View style={styles.container}>
-      <ImageBackground
+      <ResponsiveHeader
         source={require('@/assets/images/gym-equipment.png')}
-        style={styles.headerBackground}
-        resizeMode="cover"
       >
         <LinearGradient
           colors={['rgba(196, 30, 58, 0.9)', 'rgba(128, 128, 128, 0.85)']}
@@ -757,7 +756,7 @@ export default function LeaderboardScreen() {
             <Text style={styles.tagline}>Track your motion. Reach your potential.</Text>
           </View>
         </LinearGradient>
-      </ImageBackground>
+      </ResponsiveHeader>
 
       <View style={styles.tabs}>
         <TouchableOpacity
@@ -1076,9 +1075,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
-  },
-  headerBackground: {
-    height: 300,
   },
   headerOverlay: {
     flex: 1,

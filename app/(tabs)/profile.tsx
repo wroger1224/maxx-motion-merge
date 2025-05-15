@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, ActivityIndicator, Alert, View, ScrollView, ImageBackground, Text, TouchableOpacity, Platform } from 'react-native';
+import { StyleSheet, ActivityIndicator, Alert, View, ScrollView, Text, TouchableOpacity, Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -10,6 +10,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Image } from 'react-native';
+import { ResponsiveHeader } from '@/components/ui/responsiveHeader';
 
 type UserActivity = {
   id: string;
@@ -221,10 +222,8 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.container}>
-      <ImageBackground
+      <ResponsiveHeader
         source={require('@/assets/images/gym-equipment.png')}
-        style={styles.headerBackground}
-        resizeMode="cover"
       >
         <LinearGradient
           colors={['rgba(196, 30, 58, 0.9)', 'rgba(128, 128, 128, 0.85)']}
@@ -242,7 +241,7 @@ export default function ProfileScreen() {
             <Text style={styles.tagline}>Track your motion. Reach your potential.</Text>
           </View>
         </LinearGradient>
-      </ImageBackground>
+      </ResponsiveHeader>
 
       <ThemedView style={styles.profileCard}>
         <View style={styles.profileHeader}>
@@ -368,9 +367,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-  },
-  headerBackground: {
-    height: 300,
   },
   headerOverlay: {
     flex: 1,
