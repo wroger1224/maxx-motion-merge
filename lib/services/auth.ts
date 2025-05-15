@@ -116,7 +116,7 @@ export async function handleAuthRouting() {
     // Check if user exists in our profiles table by directly checking the table
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
-      .select('id, email')
+      .select('id, email, is_admin')
       .eq('id', userId)
       .single();
 
@@ -177,6 +177,13 @@ export async function handleAuthRouting() {
       }
     }
 
+    // If user is an admin, skip event and team checks
+    if (profileData?.is_admin) {
+      console.log('Admin user detected, skipping event and team checks');
+      router.replace('/(tabs)');
+      return;
+    }
+
     // Check if user is in an event
     const isInEvent = await checkUserInEvent(userId);
     console.log('User in event:', isInEvent);
@@ -200,7 +207,6 @@ export async function handleAuthRouting() {
     // User is in both event and team, redirect to dashboard
     console.log('Redirecting to dashboard');
     router.replace('/(tabs)');
-
   } catch (err) {
     console.error('Auth routing error:', err);
     router.replace('/login');
