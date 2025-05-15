@@ -37,7 +37,7 @@ export default function DashboardScreen() {
     currentMilestone: 'Silver (250 min)',
     nextMilestone: 'Gold (500 min)'
   };
-  
+
   // Dummy data for team leaderboard
   const teams: Team[] = [
     {
@@ -77,7 +77,7 @@ export default function DashboardScreen() {
       isUserTeam: false
     }
   ];
-  
+
   // Dummy data for recent activities
   const activities: Activity[] = [
     {
@@ -111,9 +111,9 @@ export default function DashboardScreen() {
 
   const { user } = useAuth();
   const { userProfile } = useUser();
-  
+
   useEffect(() => {
-    console.log('📱 Dashboard loaded', { 
+    console.log('📱 Dashboard loaded', {
       userId: user?.id,
       email: user?.email,
       hasProfile: !!userProfile
@@ -134,9 +134,6 @@ export default function DashboardScreen() {
         >
           <View style={styles.header}>
             <ThemedText style={styles.headerTitle}>MAXX Motion</ThemedText>
-            <View style={styles.userIcon}>
-              <ThemedText style={styles.userIconText}>U</ThemedText>
-            </View>
           </View>
           <View style={styles.headerContent}>
             <ThemedText style={styles.pageTitle}>Dashboard</ThemedText>
@@ -150,11 +147,11 @@ export default function DashboardScreen() {
           <ThemedText style={styles.sectionTitle}>Your Progress</ThemedText>
           <View style={styles.progressContainer}>
             <View style={styles.progressBar}>
-              <View 
+              <View
                 style={[
-                  styles.progressFill, 
+                  styles.progressFill,
                   { width: `${(userProgress.current / userProgress.target) * 100}%` }
-                ]} 
+                ]}
               />
             </View>
             <ThemedText style={styles.progressText}>
@@ -173,15 +170,15 @@ export default function DashboardScreen() {
           <ThemedText type="subtitle">Your Activity</ThemedText>
           <Text style={styles.comingSoon}>Activity summary coming soon</Text>
         </ThemedView>
-        
+
         {/* Team Leaderboard Section */}
         <ThemedView style={styles.section}>
           <ThemedText style={styles.sectionTitle}>Team Leaderboard</ThemedText>
           {teams.map(team => (
-            <View 
-              key={team.id} 
+            <View
+              key={team.id}
               style={[
-                styles.teamItem, 
+                styles.teamItem,
                 team.isUserTeam && styles.userTeamItem
               ]}
             >
@@ -275,19 +272,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 20,
     fontWeight: '600',
-  },
-  userIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  userIconText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#C41E3A',
   },
   headerContent: {
     flex: 1,
