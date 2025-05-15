@@ -283,6 +283,43 @@ export default function AdminSetupScreen() {
                           Registrations: {eventStats[item.id].totalRegistrations}
                         </ThemedText>
                       )}
+
+<View style={styles.actionButtons}>
+                        <TouchableOpacity 
+                          style={styles.actionButton} 
+                          onPress={() => navigateToEditEvent(item.id)}
+                        >
+                          <ThemedText style={styles.actionButtonText}>Edit</ThemedText>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity 
+                          style={styles.actionButton} 
+                          onPress={() => navigateToManageMilestones(item.id)}
+                        >
+                          <ThemedText style={styles.actionButtonText}>Milestones</ThemedText>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity 
+                          style={styles.actionButton} 
+                          onPress={() => updateEventStatus(item.id, 'Upcoming')}
+                        >
+                          <ThemedText style={styles.actionButtonText}>Set Upcoming</ThemedText>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity 
+                          style={styles.actionButton} 
+                          onPress={() => updateEventStatus(item.id, 'Active')}
+                        >
+                          <ThemedText style={styles.actionButtonText}>Set Active</ThemedText>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity 
+                          style={styles.actionButton} 
+                          onPress={() => updateEventStatus(item.id, 'Archive')}
+                        >
+                          <ThemedText style={styles.actionButtonText}>Set Complete</ThemedText>
+                        </TouchableOpacity>
+                      </View>
                     </TouchableOpacity>
                   </ThemedView>
                 )}
