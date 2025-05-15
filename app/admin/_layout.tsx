@@ -33,28 +33,11 @@ export default function AdminLayout() {
   return (
     <>
       <AdminNav />
-      <Stack>
-        <Stack.Screen 
-          name="setup" 
-          options={{ 
-            title: "Setup",
-            headerBackTitle: "Back" 
-          }} 
-        />
-        <Stack.Screen 
-          name="reports" 
-          options={{ 
-            title: "Reports",
-            headerBackTitle: "Back" 
-          }} 
-        />
-        <Stack.Screen 
-          name="activity-types" 
-          options={{ 
-            title: "Activity Types",
-            headerBackTitle: "Back" 
-          }} 
-        />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="setup" />
+        <Stack.Screen name="reports" />
+        <Stack.Screen name="activity-types" />
+        <Stack.Screen name="users" />
       </Stack>
     </>
   );

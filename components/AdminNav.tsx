@@ -7,6 +7,7 @@ const adminLinks = [
   { label: 'Setup', route: '/admin/setup' },
   { label: 'Reports', route: '/admin/reports' },
   { label: 'Activity Types', route: '/admin/activity-types' },
+  { label: 'User Management', route: '/admin/users' },
 ];
 
 export function AdminNav() {
