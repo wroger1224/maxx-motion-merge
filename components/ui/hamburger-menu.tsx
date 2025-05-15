@@ -1,11 +1,18 @@
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Drawer } from 'expo-router/drawer';
+import { StyleSheet } from 'react-native';
 
 
 const HamburgerMenu = () => {
 	return (
-		<GestureHandlerRootView style={{ flex: 1 }}>
-      <Drawer>
+		<GestureHandlerRootView>
+      <Drawer 
+				screenOptions={{
+    			drawerStyle: {
+						width: "50%",
+   			 	},
+  			}}
+			>
         <Drawer.Screen
           name="index"
           options={{

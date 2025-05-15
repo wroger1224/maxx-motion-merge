@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, Text, FlatList, Animated, TouchableOpacity, Modal, Dimensions, Platform, Image, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -200,7 +200,7 @@ export default function AchievementsScreen() {
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [totalMinutes, setTotalMinutes] = useState(0);
   const [badgeProgress, setBadgeProgress] = useState<Record<string, number>>({});
-  const scaleAnim = new Animated.Value(1);
+  const scaleAnim = useRef(new Animated.Value(1)).current;
   const router = useRouter();
 
   useEffect(() => {
@@ -434,23 +434,6 @@ export default function AchievementsScreen() {
     }
   };
 
-  useEffect(() => {
-    const pulseAnimation = Animated.sequence([
-      Animated.timing(scaleAnim, {
-        toValue: 1.2,
-        duration: 1000,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 1000,
-        useNativeDriver: true,
-      }),
-    ]);
-
-    Animated.loop(pulseAnimation).start();
-  }, []);
-
   const renderStreak = () => {
     const flames = [];
     for (let i = 0; i < 30; i++) {
@@ -499,25 +482,10 @@ export default function AchievementsScreen() {
   };
 
   const renderBadge = ({ item, index }: { item: Badge; index: number }) => {
-    const scaleAnim = new Animated.Value(1);
     const progress = badgeProgress[item.id] || 0;
     const isUnlocked = progress >= item.total;
-
-    const onPressIn = () => {
-      Animated.spring(scaleAnim, {
-        toValue: 0.95,
-        friction: 5,
-        useNativeDriver: true,
-      }).start();
-    };
-
-    const onPressOut = () => {
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        friction: 5,
-        useNativeDriver: true,
-      }).start();
-
+	
+    const onPress = () => {
 			setSelectedBadge({ ...item, isUnlocked, progress });
     };
 
@@ -525,16 +493,14 @@ export default function AchievementsScreen() {
 
     return (
       <TouchableOpacity
-        onPressIn={onPressIn}
-        onPressOut={onPressOut}
+        onPress={ onPress }
         activeOpacity={1}
         style={styles.badgeContainer}
       >
-        <Animated.View
+        <View
           style={[
             styles.badge,
             isUnlocked ? styles.badgeUnlocked : styles.badgeLocked,
-            { transform: [{ scale: scaleAnim }] }
           ]}
         >
           {isUnlocked && (
@@ -566,7 +532,7 @@ export default function AchievementsScreen() {
           <Text style={styles.progressText}>
             {progress}/{item.total}
           </Text>
-        </Animated.View>
+        </View>
       </TouchableOpacity>
     );
   };
@@ -688,21 +654,22 @@ export default function AchievementsScreen() {
         </View>
       </View>
 
-      <ScrollView style={styles.content}>
-        {renderMilestoneProgress()}
-
-        <View style={styles.achievementsSection}>
-          <Text style={styles.achievementsTitle}>My Achievements</Text>
-          <FlatList
-            data={badges}
-            renderItem={renderBadge}
-            keyExtractor={item => item.id}
-            numColumns={ NUM_COLUMNS }
-            scrollEnabled={false}
-            contentContainerStyle={styles.badgesGrid}
-          />
-        </View>
-      </ScrollView>
+			<View style={styles.achievementsSection}>
+				<FlatList
+					ListHeaderComponent={
+						<>
+							{renderMilestoneProgress()}
+							<Text style={styles.achievementsTitle}>My Achievements</Text>
+						</>
+					}
+					data={badges}
+					renderItem={renderBadge}
+					keyExtractor={item => item.id}
+					numColumns={ NUM_COLUMNS }
+					scrollEnabled={true}
+					contentContainerStyle={styles.badgesGrid}
+				/>
+			</View>
 
       <Modal
         visible={selectedBadge !== null}
@@ -1133,7 +1100,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   achievementsSection: {
-    marginTop: 24,
+		flex: 1,
+    marginTop: 16,
     paddingHorizontal: GRID_PADDING,
   },
   achievementsTitle: {
@@ -1155,7 +1123,6 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   badgesGrid: {
-		flex: 1,
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     paddingHorizontal: BADGE_PADDING,
