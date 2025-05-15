@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, ScrollView, TouchableOpacity, FlatList, TextInput, Alert } from 'react-native';
+import { StyleSheet, View, ScrollView, TouchableOpacity, FlatList, Alert } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useUser } from '../../contexts/UserContext';
@@ -17,26 +17,18 @@ type Event = {
 
 type Team = {
   id: string;
-  event_id: string;
   team_name: string;
-  captain_id?: string;
-};
-
-type Milestone = {
-  id: string;
   event_id: string;
-  milestone_minutes: number;
-  milestone_name: string;
 };
 
 export default function AdminSetupScreen() {
   const { userProfile, loading } = useUser();
   const [events, setEvents] = useState<Event[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
-  const [activeSection, setActiveSection] = useState<'events' | 'teams' | 'users'>('events');
+  const [activeSection, setActiveSection] = useState<'events' | 'teams'>('events');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
-  const [eventStats, setEventStats] = useState<{[key: string]: {totalRegistrations: number, teamRegistrations: {[key: string]: number}}}>(
+  const [eventStats, setEventStats] = useState<{ [key: string]: { totalRegistrations: number, teamRegistrations: { [key: string]: number } } }>(
     {}
   );
 
@@ -62,15 +54,15 @@ export default function AdminSetupScreen() {
         .from('events')
         .select('*')
         .order('start_date', { ascending: false });
-      
+
       if (error) {
         console.error('Error fetching events:', error);
         Alert.alert('Error', 'Failed to load events');
         return;
       }
-      
+
       setEvents(data || []);
-      
+
       // Fetch registration stats for each event
       if (data) {
         for (const event of data) {
@@ -93,13 +85,13 @@ export default function AdminSetupScreen() {
         .from('teams')
         .select('*')
         .eq('event_id', eventId);
-      
+
       if (error) {
         console.error('Error fetching teams:', error);
         Alert.alert('Error', 'Failed to load teams');
         return;
       }
-      
+
       setTeams(data || []);
     } catch (error) {
       console.error('Unexpected error:', error);
@@ -117,32 +109,32 @@ export default function AdminSetupScreen() {
         .from('event_registrations')
         .select('count')
         .eq('event_id', eventId);
-      
+
       if (regError) {
         console.error('Error fetching registrations:', regError);
         return;
       }
-      
+
       // Get team registrations
       const { data: teams, error: teamError } = await supabase
         .from('teams')
         .select('id, team_name')
         .eq('event_id', eventId);
-      
+
       if (teamError) {
         console.error('Error fetching teams:', teamError);
         return;
       }
-      
-      const teamStats: {[key: string]: number} = {};
-      
+
+      const teamStats: { [key: string]: number } = {};
+
       if (teams) {
         for (const team of teams) {
           const { data: members, error: membersError } = await supabase
             .from('team_members')
             .select('count')
             .eq('team_id', team.id);
-          
+
           if (membersError) {
             console.error(`Error fetching members for team ${team.id}:`, membersError);
           } else if (members) {
@@ -150,7 +142,7 @@ export default function AdminSetupScreen() {
           }
         }
       }
-      
+
       setEventStats(prev => ({
         ...prev,
         [eventId]: {
@@ -171,13 +163,13 @@ export default function AdminSetupScreen() {
         .from('events')
         .update({ status: newStatus })
         .eq('id', eventId);
-      
+
       if (error) {
         console.error('Error updating event status:', error);
         Alert.alert('Error', 'Failed to update event status');
         return;
       }
-      
+
       // Refresh events list
       await fetchEvents();
       Alert.alert('Success', `Event status updated to ${newStatus}`);
@@ -238,40 +230,38 @@ export default function AdminSetupScreen() {
   return (
     <ScrollView style={styles.scrollView}>
       <ThemedView style={styles.container}>
-        <ThemedText type="title" style={styles.title}>Admin Setup</ThemedText>
-        
         {/* Navigation tabs */}
         <View style={styles.tabs}>
-          <TouchableOpacity 
-            style={[styles.tab, activeSection === 'events' && styles.activeTab]} 
+          <TouchableOpacity
+            style={[styles.tab, activeSection === 'events' && styles.activeTab]}
             onPress={() => setActiveSection('events')}
           >
             <ThemedText>Events</ThemedText>
           </TouchableOpacity>
-          
+
           {selectedEvent && (
-            <TouchableOpacity 
-              style={[styles.tab, activeSection === 'teams' && styles.activeTab]} 
+            <TouchableOpacity
+              style={[styles.tab, activeSection === 'teams' && styles.activeTab]}
               onPress={() => setActiveSection('teams')}
             >
               <ThemedText>Teams</ThemedText>
             </TouchableOpacity>
           )}
         </View>
-        
+
         {/* Events Section */}
         {activeSection === 'events' && (
           <ThemedView style={styles.section}>
             <View style={styles.sectionHeader}>
               <ThemedText type="subtitle">Event Management</ThemedText>
-              <TouchableOpacity 
-                style={styles.createButton} 
+              <TouchableOpacity
+                style={styles.createButton}
                 onPress={navigateToCreateEvent}
               >
                 <ThemedText style={styles.createButtonText}>+ Create Event</ThemedText>
               </TouchableOpacity>
             </View>
-            
+
             {/* Event List */}
             {events.length > 0 ? (
               <FlatList
@@ -287,49 +277,12 @@ export default function AdminSetupScreen() {
                           {formatDate(item.start_date)} - {formatDate(item.end_date)}
                         </ThemedText>
                       </View>
-                      
+
                       {eventStats[item.id] && (
                         <ThemedText style={styles.registrationStats}>
                           Registrations: {eventStats[item.id].totalRegistrations}
                         </ThemedText>
                       )}
-                      
-                      <View style={styles.actionButtons}>
-                        <TouchableOpacity 
-                          style={styles.actionButton} 
-                          onPress={() => navigateToEditEvent(item.id)}
-                        >
-                          <ThemedText style={styles.actionButtonText}>Edit</ThemedText>
-                        </TouchableOpacity>
-                        
-                        <TouchableOpacity 
-                          style={styles.actionButton} 
-                          onPress={() => navigateToManageMilestones(item.id)}
-                        >
-                          <ThemedText style={styles.actionButtonText}>Milestones</ThemedText>
-                        </TouchableOpacity>
-                        
-                        <TouchableOpacity 
-                          style={styles.actionButton} 
-                          onPress={() => updateEventStatus(item.id, 'Upcoming')}
-                        >
-                          <ThemedText style={styles.actionButtonText}>Set Upcoming</ThemedText>
-                        </TouchableOpacity>
-                        
-                        <TouchableOpacity 
-                          style={styles.actionButton} 
-                          onPress={() => updateEventStatus(item.id, 'Active')}
-                        >
-                          <ThemedText style={styles.actionButtonText}>Set Active</ThemedText>
-                        </TouchableOpacity>
-                        
-                        <TouchableOpacity 
-                          style={styles.actionButton} 
-                          onPress={() => updateEventStatus(item.id, 'Archive')}
-                        >
-                          <ThemedText style={styles.actionButtonText}>Set Complete</ThemedText>
-                        </TouchableOpacity>
-                      </View>
                     </TouchableOpacity>
                   </ThemedView>
                 )}
@@ -340,20 +293,20 @@ export default function AdminSetupScreen() {
             )}
           </ThemedView>
         )}
-        
+
         {/* Teams Section */}
         {activeSection === 'teams' && selectedEvent && (
           <ThemedView style={styles.section}>
             <View style={styles.sectionHeader}>
               <ThemedText type="subtitle">Teams for {selectedEvent.name}</ThemedText>
-              <TouchableOpacity 
-                style={styles.createButton} 
+              <TouchableOpacity
+                style={styles.createButton}
                 onPress={() => navigateToCreateTeam(selectedEvent.id)}
               >
                 <ThemedText style={styles.createButtonText}>+ Add Team</ThemedText>
               </TouchableOpacity>
             </View>
-            
+
             {/* Team List */}
             {teams.length > 0 ? (
               <FlatList
@@ -362,16 +315,16 @@ export default function AdminSetupScreen() {
                 renderItem={({ item }) => (
                   <ThemedView style={styles.teamCard}>
                     <ThemedText style={styles.teamTitle}>{item.team_name}</ThemedText>
-                    
+
                     {eventStats[selectedEvent.id]?.teamRegistrations[item.id] !== undefined && (
                       <ThemedText style={styles.registrationStats}>
                         Members: {eventStats[selectedEvent.id].teamRegistrations[item.id]}
                       </ThemedText>
                     )}
-                    
+
                     <View style={styles.actionButtons}>
-                      <TouchableOpacity 
-                        style={styles.actionButton} 
+                      <TouchableOpacity
+                        style={styles.actionButton}
                         onPress={() => router.push(`/admin/edit-team?id=${item.id}` as any)}
                       >
                         <ThemedText style={styles.actionButtonText}>Edit</ThemedText>
@@ -382,7 +335,7 @@ export default function AdminSetupScreen() {
                 style={styles.list}
               />
             ) : (
-              <ThemedText style={styles.emptyText}>No teams found for this event. Add a team to get started.</ThemedText>
+              <ThemedText style={styles.emptyText}>No teams found for this event.</ThemedText>
             )}
           </ThemedView>
         )}
@@ -399,8 +352,14 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
   },
-  title: {
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 24,
+  },
+  title: {
+    flex: 1,
   },
   section: {
     marginBottom: 24,
@@ -416,14 +375,17 @@ const styles = StyleSheet.create({
   tabs: {
     flexDirection: 'row',
     marginBottom: 20,
+    flexWrap: 'wrap',
+    gap: 8,
   },
   tab: {
     paddingVertical: 8,
     paddingHorizontal: 16,
-    marginRight: 8,
     borderRadius: 4,
     borderWidth: 1,
     borderColor: '#ccc',
+    minWidth: 100,
+    alignItems: 'center',
   },
   activeTab: {
     backgroundColor: '#0a7ea4',
