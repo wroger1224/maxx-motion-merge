@@ -1,8 +1,9 @@
 import React from 'react';
 import { StyleSheet, View, Pressable, Modal } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { Image } from 'react-native';
+import { TouchableOpacity } from 'react-native';
 
 type MemberDetailsProps = {
   isVisible: boolean;
@@ -29,63 +30,50 @@ export default function MemberDetails({ isVisible, onClose, member }: MemberDeta
       visible={isVisible}
       onRequestClose={onClose}
     >
-      <ThemedView style={styles.modalContainer}>
-        <ThemedView style={styles.modalContent}>
-          <ThemedView style={styles.header}>
-            <ThemedText style={styles.headerTitle}>Member Details</ThemedText>
-            <Pressable 
-              onPress={onClose} 
-              style={styles.closeButton}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <View style={styles.closeButtonContainer}>
-                <ThemedText style={styles.closeX}>✕</ThemedText>
-              </View>
-            </Pressable>
-          </ThemedView>
-
-          <ThemedView style={styles.content}>
-            <View style={styles.memberHeader}>
-              <View style={styles.avatar}>
-                <ThemedText style={styles.avatarText}>
-                  {member.full_name.split(' ').map(n => n[0]).join('')}
-                </ThemedText>
-              </View>
-              <View style={styles.memberInfo}>
-                <ThemedText style={styles.memberName}>{member.full_name}</ThemedText>
-                <ThemedText style={styles.memberSubtext}>
-                  Member since {new Date(member.joined_at).toLocaleDateString('en-US', { 
-                    month: 'long',
-                    day: 'numeric',
-                    year: 'numeric'
-                  })}
-                </ThemedText>
-                <ThemedText style={styles.memberSubtext}>Team Rank: #{member.rank}</ThemedText>
-              </View>
+      <View style={styles.modalContainer}>
+        <View style={styles.modalContent}>
+          <View style={styles.header}>
+            <Image
+              source={{ uri: member.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.full_name)}&background=random` }}
+              style={styles.avatar}
+            />
+            <ThemedText style={styles.name}>{member.full_name}</ThemedText>
+          </View>
+          <View style={styles.statsContainer}>
+            <View style={styles.statItem}>
+              <ThemedText style={styles.statLabel}>Team Rank</ThemedText>
+              <ThemedText style={styles.statValue}>#{member.rank}</ThemedText>
             </View>
-
-            <View style={styles.section}>
-              <ThemedText style={styles.sectionTitle}>Activity Summary</ThemedText>
-              <View style={styles.summaryItem}>
-                <ThemedText style={styles.summaryLabel}>Total Minutes:</ThemedText>
-                <ThemedText style={styles.summaryValue}>{member.total_minutes}</ThemedText>
-              </View>
-              <View style={styles.summaryItem}>
-                <ThemedText style={styles.summaryLabel}>Activities Logged:</ThemedText>
-                <ThemedText style={styles.summaryValue}>{member.activities_logged}</ThemedText>
-              </View>
-              <View style={styles.summaryItem}>
-                <ThemedText style={styles.summaryLabel}>Current Milestone:</ThemedText>
-                <ThemedText style={styles.summaryValue}>{member.current_milestone}</ThemedText>
-              </View>
-              <View style={styles.summaryItem}>
-                <ThemedText style={styles.summaryLabel}>Team Contribution:</ThemedText>
-                <ThemedText style={styles.summaryValue}>{member.contribution_percentage}</ThemedText>
-              </View>
+            <View style={styles.statItem}>
+              <ThemedText style={styles.statLabel}>Total Minutes</ThemedText>
+              <ThemedText style={styles.statValue}>{member.total_minutes}</ThemedText>
             </View>
-          </ThemedView>
-        </ThemedView>
-      </ThemedView>
+            <View style={styles.statItem}>
+              <ThemedText style={styles.statLabel}>Activities Logged</ThemedText>
+              <ThemedText style={styles.statValue}>{member.activities_logged}</ThemedText>
+            </View>
+          </View>
+          <View style={styles.detailsContainer}>
+            <View style={styles.detailItem}>
+              <ThemedText style={styles.detailLabel}>Current Milestone</ThemedText>
+              <ThemedText style={styles.detailValue}>{member.current_milestone}</ThemedText>
+            </View>
+            <View style={styles.detailItem}>
+              <ThemedText style={styles.detailLabel}>Team Contribution</ThemedText>
+              <ThemedText style={styles.detailValue}>{member.contribution_percentage}</ThemedText>
+            </View>
+            <View style={styles.detailItem}>
+              <ThemedText style={styles.detailLabel}>Member Since</ThemedText>
+              <ThemedText style={styles.detailValue}>
+                {new Date(member.joined_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+              </ThemedText>
+            </View>
+          </View>
+          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+            <ThemedText style={styles.closeButtonText}>Close</ThemedText>
+          </TouchableOpacity>
+        </View>
+      </View>
     </Modal>
   );
 }
@@ -99,108 +87,98 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: '90%',
-    maxWidth: 500,
-    borderRadius: 8,
-    overflow: 'hidden',
+    maxWidth: 400,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    alignItems: 'center',
   },
   header: {
-    backgroundColor: '#C41E3A',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
     alignItems: 'center',
-    position: 'relative',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  closeButton: {
-    position: 'absolute',
-    right: 12,
-    top: 12,
-    zIndex: 10,
-  },
-  closeButtonContainer: {
-    width: 30,
-    height: 30,
-    borderRadius: 4,
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  closeX: {
-    color: 'white',
-    fontSize: 22,
-    fontWeight: 'bold',
-    lineHeight: 24,
-    textAlign: 'center',
-  },
-  content: {
-    backgroundColor: 'white',
-    padding: 20,
-  },
-  memberHeader: {
-    flexDirection: 'row',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#9C27B0',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  avatarText: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  memberInfo: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  memberName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 3,
-    color: '#333333',
-  },
-  memberSubtext: {
-    fontSize: 14,
-    color: '#666666',
+  name: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#222',
     marginBottom: 2,
+    textAlign: 'center',
   },
-  section: {
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-    paddingTop: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    color: '#333333',
-  },
-  summaryItem: {
+  statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    width: '100%',
+    marginBottom: 20,
+    gap: 8,
   },
-  summaryLabel: {
-    fontSize: 16,
-    color: '#666666',
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 8,
   },
-  summaryValue: {
+  statLabel: {
+    fontSize: 13,
+    color: '#888',
+    marginBottom: 2,
+  },
+  statValue: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333333',
+    color: '#222',
+  },
+  detailsContainer: {
+    width: '100%',
+    marginBottom: 16,
+  },
+  detailItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  detailLabel: {
+    fontSize: 14,
+    color: '#888',
+  },
+  detailValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#222',
+  },
+  closeButton: {
+    backgroundColor: '#C41E3A',
+    paddingVertical: 14,
+    paddingHorizontal: 40,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 16,
+    width: '70%',
+  },
+  closeButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'white',
+    textAlign: 'center',
   },
 }); 

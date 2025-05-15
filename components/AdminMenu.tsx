@@ -32,7 +32,7 @@ export function AdminMenu({ position = 'topRight' }: AdminMenuProps) {
     setMenuVisible(false);
   };
 
-  const navigateTo = (route: 'setup' | 'reports') => {
+  const navigateTo = (route: 'setup' | 'reports' | 'activity-types') => {
     closeMenu();
     router.push(`/admin/${route}` as any);
   };
@@ -76,6 +76,13 @@ export function AdminMenu({ position = 'topRight' }: AdminMenuProps) {
                   onPress={() => navigateTo('reports')}
                 >
                   <ThemedText style={styles.menuItemText}>Reports</ThemedText>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => navigateTo('activity-types')}
+                >
+                  <ThemedText style={styles.menuItemText}>Activity Types</ThemedText>
                 </TouchableOpacity>
               </ThemedView>
             </TouchableWithoutFeedback>
