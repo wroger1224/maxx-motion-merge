@@ -649,10 +649,9 @@ const styles = StyleSheet.create({
   },
   searchButton: {
     backgroundColor: '#0a7ea4',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+		padding: 8,
     borderRadius: 4,
-    marginLeft: 10,
+    marginLeft: 8,
   },
   searchButtonText: {
     color: 'white',

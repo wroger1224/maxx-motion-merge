@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, ImageBackground, Modal, TouchableOpacity, Pressable, StyleSheet, Platform, Alert, Animated } from 'react-native';
+import { View, Text, ScrollView, Modal, TouchableOpacity, Pressable, StyleSheet, Platform, Alert, Animated } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Card } from '@/components/ui/card';
@@ -12,6 +12,7 @@ import { TextInput } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/lib/auth';
+import { ResponsiveHeader } from '@/components/ui/responsiveHeader';
 
 // Types for our Supabase data
 type ActivityType = {
@@ -650,10 +651,8 @@ export default function Activity() {
 
   return (
     <View style={styles.container}>
-      <ImageBackground
+      <ResponsiveHeader
         source={require('../../assets/images/gym-equipment.png')}
-        style={styles.headerBackground}
-        resizeMode="cover"
       >
         <LinearGradient
           colors={['rgba(196, 30, 58, 0.9)', 'rgba(128, 128, 128, 0.85)']}
@@ -671,7 +670,7 @@ export default function Activity() {
             <Text style={styles.tagline}>Track your motion. Reach your potential.</Text>
           </View>
         </LinearGradient>
-      </ImageBackground>
+      </ResponsiveHeader>
 
       {/* Main activity page tabs */}
       <View style={styles.mainTabs}>
@@ -724,6 +723,7 @@ export default function Activity() {
               <Text style={styles.actionButtonText}>Manual Entry</Text>
             </TouchableOpacity>
           </View>
+			
 
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Add By Activity Type</Text>
@@ -981,9 +981,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F5F5',
   },
-  headerBackground: {
-    height: 300,
-  },
   headerOverlay: {
     flex: 1,
   },
@@ -1123,7 +1120,7 @@ const styles = StyleSheet.create({
   actionButton: {
     flex: 1,
     backgroundColor: '#C41E3A',
-    paddingVertical: 12,
+    paddingVertical: 8,
     borderRadius: 8,
     alignItems: 'center',
     marginHorizontal: 4,

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, FlatList, Animated, TouchableOpacity, Modal, Dimensions, Platform, Image, ImageBackground, ScrollView } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { StyleSheet, View, Text, FlatList, Animated, TouchableOpacity, Modal, Dimensions, Platform, Image, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import Constants from 'expo-constants';
@@ -7,8 +7,11 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { useUser } from '@/contexts/UserContext';
 import { useRouter } from 'expo-router';
+import { ResponsiveHeader } from '@/components/ui/responsiveHeader';
 
-const BADGE_SIZE = (Dimensions.get('window').width - 48) / 3;
+const WIDTH = Dimensions.get('window').width;
+const BADGE_SIZE = WIDTH > 768 ? (WIDTH - 48) / 3 : WIDTH - 48;
+const NUM_COLUMNS = WIDTH > 768 ? 3 : 1;
 const BADGE_PADDING = 6;
 const GRID_PADDING = 16;
 
@@ -197,7 +200,7 @@ export default function AchievementsScreen() {
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [totalMinutes, setTotalMinutes] = useState(0);
   const [badgeProgress, setBadgeProgress] = useState<Record<string, number>>({});
-  const scaleAnim = new Animated.Value(1);
+  const scaleAnim = useRef(new Animated.Value(1)).current;
   const router = useRouter();
 
   useEffect(() => {
@@ -431,23 +434,6 @@ export default function AchievementsScreen() {
     }
   };
 
-  useEffect(() => {
-    const pulseAnimation = Animated.sequence([
-      Animated.timing(scaleAnim, {
-        toValue: 1.2,
-        duration: 1000,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 1000,
-        useNativeDriver: true,
-      }),
-    ]);
-
-    Animated.loop(pulseAnimation).start();
-  }, []);
-
   const renderStreak = () => {
     const flames = [];
     for (let i = 0; i < 30; i++) {
@@ -496,41 +482,25 @@ export default function AchievementsScreen() {
   };
 
   const renderBadge = ({ item, index }: { item: Badge; index: number }) => {
-    const scaleAnim = new Animated.Value(1);
     const progress = badgeProgress[item.id] || 0;
     const isUnlocked = progress >= item.total;
-
-    const onPressIn = () => {
-      Animated.spring(scaleAnim, {
-        toValue: 0.95,
-        friction: 5,
-        useNativeDriver: true,
-      }).start();
-    };
-
-    const onPressOut = () => {
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        friction: 5,
-        useNativeDriver: true,
-      }).start();
-      setSelectedBadge({ ...item, isUnlocked, progress });
+	
+    const onPress = () => {
+			setSelectedBadge({ ...item, isUnlocked, progress });
     };
 
     const categoryColor = getCategoryColor(item.category);
 
     return (
       <TouchableOpacity
-        onPressIn={onPressIn}
-        onPressOut={onPressOut}
+        onPress={ onPress }
         activeOpacity={1}
         style={styles.badgeContainer}
       >
-        <Animated.View
+        <View
           style={[
             styles.badge,
             isUnlocked ? styles.badgeUnlocked : styles.badgeLocked,
-            { transform: [{ scale: scaleAnim }] }
           ]}
         >
           {isUnlocked && (
@@ -562,7 +532,7 @@ export default function AchievementsScreen() {
           <Text style={styles.progressText}>
             {progress}/{item.total}
           </Text>
-        </Animated.View>
+        </View>
       </TouchableOpacity>
     );
   };
@@ -650,10 +620,8 @@ export default function AchievementsScreen() {
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      <ImageBackground
+      <ResponsiveHeader
         source={require('@/assets/images/gym-equipment.png')}
-        style={styles.headerBackground}
-        resizeMode="cover"
       >
         <LinearGradient
           colors={['rgba(196, 30, 58, 0.9)', 'rgba(128, 128, 128, 0.85)']}
@@ -671,7 +639,7 @@ export default function AchievementsScreen() {
             <Text style={styles.tagline}>Track your motion. Reach your potential.</Text>
           </View>
         </LinearGradient>
-      </ImageBackground>
+      </ResponsiveHeader>
 
       <View style={styles.streakContainer}>
         <View style={styles.streakIconContainer}>
@@ -686,21 +654,22 @@ export default function AchievementsScreen() {
         </View>
       </View>
 
-      <ScrollView style={styles.content}>
-        {renderMilestoneProgress()}
-
-        <View style={styles.achievementsSection}>
-          <Text style={styles.achievementsTitle}>My Achievements</Text>
-          <FlatList
-            data={badges}
-            renderItem={renderBadge}
-            keyExtractor={item => item.id}
-            numColumns={3}
-            scrollEnabled={false}
-            contentContainerStyle={styles.badgesGrid}
-          />
-        </View>
-      </ScrollView>
+			<View style={styles.achievementsSection}>
+				<FlatList
+					ListHeaderComponent={
+						<>
+							{renderMilestoneProgress()}
+							<Text style={styles.achievementsTitle}>My Achievements</Text>
+						</>
+					}
+					data={badges}
+					renderItem={renderBadge}
+					keyExtractor={item => item.id}
+					numColumns={ NUM_COLUMNS }
+					scrollEnabled={true}
+					contentContainerStyle={styles.badgesGrid}
+				/>
+			</View>
 
       <Modal
         visible={selectedBadge !== null}
@@ -744,9 +713,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F5F5',
     paddingTop: Constants.statusBarHeight,
-  },
-  headerBackground: {
-    height: 300,
   },
   headerOverlay: {
     flex: 1,
@@ -830,8 +796,9 @@ const styles = StyleSheet.create({
   },
   streakFlamesContainer: {
     flexDirection: 'row',
+		flexWrap: 'wrap',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: WIDTH > 500 ? 'space-between' : 'flex-start',
     marginVertical: 8,
     width: '100%',
   },
@@ -1133,7 +1100,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   achievementsSection: {
-    marginTop: 24,
+		flex: 1,
+    marginTop: 16,
     paddingHorizontal: GRID_PADDING,
   },
   achievementsTitle: {
@@ -1155,7 +1123,6 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   badgesGrid: {
-    flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     paddingHorizontal: BADGE_PADDING,

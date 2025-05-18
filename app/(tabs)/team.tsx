@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, TextInput, Image, Pressable, Platform, ImageBackground, Text, ActivityIndicator, TouchableOpacity, Modal, Alert, ScrollView } from 'react-native';
+import { StyleSheet, View, TextInput, Image, Pressable, Platform, Text, ActivityIndicator, TouchableOpacity, Modal, Alert, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -10,6 +10,7 @@ import { useIsFocused } from '@react-navigation/native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import MemberDetails from '@/app/screens/MemberDetails';
+import { ResponsiveHeader } from '@/components/ui/responsiveHeader';
 
 type TeamMember = {
   id: string; // UUID from team_members table
@@ -650,10 +651,8 @@ export default function TeamScreen() {
 
   return (
     <View style={styles.container}>
-      <ImageBackground
+      <ResponsiveHeader
         source={require('@/assets/images/gym-equipment.png')}
-        style={styles.headerBackground}
-        resizeMode="cover"
       >
         <LinearGradient
           colors={['rgba(196, 30, 58, 0.9)', 'rgba(128, 128, 128, 0.85)']}
@@ -671,7 +670,7 @@ export default function TeamScreen() {
             <Text style={styles.tagline}>Track your motion. Reach your potential.</Text>
           </View>
         </LinearGradient>
-      </ImageBackground>
+      </ResponsiveHeader>
 
       {!userTeam ? (
         <View style={styles.noTeamContainer}>
@@ -949,9 +948,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  headerBackground: {
-    height: 300,
   },
   headerOverlay: {
     flex: 1,
