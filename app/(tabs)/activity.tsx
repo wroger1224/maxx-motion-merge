@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Modal, TouchableOpacity, Pressable, StyleSheet, Platform, Alert, Animated } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import { supabase } from '@/lib/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/lib/auth';
 import { ResponsiveHeader } from '@/components/ui/responsiveHeader';
+import { router } from 'expo-router';
 
 // Types for our Supabase data
 type ActivityType = {
@@ -197,6 +198,7 @@ function ActivityReview({ refreshTrigger, onRefreshComplete, onEditActivity }: {
 
 export default function Activity() {
   const navigation = useNavigation<NavigationProp>();
+  const isFocused = useIsFocused();
   const { user } = useAuth();
 
   const [activityTypes, setActivityTypes] = useState<ActivityType[]>([]);

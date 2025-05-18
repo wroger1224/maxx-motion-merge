@@ -100,6 +100,14 @@ export default function TeamScreen() {
     }
   }, [user]);
 
+  // Refresh team data when screen comes into focus
+  useEffect(() => {
+    if (isFocused && userTeam) {
+      fetchTeamMembers();
+      fetchTeamRank();
+    }
+  }, [isFocused, userTeam]);
+
   // Fetch team members when team is loaded
   useEffect(() => {
     if (userTeam) {
@@ -331,6 +339,30 @@ export default function TeamScreen() {
     if (!userTeam) return;
 
     try {
+      console.log('Fetching team members for team:', userTeam.id);
+      console.log('Current event ID:', userTeam.event_id);
+
+      // Get today's date in YYYY-MM-DD format
+      const today = new Date().toISOString().split('T')[0];
+
+      // Fetch current active event
+      const { data: currentData, error: currentError } = await supabase
+        .from('events')
+        .select('*')
+        .lte('start_date', today)
+        .gte('end_date', today)
+        .order('start_date', { ascending: false })
+        .limit(1);
+
+      if (currentError) {
+        console.error('Error fetching current event:', currentError);
+        return;
+      }
+
+      // Use the current event if available, otherwise use the team's event
+      const eventId = currentData && currentData.length > 0 ? currentData[0].id : userTeam.event_id;
+      console.log('Using event ID:', eventId);
+
       // Get all team members
       const { data: members, error: membersError } = await supabase
         .from('team_members')
@@ -342,12 +374,16 @@ export default function TeamScreen() {
         return;
       }
 
+      console.log('Found team members:', members?.length || 0);
+
       // Get activities for all current team members only
       const memberUserIds = members.map(m => m.user_id);
+      console.log('Fetching activities for user IDs:', memberUserIds);
+
       const { data: activities, error: activitiesError } = await supabase
         .from('activities')
         .select('user_id, activity_minutes')
-        .eq('event_id', userTeam.event_id)
+        .eq('event_id', eventId)
         .in('user_id', memberUserIds);
 
       if (activitiesError) {
@@ -355,6 +391,7 @@ export default function TeamScreen() {
       }
 
       console.log('Activities fetched for team:', activities);
+      console.log('Number of activities found:', activities?.length || 0);
 
       // Calculate minutes for each member
       const memberMinutes: { [key: string]: number } = {};
@@ -362,7 +399,7 @@ export default function TeamScreen() {
         memberMinutes[activity.user_id] = (memberMinutes[activity.user_id] || 0) + activity.activity_minutes;
       });
 
-      console.log('Member minutes:', memberMinutes);
+      console.log('Member minutes calculated:', memberMinutes);
 
       // Calculate total minutes for the team
       const totalMinutes = Object.values(memberMinutes).reduce((sum, minutes) => sum + minutes, 0);
