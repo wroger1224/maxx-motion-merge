@@ -161,7 +161,8 @@ export default function DashboardScreen() {
       // 3. Team Leaderboard
       const { data: allTeams } = await supabase
         .from('teams')
-        .select('id, team_name, event_id');
+        .select('id, team_name')
+				.eq('event_id', currentEvent.id);
       const leaderboard: Team[] = [];
       for (const team of allTeams || []) {
         // Get members

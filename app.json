@@ -55,7 +55,15 @@
             "WRITE_CALORIES"
           ]
         }
-      ]
+      ],
+			[
+				"expo-build-properties",
+				{
+					"android": {
+						"minSdkVersion": 26
+					}
+				}
+			]
     ],
     "experiments": {
       "typedRoutes": true
@@ -65,9 +73,8 @@
         "origin": false
       },
       "eas": {
-        "projectId": "d7f1a372-150d-4bb1-b050-546f08c91171"
+        "projectId": "310c2824-96b9-4a0d-913d-aa279d98c378"
       }
-    },
-    "owner": "tucker.mahan-org"
+    }
   }
 }
