@@ -69,13 +69,10 @@ export const signInWithGoogle = async () => {
  * Get the redirect URI for OAuth based on the current platform
  */
 function getRedirectUri(): string {
-  if (Platform.OS === 'web') {
+ 
     return window.location.origin;
-  }
   
-  // For iOS and Android simulators/devices
-  const scheme = Constants.expoConfig?.scheme || 'maxx-motion';
-  return `${scheme}://`;
+
 }
 
 /**

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator, FlatList, Dimensions } from 'react-native';
+import { StyleSheet, View, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator, FlatList, Dimensions, Platform } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useUser } from '../../contexts/UserContext';
@@ -13,6 +13,7 @@ type Milestone = {
   milestone_name: string;
 };
 
+const IS_WEB = Platform.OS === 'web';
 export default function ManageMilestonesScreen() {
   const params = useLocalSearchParams();
   const eventId = params.eventId as string;
@@ -36,7 +37,11 @@ export default function ManageMilestonesScreen() {
       fetchEventDetails();
       fetchMilestones();
     } else {
-      Alert.alert('Error', 'No event ID provided');
+      if (IS_WEB) {
+        window.alert('No event ID provided');
+      } else {
+        Alert.alert('Error', 'No event ID provided');
+      }
       router.back();
     }
   }, [eventId]);
@@ -51,14 +56,22 @@ export default function ManageMilestonesScreen() {
       
       if (error) {
         console.error('Error fetching event details:', error);
-        Alert.alert('Error', 'Failed to load event details');
+        if (IS_WEB) {
+          window.alert('Failed to load event details');
+        } else {
+          Alert.alert('Error', 'Failed to load event details');
+        }
         return;
       }
       
       setEventName(data.name);
     } catch (error) {
       console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      if (IS_WEB) {
+        window.alert('An unexpected error occurred');
+      } else {
+        Alert.alert('Error', 'An unexpected error occurred');
+      }
     }
   };
 
@@ -73,14 +86,22 @@ export default function ManageMilestonesScreen() {
       
       if (error) {
         console.error('Error fetching milestones:', error);
-        Alert.alert('Error', 'Failed to load milestones');
+        if (IS_WEB) {
+          window.alert('Failed to load milestones');
+        } else {
+          Alert.alert('Error', 'Failed to load milestones');
+        }
         return;
       }
       
       setMilestones(data || []);
     } catch (error) {
       console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+			if(IS_WEB) {
+				window.alert('An unexpected error occurred');
+			} else {
+				Alert.alert('Error', 'An unexpected error occurred');
+			}
     } finally {
       setIsLoading(false);
     }
@@ -114,29 +135,7 @@ export default function ManageMilestonesScreen() {
     ));
   };
 
-  const handleRemoveMilestone = (id: string) => {
-    Alert.alert(
-      'Confirm Delete',
-      'Are you sure you want to delete this milestone?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
-          style: 'destructive',
-          onPress: () => {
-            // If it's a new milestone (not yet saved to DB)
-            if (id.startsWith('new-')) {
-              setMilestones(milestones.filter(m => m.id !== id));
-            } else {
-              deleteMilestone(id);
-            }
-          }
-        }
-      ]
-    );
-  };
-
-  const deleteMilestone = async (id: string) => {
+	const deleteMilestone = async (id: string) => {
     try {
       setIsLoading(true);
       const { error } = await supabase
@@ -146,19 +145,64 @@ export default function ManageMilestonesScreen() {
       
       if (error) {
         console.error('Error deleting milestone:', error);
-        Alert.alert('Error', 'Failed to delete milestone');
+        if (IS_WEB) {
+          window.alert('Failed to delete milestone');
+        } else {
+          Alert.alert('Error', 'Failed to delete milestone');
+        }
         return;
       }
       
       setMilestones(milestones.filter(m => m.id !== id));
-      Alert.alert('Success', 'Milestone deleted successfully');
+      if (IS_WEB) {
+        window.alert('Milestone deleted successfully');
+      } else {
+        Alert.alert('Success', 'Milestone deleted successfully');
+      }
     } catch (error) {
       console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      if (IS_WEB) {
+        window.alert('An unexpected error occurred');
+      } else {
+        Alert.alert('Error', 'An unexpected error occurred');
+      }
     } finally {
       setIsLoading(false);
     }
   };
+
+  const handleRemoveMilestone = (id: string) => {
+    if (IS_WEB) {
+      if (window.confirm('Are you sure you want to delete this milestone?')) {
+        // If it's a new milestone (not yet saved to DB)
+        if (id.startsWith('new-')) {
+          setMilestones(milestones.filter(m => m.id !== id));	
+				} else {
+					deleteMilestone(id);
+				}
+			}
+		} else {
+			Alert.alert(
+				'Confirm Delete',
+				'Are you sure you want to delete this milestone?',
+				[
+					{ text: 'Cancel', style: 'cancel' },
+					{ 
+						text: 'Delete', 
+						style: 'destructive',
+						onPress: () => {
+							// If it's a new milestone (not yet saved to DB)
+							if (id.startsWith('new-')) {
+								setMilestones(milestones.filter(m => m.id !== id));
+							} else {
+								deleteMilestone(id);
+							}
+						}
+					}
+				]
+			);
+		}
+	};
 
   const handleSaveChanges = async () => {
     try {
@@ -180,7 +224,11 @@ export default function ManageMilestonesScreen() {
         
         if (createError) {
           console.error('Error creating milestones:', createError);
-          Alert.alert('Error', 'Failed to save new milestones');
+          if (IS_WEB) {
+            window.alert('Failed to save new milestones');
+          } else {
+            Alert.alert('Error', 'Failed to save new milestones');
+          }
           return;
         }
       }
@@ -197,7 +245,11 @@ export default function ManageMilestonesScreen() {
         
         if (updateError) {
           console.error(`Error updating milestone ${milestone.id}:`, updateError);
-          Alert.alert('Error', 'Failed to update some milestones');
+          if (IS_WEB) {
+            window.alert('Failed to update some milestones');
+          } else {
+            Alert.alert('Error', 'Failed to update some milestones');
+          }
           return;
         }
       }
@@ -205,19 +257,33 @@ export default function ManageMilestonesScreen() {
       // Refresh the milestones list
       await fetchMilestones();
       setEditMode(false);
-      Alert.alert('Success', 'Milestones updated successfully');
+      if (IS_WEB) {
+        window.alert('Milestones updated successfully');
+      } else {
+        Alert.alert('Success', 'Milestones updated successfully');
+      }
     } catch (error) {
       console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      if (IS_WEB) {
+        window.alert('An unexpected error occurred');
+      } else {
+        Alert.alert('Error', 'An unexpected error occurred');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleCancelEdit = () => {
-    Alert.alert(
-      'Discard Changes',
-      'Are you sure you want to discard your changes?',
+    if (IS_WEB) {
+      if (window.confirm('Are you sure you want to discard your changes?')) {
+        fetchMilestones();
+        setEditMode(false);
+      }
+    } else {
+      Alert.alert(
+        'Discard Changes',
+        'Are you sure you want to discard your changes?',
       [
         { text: 'Keep Editing', style: 'cancel' },
         { 
@@ -229,7 +295,8 @@ export default function ManageMilestonesScreen() {
           }
         }
       ]
-    );
+    	);
+    }
   };
 
   if (userLoading) {
