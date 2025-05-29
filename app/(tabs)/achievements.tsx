@@ -28,7 +28,8 @@ interface Badge {
   imageUrl: string;
 }
 
-const badges: Badge[] = [
+// Keep the hardcoded badges array as a fallback
+const defaultBadges: Badge[] = [
   // Step-Based Goals
   {
     id: '1',
@@ -200,6 +201,7 @@ export default function AchievementsScreen() {
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [totalMinutes, setTotalMinutes] = useState(0);
   const [badgeProgress, setBadgeProgress] = useState<Record<string, number>>({});
+  const [badges, setBadges] = useState<Badge[]>(defaultBadges);
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const router = useRouter();
 
@@ -207,6 +209,7 @@ export default function AchievementsScreen() {
     fetchMilestones();
     fetchBadgeProgress();
     fetchStreak();
+    fetchBadges();
     console.log('Initial useEffect called');
   }, []);
 
@@ -278,6 +281,55 @@ export default function AchievementsScreen() {
       setMilestones(processedMilestones);
     } catch (error) {
       console.error('Error in fetchMilestones:', error);
+    }
+  };
+
+  const fetchBadges = async () => {
+    try {
+      if (!userProfile?.id) return;
+
+      // Get the current active event
+      const { data: activeEvent, error: eventError } = await supabase
+        .from('events')
+        .select('id')
+        .eq('status', 'Active')
+        .single();
+
+      if (eventError) {
+        console.error('Error fetching active event:', eventError);
+        return;
+      }
+
+      // Fetch badges from the database
+      const { data: badgesData, error: badgesError } = await supabase
+        .from('badges')
+        .select('*')
+        .eq('event_id', activeEvent.id);
+
+      if (badgesError) {
+        console.error('Error fetching badges:', badgesError);
+        return;
+      }
+
+      if (badgesData && badgesData.length > 0) {
+        // Transform the database badges into the format we need
+        const transformedBadges = badgesData.map(badge => ({
+          id: badge.id,
+          name: badge.name,
+          icon: badge.icon,
+          description: badge.description,
+          isUnlocked: false, // This will be updated by fetchBadgeProgress
+          progress: 0, // This will be updated by fetchBadgeProgress
+          total: badge.total,
+          category: badge.category,
+          emoji: badge.emoji,
+          imageUrl: badge.image_url
+        }));
+
+        setBadges(transformedBadges);
+      }
+    } catch (error) {
+      console.error('Error in fetchBadges:', error);
     }
   };
 
@@ -354,6 +406,15 @@ export default function AchievementsScreen() {
       progress['12'] = Math.min(5, nightWorkouts); // Night Owl
 
       setBadgeProgress(progress);
+
+      // Update badges with progress and unlocked status
+      setBadges(prevBadges =>
+        prevBadges.map(badge => ({
+          ...badge,
+          progress: progress[badge.id] || 0,
+          isUnlocked: (progress[badge.id] || 0) >= badge.total
+        }))
+      );
     } catch (error) {
       console.error('Error in fetchBadgeProgress:', error);
     }
@@ -484,16 +545,16 @@ export default function AchievementsScreen() {
   const renderBadge = ({ item, index }: { item: Badge; index: number }) => {
     const progress = badgeProgress[item.id] || 0;
     const isUnlocked = progress >= item.total;
-	
+
     const onPress = () => {
-			setSelectedBadge({ ...item, isUnlocked, progress });
+      setSelectedBadge({ ...item, isUnlocked, progress });
     };
 
     const categoryColor = getCategoryColor(item.category);
 
     return (
       <TouchableOpacity
-        onPress={ onPress }
+        onPress={onPress}
         activeOpacity={1}
         style={styles.badgeContainer}
       >
@@ -654,22 +715,22 @@ export default function AchievementsScreen() {
         </View>
       </View>
 
-			<View style={styles.achievementsSection}>
-				<FlatList
-					ListHeaderComponent={
-						<>
-							{renderMilestoneProgress()}
-							<Text style={styles.achievementsTitle}>My Achievements</Text>
-						</>
-					}
-					data={badges}
-					renderItem={renderBadge}
-					keyExtractor={item => item.id}
-					numColumns={ NUM_COLUMNS }
-					scrollEnabled={true}
-					contentContainerStyle={styles.badgesGrid}
-				/>
-			</View>
+      <View style={styles.achievementsSection}>
+        <FlatList
+          ListHeaderComponent={
+            <>
+              {renderMilestoneProgress()}
+              <Text style={styles.achievementsTitle}>My Achievements</Text>
+            </>
+          }
+          data={badges}
+          renderItem={renderBadge}
+          keyExtractor={item => item.id}
+          numColumns={NUM_COLUMNS}
+          scrollEnabled={true}
+          contentContainerStyle={styles.badgesGrid}
+        />
+      </View>
 
       <Modal
         visible={selectedBadge !== null}
@@ -796,7 +857,7 @@ const styles = StyleSheet.create({
   },
   streakFlamesContainer: {
     flexDirection: 'row',
-		flexWrap: 'wrap',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: WIDTH > 500 ? 'space-between' : 'flex-start',
     marginVertical: 8,
@@ -1100,7 +1161,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   achievementsSection: {
-		flex: 1,
+    flex: 1,
     marginTop: 16,
     paddingHorizontal: GRID_PADDING,
   },
