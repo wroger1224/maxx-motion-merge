@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, TouchableOpacity, ScrollView, Text} from 'react-native';
+import { StyleSheet, View, TouchableOpacity, ScrollView, Text } from 'react-native';
 import { useEffect, useState } from 'react';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
@@ -162,7 +162,7 @@ export default function DashboardScreen() {
       const { data: allTeams } = await supabase
         .from('teams')
         .select('id, team_name')
-				.eq('event_id', currentEvent.id);
+        .eq('event_id', currentEvent.id);
       const leaderboard: Team[] = [];
       for (const team of allTeams || []) {
         // Get members
