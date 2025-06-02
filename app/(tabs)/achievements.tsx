@@ -208,7 +208,6 @@ export default function AchievementsScreen() {
     fetchBadgeProgress();
     fetchStreak();
     fetchBadges();
-    console.log('Initial useEffect called');
   }, []);
 
   const fetchMilestones = async () => {
@@ -421,11 +420,7 @@ export default function AchievementsScreen() {
 
   const fetchStreak = async () => {
     try {
-      console.log('fetchStreak called');
-      if (!userProfile?.id) {
-        console.log('No user profile ID');
-        return;
-      }
+      if (!userProfile?.id) return;
 
       // Get the current active event
       const { data: activeEvent, error: eventError } = await supabase
@@ -434,12 +429,7 @@ export default function AchievementsScreen() {
         .eq('status', 'Active')
         .single();
 
-      if (eventError) {
-        console.error('Error fetching active event:', eventError);
-        return;
-      }
-
-      console.log('Active event:', activeEvent);
+      if (eventError) return;
 
       // Fetch user's activities
       const { data: activities, error: activitiesError } = await supabase
@@ -449,52 +439,71 @@ export default function AchievementsScreen() {
         .eq('user_id', userProfile.id)
         .order('activity_date', { ascending: false });
 
-      if (activitiesError) {
-        console.error('Error fetching activities:', activitiesError);
-        return;
-      }
-
-      console.log('Activities:', activities);
-
-      if (!activities || activities.length === 0) {
-        console.log('No activities found');
+      if (activitiesError || !activities || activities.length === 0) {
         setCurrentStreak(0);
         return;
       }
 
-      // SIMPLIFIED APPROACH: Just count activities from today
+      // Get today's date in local time
       const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      const todayStr = today.toLocaleDateString('en-CA');
 
-      // Format today's date as YYYY-MM-DD for comparison
-      const todayFormatted = today.toISOString().split('T')[0];
-      console.log('Today formatted:', todayFormatted);
-
-      // Count activities from today using string comparison
-      const todayActivities = activities.filter(activity => {
-        // Format activity date as YYYY-MM-DD
-        const activityDateFormatted = activity.activity_date.split('T')[0];
-        console.log('Activity date:', activity.activity_date, 'Formatted:', activityDateFormatted);
-        return activityDateFormatted === todayFormatted;
+      // Check if there's activity today
+      const hasActivityToday = activities.some(activity => {
+        const activityDate = new Date(activity.activity_date).toLocaleDateString('en-CA');
+        return activityDate === todayStr;
       });
 
-      console.log('Today activities count:', todayActivities.length);
-
-      // If there are activities today, set streak to at least 1
-      if (todayActivities.length > 0) {
-        console.log('Setting streak to 1 for today');
-        setCurrentStreak(1);
-      } else {
-        console.log('No activities today, setting streak to 0');
+      if (!hasActivityToday) {
         setCurrentStreak(0);
+        return;
       }
+
+      // Start counting streak from today
+      let streak = 1;
+      let currentDate = new Date(today);
+      currentDate.setDate(currentDate.getDate() - 1); // Move to yesterday
+
+      // Keep checking previous days until we find a gap
+      while (true) {
+        const dateStr = currentDate.toLocaleDateString('en-CA');
+        const hasActivity = activities.some(activity => {
+          const activityDate = new Date(activity.activity_date).toLocaleDateString('en-CA');
+          return activityDate === dateStr;
+        });
+
+        if (hasActivity) {
+          streak++;
+          currentDate.setDate(currentDate.getDate() - 1);
+        } else {
+          break;
+        }
+      }
+
+      setCurrentStreak(streak);
     } catch (error) {
-      console.error('Error in fetchStreak:', error);
       setCurrentStreak(0);
     }
   };
 
   const renderStreak = () => {
+    return (
+      <View style={styles.streakContainer}>
+        <View style={styles.streakIconContainer}>
+          <FontAwesome5 name="crown" size={32} color="#FFD700" />
+        </View>
+        <View style={styles.streakInfo}>
+          <Text style={styles.streakTitle}>{currentStreak} Day Streak!</Text>
+          <View style={styles.streakFlamesContainer}>
+            {renderStreakFlames()}
+          </View>
+          <Text style={styles.streakSubtitle}>{7 - currentStreak} days until next reward</Text>
+        </View>
+      </View>
+    );
+  };
+
+  const renderStreakFlames = () => {
     const flames = [];
     for (let i = 0; i < 30; i++) {
       flames.push(
@@ -659,18 +668,7 @@ export default function AchievementsScreen() {
         </LinearGradient>
       </ResponsiveHeader>
 
-      <View style={styles.streakContainer}>
-        <View style={styles.streakIconContainer}>
-          <FontAwesome5 name="crown" size={32} color="#FFD700" />
-        </View>
-        <View style={styles.streakInfo}>
-          <Text style={styles.streakTitle}>{currentStreak} Day Streak!</Text>
-          <View style={styles.streakFlamesContainer}>
-            {renderStreak()}
-          </View>
-          <Text style={styles.streakSubtitle}>{7 - currentStreak} days until next reward</Text>
-        </View>
-      </View>
+      {renderStreak()}
 
       <View style={styles.achievementsSection}>
         <FlatList
