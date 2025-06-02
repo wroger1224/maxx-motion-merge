@@ -35,10 +35,10 @@ const defaultBadges: Badge[] = [
     id: '1',
     name: 'Step Starter',
     icon: 'shoe-prints',
-    description: '5k Steps in one day',
-    isUnlocked: true,
-    progress: 5000,
-    total: 5000,
+    description: '10k Steps in one day',
+    isUnlocked: false,
+    progress: 0,
+    total: 10000,
     category: 'Steps',
     emoji: '👣',
     imageUrl: 'https://images.unsplash.com/photo-1571008887538-b36bb32f4571?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
@@ -47,10 +47,10 @@ const defaultBadges: Badge[] = [
     id: '2',
     name: 'Step Master',
     icon: 'walking',
-    description: '10k Steps in one day',
+    description: '20k Steps in one day',
     isUnlocked: false,
-    progress: 7500,
-    total: 10000,
+    progress: 0,
+    total: 20000,
     category: 'Steps',
     emoji: '👟',
     imageUrl: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
@@ -59,10 +59,10 @@ const defaultBadges: Badge[] = [
     id: '3',
     name: 'Step Champion',
     icon: 'running',
-    description: '20k Steps in one day',
+    description: '40k Steps in one day',
     isUnlocked: false,
-    progress: 12000,
-    total: 20000,
+    progress: 0,
+    total: 40000,
     category: 'Steps',
     emoji: '👟',
     imageUrl: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
@@ -195,9 +195,7 @@ type Milestone = {
 
 export default function AchievementsScreen() {
   const { userProfile } = useUser();
-  const [showAchievement, setShowAchievement] = useState(false);
   const [currentStreak, setCurrentStreak] = useState(0);
-  const [selectedBadge, setSelectedBadge] = useState<Badge | null>(null);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [totalMinutes, setTotalMinutes] = useState(0);
   const [badgeProgress, setBadgeProgress] = useState<Record<string, number>>({});
@@ -364,11 +362,12 @@ export default function AchievementsScreen() {
       // Calculate progress for each badge type
       const progress: Record<string, number> = {};
 
-      // Step-based badges
-      const maxSteps = Math.max(...activities.map(a => a.activity_minutes || 0));
-      progress['1'] = Math.min(5000, maxSteps); // Step Starter
-      progress['2'] = Math.min(10000, maxSteps); // Step Master
-      progress['3'] = Math.min(20000, maxSteps); // Step Champion
+      // Step-based badges - Convert minutes to steps (100 steps per minute)
+      const stepsPerMinute = 100;
+      const maxSteps = Math.max(...activities.map(a => (a.activity_minutes || 0) * stepsPerMinute));
+      progress['1'] = maxSteps; // Step Starter
+      progress['2'] = maxSteps; // Step Master
+      progress['3'] = maxSteps; // Step Champion
 
       // Workout badges
       const workoutCount = activities.filter(a => a.activity_type === 'workout').length;
@@ -545,19 +544,10 @@ export default function AchievementsScreen() {
   const renderBadge = ({ item, index }: { item: Badge; index: number }) => {
     const progress = badgeProgress[item.id] || 0;
     const isUnlocked = progress >= item.total;
-
-    const onPress = () => {
-      setSelectedBadge({ ...item, isUnlocked, progress });
-    };
-
     const categoryColor = getCategoryColor(item.category);
 
     return (
-      <TouchableOpacity
-        onPress={onPress}
-        activeOpacity={1}
-        style={styles.badgeContainer}
-      >
+      <View style={styles.badgeContainer}>
         <View
           style={[
             styles.badge,
@@ -594,39 +584,6 @@ export default function AchievementsScreen() {
             {progress}/{item.total}
           </Text>
         </View>
-      </TouchableOpacity>
-    );
-  };
-
-  const renderBadgeModal = (badge: Badge) => {
-    const categoryColor = getCategoryColor(badge.category);
-    const progress = badgeProgress[badge.id] || 0;
-
-    return (
-      <View style={styles.modalContent}>
-        <Image
-          source={{ uri: badge.imageUrl }}
-          style={styles.modalImage}
-          resizeMode="cover"
-        />
-        <Text style={styles.modalTitle}>{badge.name}</Text>
-        <View style={[styles.modalCategoryContainer, { backgroundColor: categoryColor }]}>
-          <Text style={styles.modalCategoryText}>{badge.category}</Text>
-        </View>
-        <Text style={styles.modalDescription}>{badge.description}</Text>
-        <>
-          <Text style={styles.modalProgressTitle}>Progress:</Text>
-          {renderProgressEmojis(badge)}
-          <Text style={styles.modalProgressText}>
-            {progress} of {badge.total} completed
-          </Text>
-        </>
-        <TouchableOpacity
-          style={styles.modalCloseButton}
-          onPress={() => setSelectedBadge(null)}
-        >
-          <Text style={styles.modalCloseText}>Close</Text>
-        </TouchableOpacity>
       </View>
     );
   };
@@ -731,40 +688,6 @@ export default function AchievementsScreen() {
           contentContainerStyle={styles.badgesGrid}
         />
       </View>
-
-      <Modal
-        visible={selectedBadge !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setSelectedBadge(null)}
-      >
-        <View style={styles.modalOverlay}>
-          {selectedBadge && renderBadgeModal(selectedBadge)}
-        </View>
-      </Modal>
-
-      <Modal
-        visible={showAchievement}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowAchievement(false)}
-      >
-        <View style={styles.achievementOverlay}>
-          <View style={styles.achievementContent}>
-            <View style={styles.celebrationIcon}>
-              <FontAwesome5 name="trophy" size={48} color="#FFD700" />
-            </View>
-            <Text style={styles.achievementTitle}>New Achievement!</Text>
-            <Text style={styles.achievementDescription}>You've unlocked "Early Riser"</Text>
-            <TouchableOpacity
-              style={styles.modalCloseButton}
-              onPress={() => setShowAchievement(false)}
-            >
-              <Text style={styles.modalCloseText}>Awesome!</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -958,115 +881,15 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 8,
   },
-  modalOverlay: {
+  achievementsSection: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    marginTop: 16,
+    paddingHorizontal: GRID_PADDING,
   },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
-    width: '80%',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  modalImage: {
-    width: '100%',
-    height: 150,
-    borderRadius: 8,
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: 24,
+  achievementsTitle: {
+    fontSize: 20,
     fontWeight: '700',
-    color: '#000',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  modalCategoryContainer: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginBottom: 12,
-  },
-  modalCategoryText: {
-    fontSize: 12,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  modalDescription: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  modalProgressTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 8,
-  },
-  modalProgressEmojiContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  modalProgressEmoji: {
-    fontSize: 24,
-    marginHorizontal: 4,
-  },
-  modalProgressEmojiFilled: {
-    opacity: 1,
-  },
-  modalProgressEmojiEmpty: {
-    opacity: 0.3,
-  },
-  modalProgressText: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  modalCloseButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    backgroundColor: '#C41E3A',
-    borderRadius: 8,
-  },
-  modalCloseText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  achievementOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  achievementContent: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
-    width: '80%',
-  },
-  celebrationIcon: {
-    marginBottom: 16,
-  },
-  achievementTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 8,
-  },
-  achievementDescription: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+    color: '#333',
     marginBottom: 16,
   },
   milestoneSection: {
@@ -1150,26 +973,6 @@ const styles = StyleSheet.create({
   pendingText: {
     fontSize: 14,
     color: '#666',
-  },
-  content: {
-    flex: 1,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#fff',
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  achievementsSection: {
-    flex: 1,
-    marginTop: 16,
-    paddingHorizontal: GRID_PADDING,
-  },
-  achievementsTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: 16,
   },
   milestoneProgressContainer: {
     height: 8,
