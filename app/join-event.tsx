@@ -6,6 +6,7 @@ import { getAvailableEvents, registerUserForEvent, updateTeamsWithEventIds } fro
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { showAlert } from './utils/showAlert';
 
 type Event = {
   id: string;
@@ -57,7 +58,7 @@ export default function JoinEventScreen() {
 
   const navigateToJoinTeam = async () => {
     if (!selectedEventId) {
-      Alert.alert('Selection Required', 'Please select an event to join.');
+      showAlert('Selection Required', 'Please select an event to join.');
       return;
     }
 
@@ -65,7 +66,7 @@ export default function JoinEventScreen() {
       setRegistering(true);
       const { data } = await supabase.auth.getSession();
       if (!data.session) {
-        Alert.alert('Error', 'You need to be logged in to join an event.');
+        showAlert('Error', 'You need to be logged in to join an event.');
         return;
       }
 
@@ -106,7 +107,7 @@ export default function JoinEventScreen() {
             
           if (minimalError) {
             console.error('Failed even with minimal profile:', minimalError);
-            Alert.alert('Error', 'Unable to create user profile. Please try again later.');
+            showAlert('Error', 'Unable to create user profile. Please try again later.');
             return;
           }
         }
@@ -143,7 +144,7 @@ export default function JoinEventScreen() {
         
       if (insertError) {
         console.error('Error registering for event:', insertError);
-        Alert.alert('Registration Error', `Failed to register: ${insertError.message}`);
+        showAlert('Registration Error', `Failed to register: ${insertError.message}`);
         return;
       }
       
@@ -162,7 +163,7 @@ export default function JoinEventScreen() {
       } as any);
     } catch (err) {
       console.error('Error joining event:', err);
-      Alert.alert('Error', 'An unexpected error occurred during registration.');
+      showAlert('Error', 'An unexpected error occurred during registration.');
     } finally {
       setRegistering(false);
     }
@@ -278,7 +279,7 @@ export default function JoinEventScreen() {
                 const { data: events } = await supabase.from('events').select('*');
                 console.log('All teams:', teams);
                 console.log('All events:', events);
-                Alert.alert('Debug Info', `Found ${teams?.length || 0} teams and ${events?.length || 0} events`);
+                showAlert('Debug Info', `Found ${teams?.length || 0} teams and ${events?.length || 0} events`);
               } catch (err) {
                 console.error('Debug error:', err);
               }
@@ -294,13 +295,13 @@ export default function JoinEventScreen() {
                 setLoading(true);
                 const result = await updateTeamsWithEventIds();
                 if (result) {
-                  Alert.alert('Success', 'Teams have been linked to events successfully!');
+                  showAlert('Success', 'Teams have been linked to events successfully!');
                 } else {
-                  Alert.alert('Error', 'Failed to link teams to events. Check console for details.');
+                  showAlert('Error', 'Failed to link teams to events. Check console for details.');
                 }
               } catch (err) {
                 console.error('Error linking teams to events:', err);
-                Alert.alert('Error', 'An unexpected error occurred.');
+                showAlert('Error', 'An unexpected error occurred.');
               } finally {
                 setLoading(false);
               }

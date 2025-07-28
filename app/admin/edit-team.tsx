@@ -5,6 +5,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { useUser } from '../../contexts/UserContext';
 import { router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { showAlert, showAlertWithButtons } from '../utils/showAlert';
 
 type TeamMember = {
   id: string;
@@ -49,7 +50,7 @@ export default function EditTeamScreen() {
     if (teamId) {
       fetchTeamDetails();
     } else {
-      Alert.alert('Error', 'No team ID provided');
+      showAlert('Error', 'No team ID provided');
       router.back();
     }
   }, [teamId]);
@@ -67,7 +68,7 @@ export default function EditTeamScreen() {
       
       if (teamError) {
         console.error('Error fetching team:', teamError);
-        Alert.alert('Error', 'Failed to load team details');
+        showAlert('Error', 'Failed to load team details');
         return;
       }
       
@@ -95,7 +96,7 @@ export default function EditTeamScreen() {
       }
     } catch (error) {
       console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      showAlert('Error', 'An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -150,7 +151,7 @@ export default function EditTeamScreen() {
 
   const searchUsers = async () => {
     if (!userSearchQuery.trim()) {
-      Alert.alert('Error', 'Please enter a search term');
+      showAlert('Error', 'Please enter a search term');
       return;
     }
 
@@ -164,14 +165,14 @@ export default function EditTeamScreen() {
       
       if (error) {
         console.error('Error searching users:', error);
-        Alert.alert('Error', 'Failed to search users');
+        showAlert('Error', 'Failed to search users');
         return;
       }
       
       setUserSearchResults(data || []);
     } catch (error) {
       console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      showAlert('Error', 'An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -179,7 +180,7 @@ export default function EditTeamScreen() {
 
   const handleUpdateTeamName = async () => {
     if (!teamName.trim()) {
-      Alert.alert('Error', 'Team name cannot be empty');
+      showAlert('Error', 'Team name cannot be empty');
       return;
     }
 
@@ -192,14 +193,14 @@ export default function EditTeamScreen() {
       
       if (error) {
         console.error('Error updating team name:', error);
-        Alert.alert('Error', 'Failed to update team name');
+        showAlert('Error', 'Failed to update team name');
         return;
       }
       
-      Alert.alert('Success', 'Team name updated successfully');
+      showAlert('Success', 'Team name updated successfully');
     } catch (error) {
       console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      showAlert('Error', 'An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -215,7 +216,7 @@ export default function EditTeamScreen() {
       
       if (error) {
         console.error('Error setting captain:', error);
-        Alert.alert('Error', 'Failed to set team captain');
+        showAlert('Error', 'Failed to set team captain');
         return;
       }
       
@@ -231,10 +232,10 @@ export default function EditTeamScreen() {
         await addTeamMember(user);
       }
       
-      Alert.alert('Success', 'Team captain updated successfully');
+      showAlert('Success', 'Team captain updated successfully');
     } catch (error) {
       console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      showAlert('Error', 'An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -250,15 +251,15 @@ export default function EditTeamScreen() {
       
       if (error) {
         console.error('Error removing captain:', error);
-        Alert.alert('Error', 'Failed to remove team captain');
+        showAlert('Error', 'Failed to remove team captain');
         return;
       }
       
       setCaptain(null);
-      Alert.alert('Success', 'Team captain removed successfully');
+      showAlert('Success', 'Team captain removed successfully');
     } catch (error) {
       console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      showAlert('Error', 'An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -271,7 +272,7 @@ export default function EditTeamScreen() {
       // Check if user is already a member
       const existingMember = members.find(member => member.user_id === user.id);
       if (existingMember) {
-        Alert.alert('Info', 'This user is already a team member');
+        showAlert('Info', 'This user is already a team member');
         return;
       }
       
@@ -286,7 +287,7 @@ export default function EditTeamScreen() {
       
       if (error) {
         console.error('Error adding team member:', error);
-        Alert.alert('Error', 'Failed to add team member');
+        showAlert('Error', 'Failed to add team member');
         return;
       }
       
@@ -297,10 +298,10 @@ export default function EditTeamScreen() {
       setUserSearchQuery('');
       setUserSearchResults([]);
       
-      Alert.alert('Success', 'Team member added successfully');
+      showAlert('Success', 'Team member added successfully');
     } catch (error) {
       console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      showAlert('Error', 'An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -309,22 +310,17 @@ export default function EditTeamScreen() {
   const handleRemoveMember = async (memberId: string, userId: string) => {
     // Don't allow removing the captain from members
     if (captain && captain.id === userId) {
-      Alert.alert(
+      showAlert(
         'Cannot Remove Captain',
         'The team captain cannot be removed from the team. Please change the captain first.'
       );
       return;
     }
     
-    Alert.alert(
+    showAlertWithButtons(
       'Remove Member',
       'Are you sure you want to remove this member from the team?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Remove', 
-          style: 'destructive',
-          onPress: async () => {
+      async () => {
             try {
               setIsLoading(true);
               const { error } = await supabase
@@ -334,23 +330,21 @@ export default function EditTeamScreen() {
               
               if (error) {
                 console.error('Error removing team member:', error);
-                Alert.alert('Error', 'Failed to remove team member');
+                showAlert('Error', 'Failed to remove team member');
                 return;
               }
               
               // Refresh team members
               await fetchTeamMembers();
               
-              Alert.alert('Success', 'Team member removed successfully');
+              showAlert('Success', 'Team member removed successfully');
             } catch (error) {
               console.error('Unexpected error:', error);
-              Alert.alert('Error', 'An unexpected error occurred');
+              showAlert('Error', 'An unexpected error occurred');
             } finally {
               setIsLoading(false);
             }
-          }
-        }
-      ]
+      }
     );
   };
 

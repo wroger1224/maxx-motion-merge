@@ -14,16 +14,16 @@ export function ResponsiveHeader({
         source={ source }
         style={[style, styles.headerBackground]}
         resizeMode="cover"
-      >
+    >
          { children }
-      </ImageBackground>
+    </ImageBackground>
   );
 }
 
-const height  = Dimensions.get('window').height * .3;
+const height  = Dimensions.get('window').height * .2;
 const styles = StyleSheet.create({
 	headerBackground: {
-		height: height 
+		height: height, 
 	},
 
 }); 
