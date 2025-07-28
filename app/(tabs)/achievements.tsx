@@ -28,16 +28,17 @@ interface Badge {
   imageUrl: string;
 }
 
-const badges: Badge[] = [
+// Keep the hardcoded badges array as a fallback
+const defaultBadges: Badge[] = [
   // Step-Based Goals
   {
     id: '1',
     name: 'Step Starter',
     icon: 'shoe-prints',
-    description: '5k Steps in one day',
-    isUnlocked: true,
-    progress: 5000,
-    total: 5000,
+    description: '10k Steps in one day',
+    isUnlocked: false,
+    progress: 0,
+    total: 10000,
     category: 'Steps',
     emoji: '👣',
     imageUrl: 'https://images.unsplash.com/photo-1571008887538-b36bb32f4571?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
@@ -46,10 +47,10 @@ const badges: Badge[] = [
     id: '2',
     name: 'Step Master',
     icon: 'walking',
-    description: '10k Steps in one day',
+    description: '20k Steps in one day',
     isUnlocked: false,
-    progress: 7500,
-    total: 10000,
+    progress: 0,
+    total: 20000,
     category: 'Steps',
     emoji: '👟',
     imageUrl: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
@@ -58,10 +59,10 @@ const badges: Badge[] = [
     id: '3',
     name: 'Step Champion',
     icon: 'running',
-    description: '20k Steps in one day',
+    description: '40k Steps in one day',
     isUnlocked: false,
-    progress: 12000,
-    total: 20000,
+    progress: 0,
+    total: 40000,
     category: 'Steps',
     emoji: '👟',
     imageUrl: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
@@ -194,12 +195,11 @@ type Milestone = {
 
 export default function AchievementsScreen() {
   const { userProfile } = useUser();
-  const [showAchievement, setShowAchievement] = useState(false);
   const [currentStreak, setCurrentStreak] = useState(0);
-  const [selectedBadge, setSelectedBadge] = useState<Badge | null>(null);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [totalMinutes, setTotalMinutes] = useState(0);
   const [badgeProgress, setBadgeProgress] = useState<Record<string, number>>({});
+  const [badges, setBadges] = useState<Badge[]>(defaultBadges);
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const router = useRouter();
 
@@ -207,7 +207,7 @@ export default function AchievementsScreen() {
     fetchMilestones();
     fetchBadgeProgress();
     fetchStreak();
-    console.log('Initial useEffect called');
+    fetchBadges();
   }, []);
 
   const fetchMilestones = async () => {
@@ -281,6 +281,55 @@ export default function AchievementsScreen() {
     }
   };
 
+  const fetchBadges = async () => {
+    try {
+      if (!userProfile?.id) return;
+
+      // Get the current active event
+      const { data: activeEvent, error: eventError } = await supabase
+        .from('events')
+        .select('id')
+        .eq('status', 'Active')
+        .single();
+
+      if (eventError) {
+        console.error('Error fetching active event:', eventError);
+        return;
+      }
+
+      // Fetch badges from the database
+      const { data: badgesData, error: badgesError } = await supabase
+        .from('badges')
+        .select('*')
+        .eq('event_id', activeEvent.id);
+
+      if (badgesError) {
+        console.error('Error fetching badges:', badgesError);
+        return;
+      }
+
+      if (badgesData && badgesData.length > 0) {
+        // Transform the database badges into the format we need
+        const transformedBadges = badgesData.map(badge => ({
+          id: badge.id,
+          name: badge.name,
+          icon: badge.icon,
+          description: badge.description,
+          isUnlocked: false, // This will be updated by fetchBadgeProgress
+          progress: 0, // This will be updated by fetchBadgeProgress
+          total: badge.total,
+          category: badge.category,
+          emoji: badge.emoji,
+          imageUrl: badge.image_url
+        }));
+
+        setBadges(transformedBadges);
+      }
+    } catch (error) {
+      console.error('Error in fetchBadges:', error);
+    }
+  };
+
   const fetchBadgeProgress = async () => {
     try {
       if (!userProfile?.id) return;
@@ -312,11 +361,12 @@ export default function AchievementsScreen() {
       // Calculate progress for each badge type
       const progress: Record<string, number> = {};
 
-      // Step-based badges
-      const maxSteps = Math.max(...activities.map(a => a.activity_minutes || 0));
-      progress['1'] = Math.min(5000, maxSteps); // Step Starter
-      progress['2'] = Math.min(10000, maxSteps); // Step Master
-      progress['3'] = Math.min(20000, maxSteps); // Step Champion
+      // Step-based badges - Convert minutes to steps (100 steps per minute)
+      const stepsPerMinute = 100;
+      const maxSteps = Math.max(...activities.map(a => (a.activity_minutes || 0) * stepsPerMinute));
+      progress['1'] = maxSteps; // Step Starter
+      progress['2'] = maxSteps; // Step Master
+      progress['3'] = maxSteps; // Step Champion
 
       // Workout badges
       const workoutCount = activities.filter(a => a.activity_type === 'workout').length;
@@ -354,6 +404,15 @@ export default function AchievementsScreen() {
       progress['12'] = Math.min(5, nightWorkouts); // Night Owl
 
       setBadgeProgress(progress);
+
+      // Update badges with progress and unlocked status
+      setBadges(prevBadges =>
+        prevBadges.map(badge => ({
+          ...badge,
+          progress: progress[badge.id] || 0,
+          isUnlocked: (progress[badge.id] || 0) >= badge.total
+        }))
+      );
     } catch (error) {
       console.error('Error in fetchBadgeProgress:', error);
     }
@@ -361,9 +420,8 @@ export default function AchievementsScreen() {
 
   const fetchStreak = async () => {
     try {
-      console.log('fetchStreak called');
       if (!userProfile?.id) {
-        console.log('No user profile ID');
+        console.error('No user profile ID found');
         return;
       }
 
@@ -375,11 +433,14 @@ export default function AchievementsScreen() {
         .single();
 
       if (eventError) {
-        console.error('Error fetching active event:', eventError);
+        console.error('Error fetching active event:', eventError.message);
         return;
       }
 
-      console.log('Active event:', activeEvent);
+      if (!activeEvent) {
+        console.error('No active event found');
+        return;
+      }
 
       // Fetch user's activities
       const { data: activities, error: activitiesError } = await supabase
@@ -390,51 +451,114 @@ export default function AchievementsScreen() {
         .order('activity_date', { ascending: false });
 
       if (activitiesError) {
-        console.error('Error fetching activities:', activitiesError);
+        console.error('Error fetching activities:', activitiesError.message);
+        setCurrentStreak(0);
         return;
       }
-
-      console.log('Activities:', activities);
 
       if (!activities || activities.length === 0) {
-        console.log('No activities found');
+        console.log('No activities found for user');
         setCurrentStreak(0);
         return;
       }
 
-      // SIMPLIFIED APPROACH: Just count activities from today
+      // Get today's date at midnight in local time
       const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
 
-      // Format today's date as YYYY-MM-DD for comparison
-      const todayFormatted = today.toISOString().split('T')[0];
-      console.log('Today formatted:', todayFormatted);
+      // Get the most recent activity date
+      const mostRecentActivity = new Date(activities[0].activity_date);
 
-      // Count activities from today using string comparison
-      const todayActivities = activities.filter(activity => {
-        // Format activity date as YYYY-MM-DD
-        const activityDateFormatted = activity.activity_date.split('T')[0];
-        console.log('Activity date:', activity.activity_date, 'Formatted:', activityDateFormatted);
-        return activityDateFormatted === todayFormatted;
+      // Debug logging for date comparison
+      console.log('Date Comparison Details:', {
+        today: {
+          full: today.toISOString(),
+          start: todayStart.toISOString(),
+          end: todayEnd.toISOString()
+        },
+        mostRecentActivity: {
+          full: mostRecentActivity.toISOString(),
+          year: mostRecentActivity.getFullYear(),
+          month: mostRecentActivity.getMonth(),
+          date: mostRecentActivity.getDate(),
+          hours: mostRecentActivity.getHours()
+        },
+        comparison: {
+          isAfterStart: mostRecentActivity >= todayStart,
+          isBeforeEnd: mostRecentActivity < todayEnd,
+          isToday: mostRecentActivity >= todayStart && mostRecentActivity < todayEnd
+        }
       });
 
-      console.log('Today activities count:', todayActivities.length);
+      // Check if the most recent activity is from today
+      const isToday = mostRecentActivity >= todayStart && mostRecentActivity < todayEnd;
 
-      // If there are activities today, set streak to at least 1
-      if (todayActivities.length > 0) {
-        console.log('Setting streak to 1 for today');
-        setCurrentStreak(1);
-      } else {
-        console.log('No activities today, setting streak to 0');
+      if (!isToday) {
+        console.log('No activity today, streak is 0');
         setCurrentStreak(0);
+        return;
       }
+
+      // Start counting streak from today
+      let streak = 1;
+      let currentDate = new Date(todayStart);
+      currentDate.setDate(currentDate.getDate() - 1); // Move to yesterday
+
+      // Check consecutive days
+      for (let i = 1; i < activities.length; i++) {
+        const activityDate = new Date(activities[i].activity_date);
+        const dayStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
+        const dayEnd = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 1);
+
+        console.log(`Checking day ${i}:`, {
+          activityDate: {
+            full: activityDate.toISOString(),
+            year: activityDate.getFullYear(),
+            month: activityDate.getMonth(),
+            date: activityDate.getDate()
+          },
+          dayRange: {
+            start: dayStart.toISOString(),
+            end: dayEnd.toISOString()
+          },
+          isMatch: activityDate >= dayStart && activityDate < dayEnd
+        });
+
+        if (activityDate >= dayStart && activityDate < dayEnd) {
+          streak++;
+          currentDate.setDate(currentDate.getDate() - 1);
+        } else {
+          break;
+        }
+      }
+
+      console.log('Final streak:', streak);
+      setCurrentStreak(streak);
     } catch (error) {
-      console.error('Error in fetchStreak:', error);
+      console.error('Unexpected error in fetchStreak:', error);
       setCurrentStreak(0);
     }
   };
 
   const renderStreak = () => {
+    return (
+      <View style={styles.streakContainer}>
+        <View style={styles.streakIconContainer}>
+          <FontAwesome5 name="crown" size={32} color="#FFD700" />
+        </View>
+        <View style={styles.streakInfo}>
+          <Text style={styles.streakTitle}>{currentStreak} Day Streak!</Text>
+          <View style={styles.streakFlamesContainer}>
+            {renderStreakFlames()}
+          </View>
+          <Text style={styles.streakSubtitle}>{7 - currentStreak} days until next reward</Text>
+        </View>
+      </View>
+    );
+  };
+
+  const renderStreakFlames = () => {
     const flames = [];
     for (let i = 0; i < 30; i++) {
       flames.push(
@@ -484,19 +608,10 @@ export default function AchievementsScreen() {
   const renderBadge = ({ item, index }: { item: Badge; index: number }) => {
     const progress = badgeProgress[item.id] || 0;
     const isUnlocked = progress >= item.total;
-	
-    const onPress = () => {
-			setSelectedBadge({ ...item, isUnlocked, progress });
-    };
-
     const categoryColor = getCategoryColor(item.category);
 
     return (
-      <TouchableOpacity
-        onPress={ onPress }
-        activeOpacity={1}
-        style={styles.badgeContainer}
-      >
+      <View style={styles.badgeContainer}>
         <View
           style={[
             styles.badge,
@@ -533,39 +648,6 @@ export default function AchievementsScreen() {
             {progress}/{item.total}
           </Text>
         </View>
-      </TouchableOpacity>
-    );
-  };
-
-  const renderBadgeModal = (badge: Badge) => {
-    const categoryColor = getCategoryColor(badge.category);
-    const progress = badgeProgress[badge.id] || 0;
-
-    return (
-      <View style={styles.modalContent}>
-        <Image
-          source={{ uri: badge.imageUrl }}
-          style={styles.modalImage}
-          resizeMode="cover"
-        />
-        <Text style={styles.modalTitle}>{badge.name}</Text>
-        <View style={[styles.modalCategoryContainer, { backgroundColor: categoryColor }]}>
-          <Text style={styles.modalCategoryText}>{badge.category}</Text>
-        </View>
-        <Text style={styles.modalDescription}>{badge.description}</Text>
-        <>
-          <Text style={styles.modalProgressTitle}>Progress:</Text>
-          {renderProgressEmojis(badge)}
-          <Text style={styles.modalProgressText}>
-            {progress} of {badge.total} completed
-          </Text>
-        </>
-        <TouchableOpacity
-          style={styles.modalCloseButton}
-          onPress={() => setSelectedBadge(null)}
-        >
-          <Text style={styles.modalCloseText}>Close</Text>
-        </TouchableOpacity>
       </View>
     );
   };
@@ -641,69 +723,24 @@ export default function AchievementsScreen() {
         </LinearGradient>
       </ResponsiveHeader>
 
-      <View style={styles.streakContainer}>
-        <View style={styles.streakIconContainer}>
-          <FontAwesome5 name="crown" size={32} color="#FFD700" />
-        </View>
-        <View style={styles.streakInfo}>
-          <Text style={styles.streakTitle}>{currentStreak} Day Streak!</Text>
-          <View style={styles.streakFlamesContainer}>
-            {renderStreak()}
-          </View>
-          <Text style={styles.streakSubtitle}>{7 - currentStreak} days until next reward</Text>
-        </View>
+      {renderStreak()}
+
+      <View style={styles.achievementsSection}>
+        <FlatList
+          ListHeaderComponent={
+            <>
+              {renderMilestoneProgress()}
+              <Text style={styles.achievementsTitle}>My Achievements</Text>
+            </>
+          }
+          data={badges}
+          renderItem={renderBadge}
+          keyExtractor={item => item.id}
+          numColumns={NUM_COLUMNS}
+          scrollEnabled={true}
+          contentContainerStyle={styles.badgesGrid}
+        />
       </View>
-
-			<View style={styles.achievementsSection}>
-				<FlatList
-					ListHeaderComponent={
-						<>
-							{renderMilestoneProgress()}
-							<Text style={styles.achievementsTitle}>My Achievements</Text>
-						</>
-					}
-					data={badges}
-					renderItem={renderBadge}
-					keyExtractor={item => item.id}
-					numColumns={ NUM_COLUMNS }
-					scrollEnabled={true}
-					contentContainerStyle={styles.badgesGrid}
-				/>
-			</View>
-
-      <Modal
-        visible={selectedBadge !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setSelectedBadge(null)}
-      >
-        <View style={styles.modalOverlay}>
-          {selectedBadge && renderBadgeModal(selectedBadge)}
-        </View>
-      </Modal>
-
-      <Modal
-        visible={showAchievement}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowAchievement(false)}
-      >
-        <View style={styles.achievementOverlay}>
-          <View style={styles.achievementContent}>
-            <View style={styles.celebrationIcon}>
-              <FontAwesome5 name="trophy" size={48} color="#FFD700" />
-            </View>
-            <Text style={styles.achievementTitle}>New Achievement!</Text>
-            <Text style={styles.achievementDescription}>You've unlocked "Early Riser"</Text>
-            <TouchableOpacity
-              style={styles.modalCloseButton}
-              onPress={() => setShowAchievement(false)}
-            >
-              <Text style={styles.modalCloseText}>Awesome!</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -796,7 +833,7 @@ const styles = StyleSheet.create({
   },
   streakFlamesContainer: {
     flexDirection: 'row',
-		flexWrap: 'wrap',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: WIDTH > 500 ? 'space-between' : 'flex-start',
     marginVertical: 8,
@@ -897,115 +934,15 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 8,
   },
-  modalOverlay: {
+  achievementsSection: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    marginTop: 16,
+    paddingHorizontal: GRID_PADDING,
   },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
-    width: '80%',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  modalImage: {
-    width: '100%',
-    height: 150,
-    borderRadius: 8,
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: 24,
+  achievementsTitle: {
+    fontSize: 20,
     fontWeight: '700',
-    color: '#000',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  modalCategoryContainer: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginBottom: 12,
-  },
-  modalCategoryText: {
-    fontSize: 12,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  modalDescription: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  modalProgressTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 8,
-  },
-  modalProgressEmojiContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  modalProgressEmoji: {
-    fontSize: 24,
-    marginHorizontal: 4,
-  },
-  modalProgressEmojiFilled: {
-    opacity: 1,
-  },
-  modalProgressEmojiEmpty: {
-    opacity: 0.3,
-  },
-  modalProgressText: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  modalCloseButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    backgroundColor: '#C41E3A',
-    borderRadius: 8,
-  },
-  modalCloseText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  achievementOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  achievementContent: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
-    width: '80%',
-  },
-  celebrationIcon: {
-    marginBottom: 16,
-  },
-  achievementTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 8,
-  },
-  achievementDescription: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+    color: '#333',
     marginBottom: 16,
   },
   milestoneSection: {
@@ -1089,26 +1026,6 @@ const styles = StyleSheet.create({
   pendingText: {
     fontSize: 14,
     color: '#666',
-  },
-  content: {
-    flex: 1,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#fff',
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  achievementsSection: {
-		flex: 1,
-    marginTop: 16,
-    paddingHorizontal: GRID_PADDING,
-  },
-  achievementsTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: 16,
   },
   milestoneProgressContainer: {
     height: 8,
