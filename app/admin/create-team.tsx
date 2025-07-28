@@ -5,6 +5,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { useUser } from '../../contexts/UserContext';
 import { router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { showAlert } from '../utils/showAlert';
 
 type User = {
   id: string;
@@ -48,7 +49,7 @@ export default function CreateTeamScreen() {
     if (eventId) {
       fetchEventDetails();
     } else {
-      Alert.alert('Error', 'No event ID provided');
+      showAlert('Error', 'No event ID provided');
       router.back();
     }
   }, [eventId]);
@@ -64,14 +65,14 @@ export default function CreateTeamScreen() {
       
       if (error) {
         console.error('Error fetching event details:', error);
-        Alert.alert('Error', 'Failed to load event details');
+        showAlert('Error', 'Failed to load event details');
         return;
       }
       
       setEventName(data.name);
     } catch (error) {
       console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      showAlert('Error', 'An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -79,7 +80,7 @@ export default function CreateTeamScreen() {
 
   const searchUsers = async () => {
     if (!searchQuery.trim()) {
-      Alert.alert('Error', 'Please enter a search term');
+      showAlert('Error', 'Please enter a search term');
       return;
     }
 
@@ -93,14 +94,14 @@ export default function CreateTeamScreen() {
       
       if (error) {
         console.error('Error searching users:', error);
-        Alert.alert('Error', 'Failed to search users');
+        showAlert('Error', 'Failed to search users');
         return;
       }
       
       setSearchResults(data || []);
     } catch (error) {
       console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      showAlert('Error', 'An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -114,7 +115,7 @@ export default function CreateTeamScreen() {
 
   const validateForm = () => {
     if (!teamName.trim()) {
-      Alert.alert('Error', 'Please enter a team name');
+      showAlert('Error', 'Please enter a team name');
       return false;
     }
 
@@ -128,12 +129,12 @@ export default function CreateTeamScreen() {
 
   const validateNewCaptain = () => {
     if (!newCaptain.full_name.trim()) {
-      Alert.alert('Error', 'Please enter captain name');
+      showAlert('Error', 'Please enter captain name');
       return false;
     }
 
     if (!newCaptain.email.trim() || !validateEmail(newCaptain.email)) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      showAlert('Error', 'Please enter a valid email address');
       return false;
     }
 
@@ -155,13 +156,13 @@ export default function CreateTeamScreen() {
 
       if (existingUserError && existingUserError.code !== 'PGRST116') {
         console.error('Error checking for existing user:', existingUserError);
-        Alert.alert('Error', 'Failed to check if user already exists');
+        showAlert('Error', 'Failed to check if user already exists');
         return null;
       }
 
       // If user exists, return that user
       if (existingUser) {
-        Alert.alert('Notice', 'A user with this email already exists. Using existing user as team captain.');
+        showAlert('Notice', 'A user with this email already exists. Using existing user as team captain.');
         return existingUser as User;
       }
 
@@ -186,15 +187,15 @@ export default function CreateTeamScreen() {
 
       if (createError) {
         console.error('Error creating new captain profile:', createError);
-        Alert.alert('Error', 'Failed to create new captain profile');
+        showAlert('Error', 'Failed to create new captain profile');
         return null;
       }
 
-      Alert.alert('Success', 'New captain profile created');
+      showAlert('Success', 'New captain profile created');
       return newUser as User;
     } catch (error) {
       console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      showAlert('Error', 'An unexpected error occurred');
       return null;
     } finally {
       setIsLoading(false);
@@ -235,12 +236,12 @@ export default function CreateTeamScreen() {
 
       if (error) {
         console.error('Error creating team:', error);
-        Alert.alert('Error', 'Failed to create team');
+        showAlert('Error', 'Failed to create team');
         return;
       }
 
       // Show success message
-      Alert.alert('Success', 'Team created successfully');
+      showAlert('Success', 'Team created successfully');
       
       // Navigate back to setup
       console.log('Navigating to admin setup after team creation');
@@ -249,7 +250,7 @@ export default function CreateTeamScreen() {
       }, 500);
     } catch (error) {
       console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      showAlert('Error', 'An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }

@@ -6,6 +6,7 @@ import { getAvailableTeams, addUserToTeam, getTeamsForEvent, inspectTableStructu
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { showAlert, showAlertWithButtons } from './utils/showAlert';
 
 type Team = {
   id: string;
@@ -71,12 +72,12 @@ export default function JoinTeamScreen() {
             return;
           } else {
             console.log('User is not registered for any event');
-            Alert.alert(
+            showAlert(
               'No Event Selected', 
               'You need to join an event before selecting a team.',
-              [{ text: 'OK', onPress: () => router.replace('/join-event' as any) }]
             );
-            return;
+						router.replace('/join-event' as any);
+
           }
         }
         
@@ -95,10 +96,10 @@ export default function JoinTeamScreen() {
           
           if (!registration) {
             console.warn('User not registered for this event, redirecting to event selection');
-            Alert.alert(
+            showAlertWithButtons(
               'Registration Required', 
               'You need to register for an event first.',
-              [{ text: 'OK', onPress: () => router.replace('/join-event' as any) }]
+              () => router.replace('/join-event' as any)
             );
             return;
           }
@@ -110,7 +111,7 @@ export default function JoinTeamScreen() {
           console.log(`Got ${teamsData.length} teams for event ${eventId}`);
           
           if (teamsData.length === 0) {
-            Alert.alert('No Teams Available', 'There are no teams available for this event yet.');
+            showAlert('No Teams Available', 'There are no teams available for this event yet.');
           }
           
           setTeams(teamsData);
@@ -133,7 +134,7 @@ export default function JoinTeamScreen() {
 
   const joinTeamAndNavigate = async () => {
     if (!selectedTeamId) {
-      Alert.alert('Selection Required', 'Please select a team to join.');
+      showAlert('Selection Required', 'Please select a team to join.');
       return;
     }
 
@@ -141,7 +142,7 @@ export default function JoinTeamScreen() {
       setJoining(true);
       const { data } = await supabase.auth.getSession();
       if (!data.session) {
-        Alert.alert('Error', 'You need to be logged in to join a team.');
+        showAlert('Error', 'You need to be logged in to join a team.');
         return;
       }
 
@@ -182,7 +183,7 @@ export default function JoinTeamScreen() {
             
           if (minimalError) {
             console.error('Failed even with minimal profile:', minimalError);
-            Alert.alert('Error', 'Unable to create user profile. Please try again later.');
+            showAlert('Error', 'Unable to create user profile. Please try again later.');
             return;
           }
         }
@@ -219,7 +220,7 @@ export default function JoinTeamScreen() {
         
       if (insertError) {
         console.error('Error adding user to team:', insertError);
-        Alert.alert('Team Join Error', `Failed to join team: ${insertError.message}`);
+        showAlert('Team Join Error', `Failed to join team: ${insertError.message}`);
         return;
       }
       
@@ -227,7 +228,7 @@ export default function JoinTeamScreen() {
       router.replace('/(tabs)');
     } catch (err) {
       console.error('Error joining team:', err);
-      Alert.alert('Error', 'An unexpected error occurred while joining the team.');
+      showAlert('Error', 'An unexpected error occurred while joining the team.');
     } finally {
       setJoining(false);
     }
