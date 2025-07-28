@@ -420,7 +420,10 @@ export default function AchievementsScreen() {
 
   const fetchStreak = async () => {
     try {
-      if (!userProfile?.id) return;
+      if (!userProfile?.id) {
+        console.error('No user profile ID found');
+        return;
+      }
 
       // Get the current active event
       const { data: activeEvent, error: eventError } = await supabase
@@ -429,7 +432,15 @@ export default function AchievementsScreen() {
         .eq('status', 'Active')
         .single();
 
-      if (eventError) return;
+      if (eventError) {
+        console.error('Error fetching active event:', eventError.message);
+        return;
+      }
+
+      if (!activeEvent) {
+        console.error('No active event found');
+        return;
+      }
 
       // Fetch user's activities
       const { data: activities, error: activitiesError } = await supabase
@@ -439,40 +450,82 @@ export default function AchievementsScreen() {
         .eq('user_id', userProfile.id)
         .order('activity_date', { ascending: false });
 
-      if (activitiesError || !activities || activities.length === 0) {
+      if (activitiesError) {
+        console.error('Error fetching activities:', activitiesError.message);
         setCurrentStreak(0);
         return;
       }
 
-      // Get today's date in local time
-      const today = new Date();
-      const todayStr = today.toLocaleDateString('en-CA');
+      if (!activities || activities.length === 0) {
+        console.log('No activities found for user');
+        setCurrentStreak(0);
+        return;
+      }
 
-      // Check if there's activity today
-      const hasActivityToday = activities.some(activity => {
-        const activityDate = new Date(activity.activity_date).toLocaleDateString('en-CA');
-        return activityDate === todayStr;
+      // Get today's date at midnight in local time
+      const today = new Date();
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+
+      // Get the most recent activity date
+      const mostRecentActivity = new Date(activities[0].activity_date);
+
+      // Debug logging for date comparison
+      console.log('Date Comparison Details:', {
+        today: {
+          full: today.toISOString(),
+          start: todayStart.toISOString(),
+          end: todayEnd.toISOString()
+        },
+        mostRecentActivity: {
+          full: mostRecentActivity.toISOString(),
+          year: mostRecentActivity.getFullYear(),
+          month: mostRecentActivity.getMonth(),
+          date: mostRecentActivity.getDate(),
+          hours: mostRecentActivity.getHours()
+        },
+        comparison: {
+          isAfterStart: mostRecentActivity >= todayStart,
+          isBeforeEnd: mostRecentActivity < todayEnd,
+          isToday: mostRecentActivity >= todayStart && mostRecentActivity < todayEnd
+        }
       });
 
-      if (!hasActivityToday) {
+      // Check if the most recent activity is from today
+      const isToday = mostRecentActivity >= todayStart && mostRecentActivity < todayEnd;
+
+      if (!isToday) {
+        console.log('No activity today, streak is 0');
         setCurrentStreak(0);
         return;
       }
 
       // Start counting streak from today
       let streak = 1;
-      let currentDate = new Date(today);
+      let currentDate = new Date(todayStart);
       currentDate.setDate(currentDate.getDate() - 1); // Move to yesterday
 
-      // Keep checking previous days until we find a gap
-      while (true) {
-        const dateStr = currentDate.toLocaleDateString('en-CA');
-        const hasActivity = activities.some(activity => {
-          const activityDate = new Date(activity.activity_date).toLocaleDateString('en-CA');
-          return activityDate === dateStr;
+      // Check consecutive days
+      for (let i = 1; i < activities.length; i++) {
+        const activityDate = new Date(activities[i].activity_date);
+        const dayStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
+        const dayEnd = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 1);
+
+        console.log(`Checking day ${i}:`, {
+          activityDate: {
+            full: activityDate.toISOString(),
+            year: activityDate.getFullYear(),
+            month: activityDate.getMonth(),
+            date: activityDate.getDate()
+          },
+          dayRange: {
+            start: dayStart.toISOString(),
+            end: dayEnd.toISOString()
+          },
+          isMatch: activityDate >= dayStart && activityDate < dayEnd
         });
 
-        if (hasActivity) {
+        if (activityDate >= dayStart && activityDate < dayEnd) {
           streak++;
           currentDate.setDate(currentDate.getDate() - 1);
         } else {
@@ -480,8 +533,10 @@ export default function AchievementsScreen() {
         }
       }
 
+      console.log('Final streak:', streak);
       setCurrentStreak(streak);
     } catch (error) {
+      console.error('Unexpected error in fetchStreak:', error);
       setCurrentStreak(0);
     }
   };
