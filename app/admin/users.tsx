@@ -6,6 +6,7 @@ import { useUser } from '../../contexts/UserContext';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { updateUserAdminStatus } from '@/lib/services/auth';
+import { showAlert } from '../utils/showAlert';
 
 type User = {
     id: string;
@@ -51,14 +52,14 @@ export default function UserManagementScreen() {
 
             if (error) {
                 console.error('Error searching users:', error);
-                Alert.alert('Error', 'Failed to search users');
+                showAlert('Error', 'Failed to search users');
                 return;
             }
 
             setSearchResults(data || []);
         } catch (error) {
             console.error('Unexpected error:', error);
-            Alert.alert('Error', 'An unexpected error occurred');
+            showAlert('Error', 'An unexpected error occurred');
         }
     };
 
@@ -117,7 +118,7 @@ export default function UserManagementScreen() {
     // Update user admin status
     const handleUpdateAdminStatus = async (newAdminStatus: boolean) => {
         if (!selectedUser) {
-            Alert.alert('Error', 'Please select a user');
+            showAlert('Error', 'Please select a user');
             return;
         }
 
@@ -148,7 +149,7 @@ export default function UserManagementScreen() {
 
                 if (verifyError) {
                     console.error('Error verifying update:', verifyError);
-                    Alert.alert('Error', 'Failed to verify the update');
+                    showAlert('Error', 'Failed to verify the update');
                     return;
                 }
 
@@ -168,15 +169,15 @@ export default function UserManagementScreen() {
                         expected: newAdminStatus,
                         actual: updatedUser.is_admin
                     });
-                    Alert.alert('Error', 'Failed to verify the admin status update. Please try again.');
+                    showAlert('Error', 'Failed to verify the admin status update. Please try again.');
                 }
             } else {
                 console.error('Update failed: updateUserAdminStatus returned false');
-                Alert.alert('Error', 'Failed to update admin status. Please try again.');
+                showAlert('Error', 'Failed to update admin status. Please try again.');
             }
         } catch (error) {
             console.error('Unexpected error:', error);
-            Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+            showAlert('Error', 'An unexpected error occurred. Please try again.');
         } finally {
             setIsLoading(false);
         }

@@ -11,6 +11,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Image } from 'react-native';
 import { ResponsiveHeader } from '@/components/ui/responsiveHeader';
+import { showAlert } from '../utils/showAlert';
 
 type UserActivity = {
   id: string;
@@ -135,7 +136,7 @@ export default function ProfileScreen() {
       setActivities(data || []);
     } catch (err) {
       console.error('Error fetching user activities:', err);
-      Alert.alert('Error', 'Failed to load your activities');
+      showAlert('Error', 'Failed to load your activities');
     } finally {
       setLoading(false);
     }
@@ -160,10 +161,10 @@ export default function ProfileScreen() {
       const { error } = await supabase.auth.signOut();
 
       if (error) {
-        Alert.alert('Error', error.message);
+      showAlert('Error', error.message);
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      showAlert('Error', error.message);
       setLoading(false);
     }
   };
@@ -375,7 +376,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    paddingLeft: 16,
+		paddingTop: 16,
+		paddingRight: 16,
     zIndex: 1,
   },
   headerTitle: {
@@ -398,9 +401,7 @@ const styles = StyleSheet.create({
   },
   headerContent: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 40,
   },
   pageTitle: {
     fontSize: 32,

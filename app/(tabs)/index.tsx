@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, TouchableOpacity, ScrollView, Text} from 'react-native';
+import { StyleSheet, View, TouchableOpacity, ScrollView, Text } from 'react-native';
 import { useEffect, useState } from 'react';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
@@ -10,6 +10,7 @@ import { ResponsiveHeader } from '@/components/ui/responsiveHeader';
 import { supabase } from '@/lib/supabase';
 import { useIsFocused } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
+import { Badge, UserBadge, fetchBadges, fetchUserBadges, calculateBadgeProgress } from '@/lib/services/badges';
 
 // Team interface for leaderboard
 interface Team {
@@ -40,6 +41,8 @@ export default function DashboardScreen() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [badges, setBadges] = useState<Badge[]>([]);
+  const [userBadges, setUserBadges] = useState<UserBadge[]>([]);
   const isFocused = useIsFocused();
 
   const badgeList = [
@@ -87,7 +90,7 @@ export default function DashboardScreen() {
   useEffect(() => {
     if (user && userProfile && isFocused) {
       fetchDashboardData();
-      fetchBadgeProgress();
+      fetchBadgeData();
     }
   }, [user, userProfile, isFocused]);
 
@@ -162,7 +165,7 @@ export default function DashboardScreen() {
       const { data: allTeams } = await supabase
         .from('teams')
         .select('id, team_name')
-				.eq('event_id', currentEvent.id);
+        .eq('event_id', currentEvent.id);
       const leaderboard: Team[] = [];
       for (const team of allTeams || []) {
         // Get members
@@ -215,56 +218,54 @@ export default function DashboardScreen() {
     }
   };
 
-  const fetchBadgeProgress = async () => {
+  const fetchBadgeData = async () => {
     if (!userProfile?.id) return;
-    // Get the current active event
-    const today = new Date().toISOString().split('T')[0];
-    const { data: eventData, error: eventError } = await supabase
-      .from('events')
-      .select('id')
-      .lte('start_date', today)
-      .gte('end_date', today)
-      .order('start_date', { ascending: false })
-      .limit(1);
-    if (eventError) return;
-    const currentEvent = eventData && eventData.length > 0 ? eventData[0] : null;
-    if (!currentEvent) return;
-    // Fetch user's activities
-    const { data: activitiesRaw } = await supabase
-      .from('activities')
-      .select('activity_minutes, activity_date, activity_type')
-      .eq('event_id', currentEvent.id)
-      .eq('user_id', userProfile.id);
-    const activities = activitiesRaw || [];
-    // Calculate progress for each badge type
-    const progress: Record<string, number> = {};
-    const maxSteps = Math.max(...activities.map(a => a.activity_minutes || 0), 0);
-    progress['1'] = Math.min(5000, maxSteps); // Step Starter
-    progress['2'] = Math.min(10000, maxSteps); // Step Master
-    progress['3'] = Math.min(20000, maxSteps); // Step Champion
-    const workoutCount = activities.filter(a => a.activity_type === 'workout').length;
-    progress['4'] = Math.min(10, workoutCount); // Workout Beginner
-    progress['5'] = Math.min(50, workoutCount); // Workout Expert
-    progress['6'] = Math.min(100, workoutCount); // Workout Master
-    const runningCount = activities.filter(a => a.activity_type?.toLowerCase() === 'running').length;
-    const cyclingCount = activities.filter(a => a.activity_type?.toLowerCase() === 'cycling').length;
-    const yogaCount = activities.filter(a => a.activity_type?.toLowerCase() === 'yoga').length;
-    progress['7'] = Math.min(5, runningCount); // Runner's Badge
-    progress['8'] = Math.min(25, cyclingCount);
-    progress['9'] = Math.min(10, yogaCount); // Yogi's Badge
-    const earlyWorkouts = activities.filter(a => { const hour = new Date(a.activity_date).getHours(); return hour < 7; }).length;
-    const weekendWorkouts = activities.filter(a => { const day = new Date(a.activity_date).getDay(); return day === 0 || day === 6; }).length;
-    const nightWorkouts = activities.filter(a => { const hour = new Date(a.activity_date).getHours(); return hour >= 22; }).length;
-    progress['10'] = Math.min(5, earlyWorkouts); // Early Bird
-    progress['11'] = Math.min(5, weekendWorkouts); // Weekend Warrior
-    progress['12'] = Math.min(5, nightWorkouts); // Night Owl
-    setBadgeProgress(progress);
-    // Find unlocked badges
-    const unlocked = badgeList.filter(b => progress[b.id] >= b.total);
-    // Sort by most recently achieved (if possible, else by badge id)
-    // For now, just sort by badge id descending as a proxy
-    unlocked.sort((a, b) => parseInt(b.id) - parseInt(a.id));
-    setRecentBadges(unlocked.slice(0, 3));
+
+    // Fetch all badges and user badges
+    const [allBadges, userBadgeData] = await Promise.all([
+      fetchBadges(),
+      fetchUserBadges(userProfile.id)
+    ]);
+
+    setBadges(allBadges);
+    setUserBadges(userBadgeData);
+
+    // Calculate badge progress
+    await calculateBadgeProgress(userProfile.id);
+  };
+
+  const renderRecentBadges = () => {
+    const unlockedBadges = userBadges
+      .filter(ub => ub.is_unlocked)
+      .map(ub => ub.badge)
+      .filter((badge): badge is Badge => badge !== undefined)
+      .sort((a, b) => {
+        const badgeA = userBadges.find(ub => ub.badge_id === a.id);
+        const badgeB = userBadges.find(ub => ub.badge_id === b.id);
+        return new Date(badgeB?.unlocked_at || '').getTime() - new Date(badgeA?.unlocked_at || '').getTime();
+      })
+      .slice(0, 3);
+
+    if (unlockedBadges.length === 0) {
+      return (
+        <Text style={{ color: '#888', fontStyle: 'italic', textAlign: 'center', marginTop: 8 }}>
+          You have not yet earned any achievement badges.
+        </Text>
+      );
+    }
+
+    return (
+      <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 8 }}>
+        {unlockedBadges.map(badge => (
+          <View key={badge.id} style={{ alignItems: 'center', marginHorizontal: 8 }}>
+            <View style={{ width: 56, height: 56, borderRadius: 28, overflow: 'hidden', backgroundColor: '#eee', marginBottom: 4 }}>
+              <FontAwesome5 name={badge.icon} size={32} color="#C41E3A" style={{ textAlign: 'center', marginTop: 12 }} />
+            </View>
+            <Text style={{ fontSize: 12, fontWeight: '600', color: '#333', textAlign: 'center' }}>{badge.name}</Text>
+          </View>
+        ))}
+      </View>
+    );
   };
 
   return (
@@ -363,22 +364,7 @@ export default function DashboardScreen() {
             </View>
           ))}
           <ThemedText type="subtitle">Recent Achievements</ThemedText>
-          {recentBadges.length > 0 ? (
-            <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 8 }}>
-              {recentBadges.map(badge => (
-                <View key={badge.id} style={{ alignItems: 'center', marginHorizontal: 8 }}>
-                  <View style={{ width: 56, height: 56, borderRadius: 28, overflow: 'hidden', backgroundColor: '#eee', marginBottom: 4 }}>
-                    <FontAwesome5 name={badge.icon} size={32} color="#C41E3A" style={{ textAlign: 'center', marginTop: 12 }} />
-                  </View>
-                  <Text style={{ fontSize: 12, fontWeight: '600', color: '#333', textAlign: 'center' }}>{badge.name}</Text>
-                </View>
-              ))}
-            </View>
-          ) : (
-            <Text style={{ color: '#888', fontStyle: 'italic', textAlign: 'center', marginTop: 8 }}>
-              You have not yet earned any achievement badges.
-            </Text>
-          )}
+          {renderRecentBadges()}
         </ThemedView>
       </ScrollView>
     </View>
@@ -417,7 +403,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    paddingLeft: 16,
+		paddingTop: 16,
+		paddingRight: 16,
     zIndex: 1,
   },
   headerTitle: {

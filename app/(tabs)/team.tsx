@@ -11,6 +11,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import MemberDetails from '@/app/screens/MemberDetails';
 import { ResponsiveHeader } from '@/components/ui/responsiveHeader';
+import { showAlert } from '../utils/showAlert';
 
 type TeamMember = {
   id: string; // UUID from team_members table
@@ -643,7 +644,7 @@ export default function TeamScreen() {
     // Validate input
     const goalValue = parseInt(newGoalValue);
     if (isNaN(goalValue) || goalValue <= 0) {
-      Alert.alert('Invalid Value', 'Please enter a positive number for the team goal');
+      showAlert('Invalid Value', 'Please enter a positive number for the team goal');
       return;
     }
 
@@ -993,7 +994,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    paddingLeft: 16,
+		paddingTop: 16,
+		paddingRight: 16,
     zIndex: 1,
   },
   headerTitle: {
@@ -1016,9 +1019,7 @@ const styles = StyleSheet.create({
   },
   headerContent: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 40,
   },
   pageTitle: {
     fontSize: 32,

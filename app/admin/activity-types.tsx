@@ -6,6 +6,7 @@ import { useUser } from '@/contexts/UserContext';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Button } from '@/components/ui/button';
+import { showAlert } from '../utils/showAlert';
 
 type ActivityType = {
   id: string;
@@ -57,7 +58,7 @@ export default function ActivityTypesScreen() {
       setActivityTypes(data || []);
     } catch (err) {
       console.error('Error fetching activity types:', err);
-      Alert.alert('Error', 'Failed to load activity types');
+      showAlert('Error', 'Failed to load activity types');
     } finally {
       setLoading(false);
     }
@@ -100,13 +101,13 @@ export default function ActivityTypesScreen() {
 
       if (error) throw error;
 
-      Alert.alert('Success', 'Activity type deleted successfully');
+      showAlert('Success', 'Activity type deleted successfully');
       setShowDeleteModal(false);
       setTypeToDelete(null);
       fetchActivityTypes();
     } catch (err) {
       console.error('Error deleting activity type:', err);
-      Alert.alert('Error', 'Failed to delete activity type');
+      showAlert('Error', 'Failed to delete activity type');
       setShowDeleteModal(false);
       setTypeToDelete(null);
     }
@@ -119,7 +120,7 @@ export default function ActivityTypesScreen() {
 
   const handleSubmit = async () => {
     if (!typeName || !typeEmoji) {
-      Alert.alert('Error', 'Please fill in all required fields');
+      showAlert('Error', 'Please fill in all required fields');
       return;
     }
 
@@ -136,7 +137,7 @@ export default function ActivityTypesScreen() {
           .eq('id', editingType.id);
 
         if (error) throw error;
-        Alert.alert('Success', 'Activity type updated successfully');
+        showAlert('Success', 'Activity type updated successfully');
       } else {
         // Add new type
         const { error } = await supabase
@@ -148,7 +149,7 @@ export default function ActivityTypesScreen() {
           }]);
 
         if (error) throw error;
-        Alert.alert('Success', 'Activity type added successfully');
+        showAlert('Success', 'Activity type added successfully');
       }
 
       // Reset form and refresh list
@@ -160,7 +161,7 @@ export default function ActivityTypesScreen() {
       fetchActivityTypes();
     } catch (err) {
       console.error('Error saving activity type:', err);
-      Alert.alert('Error', 'Failed to save activity type');
+      showAlert('Error', 'Failed to save activity type');
     }
   };
 
