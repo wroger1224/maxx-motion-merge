@@ -208,36 +208,13 @@ export default function UserManagementScreen() {
         try {
             setIsLoading(true);
 
-            // First, delete the user's profile
-            const { error: profileError } = await supabase
-                .from('profiles')
-                .delete()
-                .eq('id', selectedUser.id);
-
-            if (profileError) {
-                console.error('Error deleting user profile:', profileError);
-                Alert.alert('Error', 'Failed to delete user profile');
-                return;
-            }
-
-            // Then, delete the user from Supabase Auth via Edge Function
-            const response = await fetch('https://hlfkovvfzqczsowfybwe.functions.supabase.co/delete-user', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: selectedUser.id }),
+            const { data, error } = await supabase.functions.invoke('delete-user', {
+                body: {userId: selectedUser.id },
             });
 
-            let data;
-            try {
-                data = await response.json();
-            } catch (e) {
-                data = null;
-            }
-
-            if (!response.ok) {
-                const errorMsg = data?.error || 'Failed to delete user from Supabase Auth.';
-                console.error('Error deleting user from auth:', errorMsg);
-                setSuccessMessage(`User profile deleted, but there was an error removing their account from Supabase Auth. Please contact support.`);
+            if (error) {
+                console.error('Error deleting user from auth:', error);
+                setSuccessMessage(`Failed to delete user ${selectedUser.full_name}`);
                 setShowSuccessPopup(true);
                 return;
             }
