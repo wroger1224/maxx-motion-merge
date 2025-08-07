@@ -827,10 +827,9 @@ export default function LeaderboardScreen() {
         style={styles.headerBackground}
         resizeMode="cover"
       >
-        <LinearGradient
-          colors={["rgba(196, 30, 58, 0.9)", "rgba(128, 128, 128, 0.85)"]}
-          locations={[0, 0.5]}
-          style={styles.headerOverlay}
+				<LinearGradient
+					colors={[Colors.light.blue, "rgba(0, 0, 0, 0.7)"]}
+					style={styles.headerOverlay}
         >
           <View style={styles.header}>
             <Text style={styles.headerTitle}>MAXX Motion</Text>

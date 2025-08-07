@@ -585,15 +585,17 @@ export default function AchievementsScreen() {
           colors={[Colors.light.blue, "rgba(0, 0, 0, 0.7)"]}
           style={styles.headerOverlay}
         >
-          <View style={styles.header}>
-            <ThemedText variant="h1" style={styles.headerTitle}>
-              Achievements
-            </ThemedText>
+					<View style={styles.header}>
+            <Text style={styles.headerTitle}>MAXX Motion</Text>
+            <View style={styles.userIcon}>
+              <Text style={styles.userIconText}>U</Text>
+          	</View>
           </View>
           <View style={styles.headerContent}>
-            <ThemedText style={styles.headerSubtitle}>
-              Unlock badges and track your progress
-            </ThemedText>
+					<Text style={styles.pageTitle}>Achievements</Text>
+						<ThemedText style={styles.tagline}>
+								Unlock badges and track your progress
+						</ThemedText>
           </View>
         </LinearGradient>
       </ImageBackground>
@@ -685,19 +687,38 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     color: "#fff",
-    fontSize: 32,
-    fontWeight: "700",
+    fontSize: 20,
+    fontWeight: "600",
   },
-  headerContent: {
+  userIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.light.background,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  userIconText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: Colors.light.redOrange,
+  },
+	headerContent: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     paddingVertical: 40,
   },
-  headerSubtitle: {
-    fontSize: 16,
+  pageTitle: {
+    fontSize: 32,
+    fontWeight: "700",
     color: "#fff",
-    marginTop: 8,
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  tagline: {
+    fontSize: 16,
+    color: "rgba(255, 255, 255, 0.8)",
     textAlign: "center",
   },
   content: {
