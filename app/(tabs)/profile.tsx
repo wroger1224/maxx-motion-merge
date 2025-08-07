@@ -403,7 +403,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: Colors.light.mimosa,
+    backgroundColor: Colors.light.orange,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -440,7 +440,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   activeTab: {
-    backgroundColor: Colors.light.blue,
+    backgroundColor: Colors.light.redOrange,
   },
   tabText: {
     fontSize: 14,
@@ -489,7 +489,7 @@ const styles = StyleSheet.create({
   },
   cardMinutes: {
     fontSize: 14,
-    color: Colors.light.blue,
+    color: Colors.light.redOrange,
     fontWeight: "500",
   },
   statusBadge: {
