@@ -1200,6 +1200,7 @@ const styles = StyleSheet.create({
   },
   mainContent: {
     padding: 16,
+    backgroundColor: Colors.light.background,
   },
   scrollContent: {
     flex: 1,
@@ -1211,7 +1212,7 @@ const styles = StyleSheet.create({
     paddingBottom: 100, // Extra padding to account for tab bar
   },
   card: {
-    backgroundColor: Colors.light.background,
+    backgroundColor: "#fff",
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -1232,7 +1233,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: Colors.light.blue,
+    backgroundColor: Colors.light.mimosa,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 16,
@@ -1295,7 +1296,7 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   actionButtonHovered: {
-    backgroundColor: Colors.light.blue,
+    backgroundColor: Colors.light.redOrange,
   },
   actionButtonText: {
     fontSize: 12,

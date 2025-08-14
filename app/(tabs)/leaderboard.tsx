@@ -846,32 +846,32 @@ export default function LeaderboardScreen() {
         </LinearGradient>
       </ImageBackground>
 
-      <View style={styles.tabs}>
+      <View style={styles.tabContainer}>
         <TouchableOpacity
           style={[styles.tab, activeTab === "team" && styles.activeTab]}
           onPress={() => setActiveTab("team")}
         >
-          <Text
+          <ThemedText
             style={[
               styles.tabText,
               activeTab === "team" && styles.activeTabText,
             ]}
           >
             TEAM RANKINGS
-          </Text>
+          </ThemedText>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === "user" && styles.activeTab]}
           onPress={() => setActiveTab("user")}
         >
-          <Text
+          <ThemedText
             style={[
               styles.tabText,
               activeTab === "user" && styles.activeTabText,
             ]}
           >
             USER RANKINGS
-          </Text>
+          </ThemedText>
         </TouchableOpacity>
       </View>
 
@@ -1368,27 +1368,37 @@ const styles = StyleSheet.create({
     color: "rgba(255, 255, 255, 0.8)",
     textAlign: "center",
   },
-  tabs: {
+  // Main top-level tabs
+  tabContainer: {
     flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
+    backgroundColor: "#fff",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
+
   tab: {
     flex: 1,
     paddingVertical: 12,
     alignItems: "center",
+    borderRadius: 8,
   },
+
   activeTab: {
-    borderBottomWidth: 2,
-    borderBottomColor: "#2196F3",
+    backgroundColor: Colors.light.redOrange,
   },
   tabText: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#757575",
+    color: Colors.light.text,
   },
   activeTabText: {
-    color: "#2196F3",
+    color: "#fff",
+    fontWeight: "600",
   },
   challengeCard: {
     marginLeft: 16,

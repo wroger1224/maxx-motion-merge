@@ -723,35 +723,35 @@ export default function Activity() {
       </ImageBackground>
 
       {/* Main activity page tabs */}
-      <View style={styles.mainTabs}>
+      <View style={styles.tabContainer}>
         <TouchableOpacity
-          style={[styles.mainTab, activeTab === "add" && styles.activeMainTab]}
+          style={[styles.tab, activeTab === "add" && styles.activeTab]}
           onPress={() => setActiveTab("add")}
         >
-          <Text
+          <ThemedText
             style={[
-              styles.mainTabText,
-              activeTab === "add" && styles.activeMainTabText,
+              styles.tabText,
+              activeTab === "add" && styles.activeTabText,
             ]}
           >
             Add Activity
-          </Text>
+          </ThemedText>
         </TouchableOpacity>
         <TouchableOpacity
           style={[
-            styles.mainTab,
-            activeTab === "review" && styles.activeMainTab,
+            styles.tab,
+            activeTab === "review" && styles.activeTab,
           ]}
           onPress={() => setActiveTab("review")}
         >
-          <Text
+          <ThemedText
             style={[
-              styles.mainTabText,
-              activeTab === "review" && styles.activeMainTabText,
+              styles.tabText,
+              activeTab === "review" && styles.activeTabText,
             ]}
           >
             Review Activities
-          </Text>
+          </ThemedText>
         </TouchableOpacity>
       </View>
 
@@ -1117,51 +1117,38 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   // Main top-level tabs
-  mainTabs: {
+  tabContainer: {
     flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
+    backgroundColor: "#fff",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  mainTab: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  activeMainTab: {
-    borderBottomWidth: 2,
-    borderBottomColor: "#C41E3A",
-  },
-  mainTabText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#757575",
-  },
-  activeMainTabText: {
-    color: "#C41E3A",
-  },
-  // Old tabs - renamed to avoid conflicts
-  tabs: {
-    flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
-  },
+
   tab: {
     flex: 1,
     paddingVertical: 12,
     alignItems: "center",
+    borderRadius: 8,
   },
+
   activeTab: {
-    borderBottomWidth: 2,
-    borderBottomColor: "#2196F3",
+    backgroundColor: Colors.light.redOrange,
   },
   tabText: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#757575",
+    color: Colors.light.text,
   },
   activeTabText: {
-    color: "#2196F3",
+    color: "#fff",
+    fontWeight: "600",
   },
+ 
   challengeCard: {
     marginHorizontal: 16,
     marginTop: 16,
@@ -1188,7 +1175,7 @@ const styles = StyleSheet.create({
     color: "#666",
   },
   activeTag: {
-    backgroundColor: "#C41E3A",
+    backgroundColor: Colors.light.orange,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
@@ -1208,7 +1195,7 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-    backgroundColor: "#C41E3A",
+    backgroundColor: Colors.light.redOrange,
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: "center",
