@@ -7,7 +7,7 @@ import {
   Text,
   ImageBackground,
 } from "react-native";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ThemedView } from "@/components/ThemedView";
 import { ThemedText } from "@/components/ThemedText";
 import { useAuth } from "@/lib/auth";
@@ -15,6 +15,11 @@ import { useUser } from "@/contexts/UserContext";
 import { LinearGradient } from "expo-linear-gradient";
 import { Colors } from "@/constants/Colors";
 import { Layout, Spacing, CommonStyles } from "@/constants/Styles";
+import { ResponsiveHeader } from '@/components/ui/responsiveHeader';
+import { supabase } from '@/lib/supabase';
+import { useIsFocused } from '@react-navigation/native';
+import { FontAwesome5 } from '@expo/vector-icons';
+import { Badge, UserBadge, fetchBadges, fetchUserBadges, calculateBadgeProgress } from '@/lib/services/badges';
 
 // Team interface for leaderboard
 interface Team {
@@ -39,106 +44,245 @@ interface Activity {
 }
 
 export default function DashboardScreen() {
-  // Dummy data for user progress
-  const userProgress = {
-    current: 310,
-    target: 500,
-    currentMilestone: "Silver (250 min)",
-    nextMilestone: "Gold (500 min)",
-  };
+  const { user } = useAuth();
+	const { signOut } = useAuth();
+  const { userProfile } = useUser();
+  const [userProgress, setUserProgress] = useState({ current: 0, progressMin: 0, progressMax: 0, currentMilestone: '', nextMilestone: '' });
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [badges, setBadges] = useState<Badge[]>([]);
+  const [userBadges, setUserBadges] = useState<UserBadge[]>([]);
+  const isFocused = useIsFocused();
 
-  // Dummy data for team leaderboard
-  const teams: Team[] = [
+  const badgeList = [
     {
-      id: "fw1",
-      rank: 1,
-      name: "Fitness Warriors",
-      members: 15,
-      totalMinutes: 3450,
-      minutesPerMember: 230,
-      isUserTeam: false,
+      id: '1', name: 'Step Starter', icon: 'shoe-prints', description: '5k Steps in one day', total: 5000, category: 'Steps', emoji: '👣', imageUrl: 'https://images.unsplash.com/photo-1571008887538-b36bb32f4571?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
     },
     {
-      id: "mm2",
-      rank: 2,
-      name: "Move Masters",
-      members: 12,
-      totalMinutes: 2640,
-      minutesPerMember: 220,
-      isUserTeam: true,
+      id: '2', name: 'Step Master', icon: 'walking', description: '10k Steps in one day', total: 10000, category: 'Steps', emoji: '👟', imageUrl: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
     },
     {
-      id: "hh3",
-      rank: 3,
-      name: "Health Heroes",
-      members: 18,
-      totalMinutes: 3240,
-      minutesPerMember: 180,
-      isUserTeam: false,
+      id: '3', name: 'Step Champion', icon: 'running', description: '20k Steps in one day', total: 20000, category: 'Steps', emoji: '👟', imageUrl: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
     },
     {
-      id: "ww4",
-      rank: 4,
-      name: "Wellness Warriors",
-      members: 10,
-      totalMinutes: 1650,
-      minutesPerMember: 165,
-      isUserTeam: false,
+      id: '4', name: 'Workout Beginner', icon: 'dumbbell', description: '10 Total Workouts', total: 10, category: 'Workouts', emoji: '🏋️', imageUrl: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
     },
+    {
+      id: '5', name: 'Workout Expert', icon: 'dumbbell', description: '50 Total Workouts', total: 50, category: 'Workouts', emoji: '🏋️', imageUrl: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
+    },
+    {
+      id: '6', name: 'Workout Master', icon: 'award', description: '100 Total Workouts', total: 100, category: 'Workouts', emoji: '🏆', imageUrl: 'https://images.unsplash.com/photo-1549060279-7e168fcee0c2?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
+    },
+    {
+      id: '7', name: 'Runner\'s Badge', icon: 'running', description: 'Complete a 5k Run', total: 5, category: 'Activities', emoji: '🏃', imageUrl: 'https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
+    },
+    {
+      id: '8', name: 'Cyclist\'s Badge', icon: 'bicycle', description: 'Bike 25 Miles', total: 25, category: 'Activities', emoji: '🚴', imageUrl: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
+    },
+    {
+      id: '9', name: 'Yogi\'s Badge', icon: 'pray', description: '10 Yoga Sessions', total: 10, category: 'Activities', emoji: '🧘‍♂️', imageUrl: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
+    },
+    {
+      id: '10', name: 'Early Bird', icon: 'sun', description: 'Workout Before 7 AM', total: 5, category: 'Time', emoji: '🌅', imageUrl: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
+    },
+    {
+      id: '11', name: 'Weekend Warrior', icon: 'calendar', description: '5 Weekend Workouts', total: 5, category: 'Time', emoji: '💪', imageUrl: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
+    },
+    {
+      id: '12', name: 'Night Owl', icon: 'moon', description: 'Workout After 10 PM', total: 5, category: 'Time', emoji: '🌙', imageUrl: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
+    }
   ];
 
-  // Dummy data for recent activities
-  const activities: Activity[] = [
-    {
-      id: "1",
-      type: "Running",
-      time: "Today",
-      duration: 45,
-      source: "Strava",
-      color: Colors.light.mimosa, // Updated to use Hackathon colors
-      initial: "R",
-    },
-    {
-      id: "2",
-      type: "Cycling",
-      time: "Yesterday",
-      duration: 60,
-      source: "Strava",
-      color: Colors.light.chartreuse, // Updated to use Hackathon colors
-      initial: "C",
-    },
-    {
-      id: "3",
-      type: "Swimming",
-      time: "2 days ago",
-      duration: 30,
-      source: "Apple Health",
-      color: Colors.light.orange, // Updated to use Hackathon colors
-      initial: "S",
-    },
-  ];
-
-  const { user } = useUser();
-  const { signOut } = useAuth();
+  const [badgeProgress, setBadgeProgress] = useState<Record<string, number>>({});
+  const [recentBadges, setRecentBadges] = useState<any[]>([]);
 
   useEffect(() => {
-    // Any initialization logic
-  }, []);
+    if (user && userProfile && isFocused) {
+      fetchDashboardData();
+      fetchBadgeData();
+    }
+  }, [user, userProfile, isFocused]);
 
-  const progressPercentage = (userProgress.current / userProgress.target) * 100;
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    try {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+      // 1. Get current event
+      const today = new Date().toISOString().split('T')[0];
+      const { data: eventData, error: eventError } = await supabase
+        .from('events')
+        .select('*')
+        .lte('start_date', today)
+        .gte('end_date', today)
+        .order('start_date', { ascending: false })
+        .limit(1);
+      if (eventError) throw eventError;
+      const currentEvent = eventData && eventData.length > 0 ? eventData[0] : null;
+      if (!currentEvent) {
+        setLoading(false);
+        return;
+      }
+      // 2. User Progress & Milestones
+      const { data: userActivities } = await supabase
+        .from('activities')
+        .select('activity_minutes')
+        .eq('user_id', user.id)
+        .eq('event_id', currentEvent.id);
+      const totalMinutes = userActivities?.reduce((sum, a) => sum + a.activity_minutes, 0) || 0;
+      const { data: milestones } = await supabase
+        .from('milestones')
+        .select('milestone_minutes, milestone_name')
+        .eq('event_id', currentEvent.id)
+        .order('milestone_minutes', { ascending: true });
+      let currentMilestone = 'None';
+      let nextMilestone = 'None';
+      let progressMin = 0;
+      let progressMax = 0;
+      if (milestones && milestones.length > 0) {
+        let prev = { milestone_minutes: 0, milestone_name: 'Start' };
+        let found = false;
+        for (let i = 0; i < milestones.length; i++) {
+          if (totalMinutes < milestones[i].milestone_minutes) {
+            currentMilestone = prev.milestone_name + ` (${prev.milestone_minutes} min)`;
+            nextMilestone = milestones[i].milestone_name + ` (${milestones[i].milestone_minutes} min)`;
+            progressMin = prev.milestone_minutes;
+            progressMax = milestones[i].milestone_minutes;
+            found = true;
+            break;
+          }
+          prev = milestones[i];
+        }
+        if (!found) {
+          // User has surpassed all milestones
+          currentMilestone = milestones[milestones.length - 1].milestone_name + ` (${milestones[milestones.length - 1].milestone_minutes} min)`;
+          nextMilestone = 'All milestones achieved!';
+          progressMin = milestones[milestones.length - 1].milestone_minutes;
+          progressMax = milestones[milestones.length - 1].milestone_minutes;
+        }
+      }
+      setUserProgress({
+        current: totalMinutes,
+        progressMin,
+        progressMax,
+        currentMilestone,
+        nextMilestone
+      });
+      // 3. Team Leaderboard
+      const { data: allTeams } = await supabase
+        .from('teams')
+        .select('id, team_name')
+        .eq('event_id', currentEvent.id);
+      const leaderboard: Team[] = [];
+      for (const team of allTeams || []) {
+        // Get members
+        const { data: members } = await supabase
+          .from('team_members')
+          .select('user_id')
+          .eq('team_id', team.id);
+        const memberIds = members?.map(m => m.user_id) || [];
+        // Get activities for this team in the current event
+        const { data: teamActivities } = await supabase
+          .from('activities')
+          .select('activity_minutes')
+          .eq('event_id', currentEvent.id)
+          .in('user_id', memberIds);
+        const teamMinutes = teamActivities?.reduce((sum, a) => sum + a.activity_minutes, 0) || 0;
+        leaderboard.push({
+          id: team.id,
+          rank: 0, // will be set after sorting
+          name: team.team_name,
+          members: memberIds.length,
+          totalMinutes: teamMinutes,
+          minutesPerMember: memberIds.length > 0 ? Math.round(teamMinutes / memberIds.length) : 0,
+          isUserTeam: !!members?.find(m => m.user_id === user.id)
+        });
+      }
+      leaderboard.sort((a, b) => b.totalMinutes - a.totalMinutes);
+      leaderboard.forEach((team, idx) => (team.rank = idx + 1));
+      setTeams(leaderboard);
+      // 4. Recent Activities (user only)
+      const { data: recentActs } = await supabase
+        .from('activities')
+        .select('id, activity_type, activity_date, activity_minutes, activity_source')
+        .eq('user_id', user.id)
+        .eq('event_id', currentEvent.id)
+        .order('activity_date', { ascending: false })
+        .limit(5);
+      setActivities((recentActs || []).map(a => ({
+        id: a.id,
+        type: a.activity_type,
+        time: new Date(a.activity_date).toLocaleDateString(),
+        duration: a.activity_minutes,
+        source: a.activity_source,
+        color: '#4CAF50', // You can enhance this by mapping activity types to colors
+        initial: a.activity_type ? a.activity_type[0] : '?'
+      })));
+    } catch (err) {
+      console.error('Error loading dashboard data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchBadgeData = async () => {
+    if (!userProfile?.id) return;
+
+    // Fetch all badges and user badges
+    const [allBadges, userBadgeData] = await Promise.all([
+      fetchBadges(),
+      fetchUserBadges(userProfile.id)
+    ]);
+
+    setBadges(allBadges);
+    setUserBadges(userBadgeData);
+
+    // Calculate badge progress
+    await calculateBadgeProgress(userProfile.id);
+  };
+
+  const renderRecentBadges = () => {
+    const unlockedBadges = userBadges
+      .filter(ub => ub.is_unlocked)
+      .map(ub => ub.badge)
+      .filter((badge): badge is Badge => badge !== undefined)
+      .sort((a, b) => {
+        const badgeA = userBadges.find(ub => ub.badge_id === a.id);
+        const badgeB = userBadges.find(ub => ub.badge_id === b.id);
+        return new Date(badgeB?.unlocked_at || '').getTime() - new Date(badgeA?.unlocked_at || '').getTime();
+      })
+      .slice(0, 3);
+
+    if (unlockedBadges.length === 0) {
+      return (
+        <Text style={{ color: '#888', fontStyle: 'italic', textAlign: 'center', marginTop: 8 }}>
+          You have not yet earned any achievement badges.
+        </Text>
+      );
+    }
+
+    return (
+      <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 8 }}>
+        {unlockedBadges.map(badge => (
+          <View key={badge.id} style={{ alignItems: 'center', marginHorizontal: 8 }}>
+            <View style={{ width: 56, height: 56, borderRadius: 28, overflow: 'hidden', backgroundColor: '#eee', marginBottom: 4 }}>
+              <FontAwesome5 name={badge.icon} size={32} color="#C41E3A" style={{ textAlign: 'center', marginTop: 12 }} />
+            </View>
+            <Text style={{ fontSize: 12, fontWeight: '600', color: '#333', textAlign: 'center' }}>{badge.name}</Text>
+          </View>
+        ))}
+      </View>
+    );
+  };
 
   return (
     <View style={styles.container}>
-      <ScrollView
-        style={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+      <ResponsiveHeader
+        source={require('@/assets/images/gym-equipment.png')}
       >
-        {/* Header with gradient background */}
-        <ImageBackground
-          source={require("../../assets/images/gym-equipment.png")}
-          style={styles.headerBackground}
-          resizeMode="cover"
-        >
           <LinearGradient
             colors={[Colors.light.blue, "rgba(0, 0, 0, 0.7)"]}
             style={styles.headerOverlay}
@@ -158,8 +302,9 @@ export default function DashboardScreen() {
               </ThemedText>
             </View>
           </LinearGradient>
-        </ImageBackground>
+      </ResponsiveHeader>
 
+			<ScrollView style={styles.scrollContent}>
         {/* Progress Section */}
         <View style={styles.section}>
           <ThemedText variant="h2" style={styles.sectionTitle}>
@@ -170,12 +315,12 @@ export default function DashboardScreen() {
               <View
                 style={[
                   styles.progressFill,
-                  { width: `${progressPercentage}%` },
+                  { width: `${userProgress.progressMax > userProgress.progressMin ? ((userProgress.current - userProgress.progressMin) / (userProgress.progressMax - userProgress.progressMin)) * 100 : 100}%` }
                 ]}
               />
             </View>
             <ThemedText style={styles.progressText}>
-              {userProgress.current} / {userProgress.target} minutes
+              {userProgress.current} / {userProgress.progressMax} min
             </ThemedText>
             <ThemedText style={styles.milestoneText}>
               Current: {userProgress.currentMilestone}
@@ -253,21 +398,14 @@ export default function DashboardScreen() {
             </View>
           ))}
         </View>
-
-        {/* Coming Soon Section */}
-        <ThemedView style={styles.section}>
+        <ThemedView style={[styles.section, styles.sectionLast]}>
           <ThemedText variant="h2" style={styles.sectionTitle}>
             Achievements
           </ThemedText>
-          <ThemedText style={styles.comingSoon}>
-            Achievements coming soon
+          <ThemedText>
+						{renderRecentBadges()}
           </ThemedText>
         </ThemedView>
-
-        {/* Floating Action Button */}
-        <TouchableOpacity style={styles.fab}>
-          <ThemedText style={styles.fabIcon}>+</ThemedText>
-        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -298,9 +436,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.light.background,
   },
-  headerBackground: {
-    height: 300,
-  },
   headerOverlay: {
     flex: 1,
   },
@@ -308,7 +443,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: Spacing.md,
+		paddingLeft: 16,
+		paddingTop: 16,
+		paddingRight: 16,
     zIndex: 1,
   },
   headerTitle: {
@@ -336,7 +473,7 @@ const styles = StyleSheet.create({
   },
   section: {
     padding: Spacing.md,
-    marginBottom: Spacing.md,
+    marginTop: Spacing.md,
     backgroundColor: "#fff",
     borderRadius: 8,
     shadowColor: "#000",
@@ -346,6 +483,9 @@ const styles = StyleSheet.create({
     elevation: 2,
     marginHorizontal: Spacing.md,
   },
+	sectionLast: {
+		marginBottom: Spacing.md
+	},
   sectionTitle: {
     fontSize: 18,
     fontWeight: "600",

@@ -20,6 +20,8 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { Image } from "react-native";
+import { ResponsiveHeader } from '@/components/ui/responsiveHeader';
+import { showAlert } from '../utils/showAlert';
 
 type UserActivity = {
   id: string;
@@ -110,43 +112,73 @@ export default function ProfileScreen() {
   const fetchUserEvents = async () => {
     if (!user) return;
     const { data, error } = await supabase
-      .from("events")
-      .select("id, name, status, start_date, end_date")
-      .eq("status", "Active");
+      .from('event_registrations')
+      .select('events(id, name, status, start_date, end_date)')
+      .eq('user_id', user.id);
     if (!error && data) {
-      setEvents(data);
+      setEvents(
+        data.map((er: any) => ({
+          id: er.events.id,
+          name: er.events.name,
+          status: er.events.status,
+          start_date: er.events.start_date,
+          end_date: er.events.end_date,
+        }))
+      );
     }
   };
 
   const fetchUserActivities = async () => {
     if (!user) return;
-    const { data, error } = await supabase
-      .from("activities")
-      .select("id, activity_type, activity_date, activity_minutes")
-      .eq("user_id", user.id)
-      .order("activity_date", { ascending: false })
-      .limit(10);
-    if (!error && data) {
-      setActivities(data);
+
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('activities')
+        .select(`
+          *,
+          event:event_id (
+            name
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('activity_date', { ascending: false });
+      console.log('Profile activities:', data, error);
+      if (error) throw error;
+      setActivities(data || []);
+    } catch (err) {
+      console.error('Error fetching user activities:', err);
+      showAlert('Error', 'Failed to load your activities');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleLogout = async () => {
-    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Sign Out",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await supabase.auth.signOut();
-            router.replace("/login");
-          } catch (error) {
-            console.error("Error signing out:", error);
-          }
-        },
-      },
-    ]);
+    try {
+      setLoading(true);
+
+      // Force navigation to home page before signing out
+      setTimeout(() => {
+        // Navigate using window.location for a full reset of the app state
+        if (typeof window !== 'undefined') {
+          window.location.href = '/';
+        } else {
+          // Fallback for native
+          router.replace('/');
+        }
+      }, 100);
+
+      // Sign out
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+      showAlert('Error', error.message);
+      }
+    } catch (error: any) {
+      showAlert('Error', error.message);
+      setLoading(false);
+    }
   };
 
   const ActivityCard = ({ activity }: { activity: UserActivity }) => (
@@ -211,10 +243,8 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.container}>
-      <ImageBackground
-        source={require("../../assets/images/gym-equipment.png")}
-        style={styles.headerBackground}
-        resizeMode="cover"
+      <ResponsiveHeader
+        source={require('@/assets/images/gym-equipment.png')}
       >
         <LinearGradient
           colors={[Colors.light.blue, "rgba(0, 0, 0, 0.7)"]}
@@ -252,7 +282,7 @@ export default function ProfileScreen() {
             <ThemedText style={styles.userEmail}>{user?.email}</ThemedText>
           </View>
         </LinearGradient>
-      </ImageBackground>
+      </ResponsiveHeader>
 
       <View style={styles.tabContainer}>
         <TouchableOpacity
@@ -299,16 +329,19 @@ export default function ProfileScreen() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {activeTab === "activities" && (
           <View style={styles.tabContent}>
-            {activities.length > 0 ? (
-              activities.map((activity) => (
-                <ActivityCard key={activity.id} activity={activity} />
-              ))
-            ) : (
-              <View style={styles.emptyState}>
+
+						{loading ? (
+                <ActivityIndicator size="large" color="#2196F3" />
+              ) : activities.length === 0 ? (
+								<View style={styles.emptyState}>
                 <ThemedText style={styles.emptyStateText}>
                   No activities yet
                 </ThemedText>
               </View>
+              ) : (
+                activities.map(activity => (
+                  <ActivityCard key={activity.id} activity={activity} />
+                ))
             )}
           </View>
         )}
@@ -356,9 +389,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: Colors.light.background,
   },
-  headerBackground: {
-    height: 300,
-  },
   headerOverlay: {
     flex: 1,
   },
@@ -368,11 +398,38 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 16,
     paddingTop: Platform.OS === "ios" ? 60 : 16,
+		paddingLeft: 16,
+		paddingRight: 16,
+    zIndex: 1,
   },
   headerTitle: {
-    color: "#fff",
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '600',
+  },
+  userIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  userIconText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#C41E3A',
+  },
+  headerContent: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  pageTitle: {
     fontSize: 32,
     fontWeight: "700",
+		color: '#fff',
+    textAlign: 'center',
+    marginBottom: 8,
   },
   logoutButton: {
     paddingVertical: 8,

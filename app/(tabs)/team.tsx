@@ -28,6 +28,9 @@ import { Colors } from "@/constants/Colors";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import MemberDetails from "@/app/screens/MemberDetails";
+import { ResponsiveHeader } from '@/components/ui/responsiveHeader';
+import { showAlert } from '../utils/showAlert';
+
 
 type TeamMember = {
   id: string; // UUID from team_members table
@@ -119,6 +122,14 @@ export default function TeamScreen() {
     }
   }, [user]);
 
+  // Refresh team data when screen comes into focus
+  useEffect(() => {
+    if (isFocused && userTeam) {
+      fetchTeamMembers();
+      fetchTeamRank();
+    }
+  }, [isFocused, userTeam]);
+
   // Fetch team members when team is loaded
   useEffect(() => {
     if (userTeam) {
@@ -204,7 +215,7 @@ export default function TeamScreen() {
       }
 
       console.log("Team memberships found:", memberships?.length || 0);
-      console.log("Raw membership data:", JSON.stringify(memberships));
+      console.log("Raw membership data:", memberships);
 
       if (!memberships || memberships.length === 0) {
         // User is not part of any team
@@ -213,60 +224,48 @@ export default function TeamScreen() {
         return;
       }
 
+			const typedMemberships = memberships as unknown as TeamMembershipQueryResult[]
+
       // Find active event team first
       let activeEventTeam = null;
 
       // Try to find an active event
-      for (const membership of memberships) {
+      for (const typedMembership of typedMemberships) {
+				console.log(typedMembership)
         // Access nested properties safely - handle teams as an array
-        const teamsArray = membership?.teams;
-        if (teamsArray && Array.isArray(teamsArray) && teamsArray.length > 0) {
-          const team = teamsArray[0];
-          console.log("Checking team:", team?.team_name);
+        const { teams } = typedMembership;
+        if (teams) {
+          console.log("Checking team:", teams?.team_name);
 
-          const eventsArray = team.events;
-          if (
-            eventsArray &&
-            Array.isArray(eventsArray) &&
-            eventsArray.length > 0
-          ) {
-            const event = eventsArray[0];
-            console.log("Found event with status:", event?.status);
+          const { events } = teams;
+					console.log("event: ", events);
+          if (events) {
+            console.log("Found event with status:", events?.status);
 
-            if (event.status === "Active") {
-              console.log("Active event found:", event?.name);
-              activeEventTeam = membership;
+            if (events.status === "Active") {
+              console.log("Active event found:", events?.name);
+              activeEventTeam = typedMembership;
               break;
             }
           } else {
-            console.log("No events found for team");
+            console.log("No event found for team");
           }
         } else {
-          console.log("Teams array is empty or not properly structured");
+          console.log("Teams object does not exist");
         }
       }
 
       // If no active event, look for upcoming event
       if (!activeEventTeam) {
         console.log("No active event found, looking for upcoming events");
-        for (const membership of memberships) {
-          const teamsArray = membership?.teams;
-          if (
-            teamsArray &&
-            Array.isArray(teamsArray) &&
-            teamsArray.length > 0
-          ) {
-            const team = teamsArray[0];
-            const eventsArray = team.events;
-            if (
-              eventsArray &&
-              Array.isArray(eventsArray) &&
-              eventsArray.length > 0
-            ) {
-              const event = eventsArray[0];
-              if (event.status === "Upcoming") {
-                console.log("Upcoming event found:", event?.name);
-                activeEventTeam = membership;
+        for (const typedMembership of typedMemberships) {
+          const { teams } = typedMembership;
+          if (teams) {
+            const { events } = teams;
+            if (events) {
+              if (events.status === "Upcoming") {
+                console.log("Upcoming event found:", events?.name);
+                activeEventTeam = typedMembership;
                 break;
               }
             }
@@ -279,90 +278,60 @@ export default function TeamScreen() {
         console.log(
           "No active or upcoming events found, using first available membership"
         );
-        activeEventTeam = memberships[0];
+        activeEventTeam = typedMemberships[0];
       }
 
       if (activeEventTeam) {
         console.log("Selected team membership:", activeEventTeam);
-        const teamsArray = activeEventTeam.teams;
+        const { teams } = activeEventTeam ;
 
-        // Check if teams is already an object rather than an array
-        if (teamsArray && typeof teamsArray === "object") {
-          let team;
-          let eventsData;
+				if (teams) {
+					console.log("Team found:", teams.team_name);
 
-          // Handle both array and direct object cases
-          if (Array.isArray(teamsArray)) {
-            console.log("Teams is an array with length:", teamsArray.length);
-            if (teamsArray.length > 0) {
-              team = teamsArray[0];
-            }
-          } else {
-            console.log("Teams is a direct object");
-            team = teamsArray;
-          }
+					const teamData = {
+						id: teams.id || "",
+						team_name: teams.team_name || "",
+						team_minute_goal: teams.team_minute_goal || 10000,
+						captain_id: teams.captain_id || "",
+						event_id: teams.event_id || "",
+					};
 
-          if (team) {
-            console.log("Team found:", team.team_name);
+					if (teams.events) {
+				
+						const eventsData = teams.events;
 
-            const teamData = {
-              id: team.id || "",
-              team_name: team.team_name || "",
-              team_minute_goal: team.team_minute_goal || 10000,
-              captain_id: team.captain_id || "",
-              event_id: team.event_id || "",
-            };
+						if (eventsData) {
+							console.log(
+								"Event found:",
+								eventsData.name,
+								"with status:",
+								eventsData.status
+							);
 
-            // Handle events the same way - could be array or direct object
-            if (team.events) {
-              if (Array.isArray(team.events)) {
-                console.log(
-                  "Events is an array with length:",
-                  team.events.length
-                );
-                if (team.events.length > 0) {
-                  eventsData = team.events[0];
-                }
-              } else {
-                console.log("Events is a direct object");
-                eventsData = team.events;
-              }
+							const eventData = {
+								id: eventsData.id || "",
+								name: eventsData.name || "",
+								start_date: eventsData.start_date || "",
+								end_date: eventsData.end_date || "",
+								status:
+									(eventsData.status as "Upcoming" | "Active" | "Archive") ||
+									"Archive",
+							};
 
-              if (eventsData) {
-                console.log(
-                  "Event found:",
-                  eventsData.name,
-                  "with status:",
-                  eventsData.status
-                );
+							console.log("Setting user team:", teamData);
+							console.log("Setting user event:", eventData);
 
-                const eventData = {
-                  id: eventsData.id || "",
-                  name: eventsData.name || "",
-                  start_date: eventsData.start_date || "",
-                  end_date: eventsData.end_date || "",
-                  status:
-                    (eventsData.status as "Upcoming" | "Active" | "Archive") ||
-                    "Archive",
-                };
-
-                console.log("Setting user team:", teamData);
-                console.log("Setting user event:", eventData);
-
-                setUserTeam(teamData);
-                setUserEvent(eventData);
-              } else {
-                console.log("No valid event data found");
-              }
-            } else {
-              console.log("No events property found on team");
-            }
-          } else {
-            console.log("No valid team found");
-          }
-        } else {
-          console.log("Teams property is not an object or is undefined");
-        }
+							setUserTeam(teamData);
+							setUserEvent(eventData);
+						} else {
+							console.log("No valid event data found");
+						}
+					} else {
+						console.log("No events property found on team");
+					}
+				} else {
+					console.log("No valid team found");
+				}
       } else {
         console.log("No active team membership found");
       }
@@ -378,6 +347,30 @@ export default function TeamScreen() {
     if (!userTeam) return;
 
     try {
+      console.log('Fetching team members for team:', userTeam.id);
+      console.log('Current event ID:', userTeam.event_id);
+
+      // Get today's date in YYYY-MM-DD format
+      const today = new Date().toISOString().split('T')[0];
+
+      // Fetch current active event
+      const { data: currentData, error: currentError } = await supabase
+        .from('events')
+        .select('*')
+        .lte('start_date', today)
+        .gte('end_date', today)
+        .order('start_date', { ascending: false })
+        .limit(1);
+
+      if (currentError) {
+        console.error('Error fetching current event:', currentError);
+        return;
+      }
+
+      // Use the current event if available, otherwise use the team's event
+      const eventId = currentData && currentData.length > 0 ? currentData[0].id : userTeam.event_id;
+      console.log('Using event ID:', eventId);
+
       // Get all team members
       const { data: members, error: membersError } = await supabase
         .from("team_members")
@@ -391,19 +384,24 @@ export default function TeamScreen() {
         return;
       }
 
+      console.log('Found team members:', members?.length || 0);
+
       // Get activities for all current team members only
-      const memberUserIds = members.map((m) => m.user_id);
+      const memberUserIds = members.map(m => m.user_id);
+      console.log('Fetching activities for user IDs:', memberUserIds);
+
       const { data: activities, error: activitiesError } = await supabase
-        .from("activities")
-        .select("user_id, activity_minutes")
-        .eq("event_id", userTeam.event_id)
-        .in("user_id", memberUserIds);
+        .from('activities')
+        .select('user_id, activity_minutes')
+        .eq('event_id', eventId)
+        .in('user_id', memberUserIds);
 
       if (activitiesError) {
         console.error("Error fetching activities:", activitiesError);
       }
 
-      console.log("Activities fetched for team:", activities);
+      console.log('Activities fetched for team:', activities);
+      console.log('Number of activities found:', activities?.length || 0);
 
       // Calculate minutes for each member
       const memberMinutes: { [key: string]: number } = {};
@@ -412,7 +410,7 @@ export default function TeamScreen() {
           (memberMinutes[activity.user_id] || 0) + activity.activity_minutes;
       });
 
-      console.log("Member minutes:", memberMinutes);
+      console.log('Member minutes calculated:', memberMinutes);
 
       // Calculate total minutes for the team
       const totalMinutes = Object.values(memberMinutes).reduce(
@@ -685,10 +683,7 @@ export default function TeamScreen() {
     // Validate input
     const goalValue = parseInt(newGoalValue);
     if (isNaN(goalValue) || goalValue <= 0) {
-      Alert.alert(
-        "Invalid Value",
-        "Please enter a positive number for the team goal"
-      );
+      showAlert('Invalid Value', 'Please enter a positive number for the team goal');
       return;
     }
 
@@ -736,10 +731,8 @@ export default function TeamScreen() {
 
   return (
     <View style={styles.container}>
-      <ImageBackground
-        source={require("@/assets/images/gym-equipment.png")}
-        style={styles.headerBackground}
-        resizeMode="cover"
+      <ResponsiveHeader
+        source={require('@/assets/images/gym-equipment.png')}
       >
 				<LinearGradient
             colors={[Colors.light.blue, "rgba(0, 0, 0, 0.7)"]}
@@ -758,7 +751,7 @@ export default function TeamScreen() {
             </Text>
           </View>
         </LinearGradient>
-      </ImageBackground>
+      </ResponsiveHeader>
 
       {!userTeam ? (
         <View style={styles.noTeamContainer}>
@@ -1149,17 +1142,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
   },
-  headerBackground: {
-    height: 300,
-  },
   headerOverlay: {
     flex: 1,
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingLeft: 16,
+		paddingTop: 16,
+		paddingRight: 16,
     zIndex: 1,
   },
   headerTitle: {

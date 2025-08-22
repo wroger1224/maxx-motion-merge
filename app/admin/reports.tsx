@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
+import { showAlert } from '../utils/showAlert';
 
 // Type definitions
 type Event = {
@@ -142,7 +143,7 @@ export default function AdminReportsScreen() {
       
       if (error) {
         console.error('Error fetching events:', error);
-        Alert.alert('Error', 'Failed to load events');
+        showAlert('Error', 'Failed to load events');
         return;
       }
       
@@ -157,7 +158,7 @@ export default function AdminReportsScreen() {
       }
     } catch (error) {
       console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      showAlert('Error', 'An unexpected error occurred');
     } finally {
       setLoading(false);
     }
@@ -344,7 +345,7 @@ export default function AdminReportsScreen() {
       
     } catch (error) {
       console.error('Error generating weekly report:', error);
-      Alert.alert('Error', 'Failed to generate weekly report');
+      showAlert('Error', 'Failed to generate weekly report');
     } finally {
       setLoading(false);
     }
@@ -514,7 +515,7 @@ export default function AdminReportsScreen() {
       setMilestoneAchievements(achievements);
     } catch (error) {
       console.error('Error in fetchMilestoneAchievements:', error);
-      Alert.alert('Error', 'Failed to load milestone achievements');
+      showAlert('Error', 'Failed to load milestone achievements');
     } finally {
       setLoading(false);
     }
@@ -565,7 +566,7 @@ export default function AdminReportsScreen() {
       
       if (fetchError) {
         console.error('Error fetching milestone:', fetchError);
-        Alert.alert('Error', 'Failed to load milestone data');
+        showAlert('Error', 'Failed to load milestone data');
         return;
       }
       
@@ -611,7 +612,7 @@ export default function AdminReportsScreen() {
       
       if (updateError) {
         console.error('Error updating milestone:', updateError);
-        Alert.alert('Error', 'Failed to mark user as rewarded');
+        showAlert('Error', 'Failed to mark user as rewarded');
         return;
       }
       
@@ -626,10 +627,10 @@ export default function AdminReportsScreen() {
         return achievement;
       }));
       
-      Alert.alert('Success', 'User marked as rewarded');
+      showAlert('Success', 'User marked as rewarded');
     } catch (error) {
       console.error('Error marking achievement as rewarded:', error);
-      Alert.alert('Error', 'Failed to mark user as rewarded');
+      showAlert('Error', 'Failed to mark user as rewarded');
     } finally {
       setMarkingReward(false);
     }
@@ -1081,7 +1082,7 @@ export default function AdminReportsScreen() {
       
     } catch (error) {
       console.error('Error generating cumulative report:', error);
-      Alert.alert('Error', 'Failed to generate cumulative report');
+      showAlert('Error', 'Failed to generate cumulative report');
     } finally {
       setLoading(false);
     }

@@ -12,7 +12,7 @@ import {
   Alert,
   Animated,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useIsFocused } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,9 @@ import { supabase } from "@/lib/supabase";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "@/lib/auth";
 import { Colors } from "@/constants/Colors";
+import { ResponsiveHeader } from '@/components/ui/responsiveHeader';
+import { router } from 'expo-router';
+import { showAlert, showAlertWithButtons } from '../utils/showAlert';
 
 // Types for our Supabase data
 type ActivityType = {
@@ -219,6 +222,7 @@ function ActivityReview({
 
 export default function Activity() {
   const navigation = useNavigation<NavigationProp>();
+  const isFocused = useIsFocused();
   const { user } = useAuth();
 
   const [activityTypes, setActivityTypes] = useState<ActivityType[]>([]);
@@ -410,18 +414,18 @@ export default function Activity() {
   const handleManualSubmit = async () => {
     try {
       if (!manualEntry.activity_type || !manualEntry.activity_minutes) {
-        Alert.alert("Error", "Please fill all required fields");
+				showAlert('Error', 'Please fill all required fields');
         return;
       }
 
       if (!user) {
-        Alert.alert("Error", "You must be logged in to log activity");
+				showAlert('Error', 'You must be logged in to log activity');
         return;
       }
 
       // Check if we have an event to associate with this activity
       if (!currentEvent && !upcomingEvent) {
-        Alert.alert("Error", "No active or upcoming event available");
+				showAlert('Error', 'No active or upcoming event available');
         return;
       }
 
@@ -466,8 +470,8 @@ export default function Activity() {
       // Trigger refresh of activities list
       setRefreshTrigger((prev) => prev + 1);
     } catch (error: any) {
-      console.error("Error:", error);
-      Alert.alert("Error", error.message || "Failed to log activity");
+      console.error('Error:', error);
+			showAlert('Error', 'Failed to log activity');
     }
   };
 
@@ -494,7 +498,7 @@ export default function Activity() {
 
     try {
       if (!manualEntry.activity_type || !manualEntry.activity_minutes) {
-        Alert.alert("Error", "Please fill all required fields");
+				showAlert('Error', 'Please fill all required fields');
         return;
       }
 
@@ -530,66 +534,54 @@ export default function Activity() {
       // Trigger refresh of activities list
       setRefreshTrigger((prev) => prev + 1);
     } catch (error: any) {
-      console.error("Error updating activity:", error);
-      Alert.alert("Error", error.message || "Failed to update activity");
+      console.error('Error updating activity:', error);
+			showAlert('Error', error.message || 'Failed to update activity');
     }
   };
 
   // Function to delete an activity
-  const handleDeleteActivity = async () => {
+  const handleDeleteActivity = () => {
     if (!currentEditActivity || !user) return;
 
     // Confirmation dialog
-    Alert.alert(
-      "Delete Activity",
-      "Are you sure you want to delete this activity? This cannot be undone.",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const { error } = await supabase
-                .from("activities")
-                .delete()
-                .eq("id", currentEditActivity.id)
-                .eq("user_id", user.id); // Additional safety check
+		showAlertWithButtons(
+			'Delete Activity', 
+			'Are you sure you want to delete this activity? This cannot be undone.',
+			async () => {
+				try {
+					const { error } = await supabase
+						.from('activities')
+						.delete()
+						.eq('id', currentEditActivity.id)
+						.eq('user_id', user.id); // Additional safety check
 
-              if (error) throw error;
+					if (error) throw error;
 
-              setEditActivityModalVisible(false);
+					setEditActivityModalVisible(false);
 
-              // Reset state
-              setCurrentEditActivity(null);
-              setManualEntry({
-                activity_type: "",
-                activity_type_linked: "",
-                activity_type_emoji: "",
-                activity_minutes: "",
-                activity_date: new Date(),
-                activity_source: "manual",
-              });
+					// Reset state
+					setCurrentEditActivity(null);
+					setManualEntry({
+						activity_type: '',
+						activity_type_linked: '',
+						activity_type_emoji: '',
+						activity_minutes: '',
+						activity_date: new Date(),
+						activity_source: 'manual'
+					});
 
-              // Show success message
-              showSuccessToast("Activity deleted successfully");
+					// Show success message
+					showSuccessToast('Activity deleted successfully');
 
-              // Trigger refresh of activities list
-              setRefreshTrigger((prev) => prev + 1);
-            } catch (error: any) {
-              console.error("Error deleting activity:", error);
-              Alert.alert(
-                "Error",
-                error.message || "Failed to delete activity"
-              );
-            }
-          },
-        },
-      ]
-    );
+					// Trigger refresh of activities list
+					setRefreshTrigger(prev => prev + 1);
+				} catch (error: any) {
+					console.error('Error deleting activity:', error);
+					showAlert('Error', error.message || 'Failed to delete activity');
+				}
+			}
+		)
+
   };
 
   // Add a platform-specific date picker component
@@ -698,10 +690,8 @@ export default function Activity() {
 
   return (
     <View style={styles.container}>
-      <ImageBackground
-        source={require("../../assets/images/gym-equipment.png")}
-        style={styles.headerBackground}
-        resizeMode="cover"
+      <ResponsiveHeader
+        source={require('../../assets/images/gym-equipment.png')}
       >
 				<LinearGradient
             colors={[Colors.light.blue, "rgba(0, 0, 0, 0.7)"]}
@@ -720,7 +710,7 @@ export default function Activity() {
             </Text>
           </View>
         </LinearGradient>
-      </ImageBackground>
+      </ResponsiveHeader>
 
       {/* Main activity page tabs */}
       <View style={styles.tabContainer}>
@@ -786,6 +776,7 @@ export default function Activity() {
               <Text style={styles.actionButtonText}>Manual Entry</Text>
             </TouchableOpacity>
           </View>
+			
 
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Add By Activity Type</Text>
@@ -1067,9 +1058,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.light.background,
   },
-  headerBackground: {
-    height: 300,
-  },
   headerOverlay: {
     flex: 1,
   },
@@ -1077,7 +1065,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: 16,
+		paddingTop: 16,
+		paddingLeft: 16,
+		paddingRight: 16,
     zIndex: 1,
   },
   headerTitle: {

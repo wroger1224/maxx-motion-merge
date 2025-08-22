@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator, FlatList } from 'react-native';
+import { StyleSheet, View, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator, FlatList, Dimensions, Platform } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useUser } from '../../contexts/UserContext';
 import { router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { showAlert, showAlertWithButtons } from '../utils/showAlert';
 
 type Milestone = {
   id: string;
@@ -13,6 +14,7 @@ type Milestone = {
   milestone_name: string;
 };
 
+const IS_WEB = Platform.OS === 'web';
 export default function ManageMilestonesScreen() {
   const params = useLocalSearchParams();
   const eventId = params.eventId as string;
@@ -36,7 +38,7 @@ export default function ManageMilestonesScreen() {
       fetchEventDetails();
       fetchMilestones();
     } else {
-      Alert.alert('Error', 'No event ID provided');
+			showAlert('Error', 'No event ID provided');
       router.back();
     }
   }, [eventId]);
@@ -51,14 +53,14 @@ export default function ManageMilestonesScreen() {
       
       if (error) {
         console.error('Error fetching event details:', error);
-        Alert.alert('Error', 'Failed to load event details');
+				showAlert('Error', 'Failed to load event details');
         return;
       }
       
       setEventName(data.name);
     } catch (error) {
       console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+			showAlert('Error', 'An unexpected error occured');
     }
   };
 
@@ -73,14 +75,14 @@ export default function ManageMilestonesScreen() {
       
       if (error) {
         console.error('Error fetching milestones:', error);
-        Alert.alert('Error', 'Failed to load milestones');
+				showAlert('Error', 'Failed to load milestones');
         return;
       }
       
       setMilestones(data || []);
     } catch (error) {
       console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+			showAlert('Error', 'An unexpected error occured');
     } finally {
       setIsLoading(false);
     }
@@ -114,29 +116,7 @@ export default function ManageMilestonesScreen() {
     ));
   };
 
-  const handleRemoveMilestone = (id: string) => {
-    Alert.alert(
-      'Confirm Delete',
-      'Are you sure you want to delete this milestone?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
-          style: 'destructive',
-          onPress: () => {
-            // If it's a new milestone (not yet saved to DB)
-            if (id.startsWith('new-')) {
-              setMilestones(milestones.filter(m => m.id !== id));
-            } else {
-              deleteMilestone(id);
-            }
-          }
-        }
-      ]
-    );
-  };
-
-  const deleteMilestone = async (id: string) => {
+	const deleteMilestone = async (id: string) => {
     try {
       setIsLoading(true);
       const { error } = await supabase
@@ -146,19 +126,33 @@ export default function ManageMilestonesScreen() {
       
       if (error) {
         console.error('Error deleting milestone:', error);
-        Alert.alert('Error', 'Failed to delete milestone');
+				showAlert('Error', 'Failed to delete milestone');
         return;
       }
       
       setMilestones(milestones.filter(m => m.id !== id));
-      Alert.alert('Success', 'Milestone deleted successfully');
+			showAlert('Success', 'Milestone deleted successfully');
+
     } catch (error) {
       console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+			showAlert('Error', 'An unexpected error occured');
     } finally {
       setIsLoading(false);
     }
   };
+
+  const handleRemoveMilestone = (id: string) => {
+		showAlertWithButtons('Confirm Delete', 
+			'Are you sure you want to delete this milestone?',
+			() => {
+				if (id.startsWith('new-')) {
+          setMilestones(milestones.filter(m => m.id !== id));	
+				} else {
+					deleteMilestone(id);
+				}
+			}
+		)
+	};
 
   const handleSaveChanges = async () => {
     try {
@@ -180,7 +174,7 @@ export default function ManageMilestonesScreen() {
         
         if (createError) {
           console.error('Error creating milestones:', createError);
-          Alert.alert('Error', 'Failed to save new milestones');
+					showAlert('Error', 'Failed to save new milestones');
           return;
         }
       }
@@ -197,7 +191,7 @@ export default function ManageMilestonesScreen() {
         
         if (updateError) {
           console.error(`Error updating milestone ${milestone.id}:`, updateError);
-          Alert.alert('Error', 'Failed to update some milestones');
+					showAlert('Error', 'Failed to update some milestones');
           return;
         }
       }
@@ -205,31 +199,23 @@ export default function ManageMilestonesScreen() {
       // Refresh the milestones list
       await fetchMilestones();
       setEditMode(false);
-      Alert.alert('Success', 'Milestones updated successfully');
+			showAlert('Success', 'Milestones updated successfully');
     } catch (error) {
       console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+			showAlert('Error', 'An unexpected error occured');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleCancelEdit = () => {
-    Alert.alert(
-      'Discard Changes',
-      'Are you sure you want to discard your changes?',
-      [
-        { text: 'Keep Editing', style: 'cancel' },
-        { 
-          text: 'Discard', 
-          style: 'destructive',
-          onPress: () => {
-            fetchMilestones();
-            setEditMode(false);
-          }
-        }
-      ]
-    );
+		showAlertWithButtons('Discard Changes', 
+			'Are you sure you want to discard your changes?', 
+			() => {
+				fetchMilestones();
+				setEditMode(false);
+			}
+		)
   };
 
   if (userLoading) {
@@ -358,6 +344,7 @@ export default function ManageMilestonesScreen() {
   );
 }
 
+const isMobile = Dimensions.get('window').width < 500;
 const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
@@ -453,6 +440,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   milestoneInputGroup: {
+		flexWrap: 'wrap',
     flex: 1,
     flexDirection: 'row',
   },
@@ -465,7 +453,7 @@ const styles = StyleSheet.create({
   },
   minutesInput: {
     flex: 1,
-    marginRight: 10,
+    marginRight: isMobile ? 0 : 10,
   },
   nameInput: {
     flex: 2,

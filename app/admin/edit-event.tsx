@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator, Platform, FlatList } from 'react-native';
+import { StyleSheet, View, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator, Platform, FlatList, Dimensions } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useUser } from '../../contexts/UserContext';
 import { router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { showAlert, showAlertWithButtons } from '../utils/showAlert';
 
 type Milestone = {
   id: string;
@@ -64,7 +65,7 @@ export default function EditEventScreen() {
       fetchEventDetails();
       fetchEventMilestones();
     } else {
-      Alert.alert('Error', 'No event ID provided');
+      showAlert('Error', 'No event ID provided');
       router.back();
     }
   }, [eventId]);
@@ -80,7 +81,7 @@ export default function EditEventScreen() {
       
       if (error) {
         console.error('Error fetching event details:', error);
-        Alert.alert('Error', 'Failed to load event details');
+        showAlert('Error', 'Failed to load event details');
         return;
       }
       
@@ -96,7 +97,7 @@ export default function EditEventScreen() {
       await fetchTeams();
     } catch (error) {
       console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      showAlert('Error', 'An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -112,14 +113,14 @@ export default function EditEventScreen() {
       
       if (error) {
         console.error('Error fetching milestones:', error);
-        Alert.alert('Error', 'Failed to load milestones');
+        showAlert('Error', 'Failed to load milestones');
         return;
       }
       
       setMilestones(data || []);
     } catch (error) {
       console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      showAlert('Error', 'An unexpected error occurred');
     }
   };
 
@@ -230,25 +231,18 @@ export default function EditEventScreen() {
   };
 
   const handleRemoveMilestone = (id: string) => {
-    Alert.alert(
+    showAlertWithButtons(
       'Remove Milestone',
       'Are you sure you want to remove this milestone?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Remove', 
-          style: 'destructive',
-          onPress: () => {
-            if (id.startsWith('temp-')) {
-              // It's a new milestone that hasn't been saved, just remove from state
-              setMilestones(milestones.filter(m => m.id !== id));
-            } else {
-              // It's an existing milestone, need to delete from DB
-              deleteMilestone(id);
-            }
-          }
-        }
-      ]
+      () => {
+				if (id.startsWith('temp-')) {
+					// It's a new milestone that hasn't been saved, just remove from state
+					setMilestones(milestones.filter(m => m.id !== id));
+				} else {
+					// It's an existing milestone, need to delete from DB
+					deleteMilestone(id);
+				}
+      }  
     );
   };
 
@@ -262,14 +256,14 @@ export default function EditEventScreen() {
       
       if (error) {
         console.error('Error deleting milestone:', error);
-        Alert.alert('Error', 'Failed to delete milestone');
+        showAlert('Error', 'Failed to delete milestone');
         return;
       }
       
       setMilestones(milestones.filter(m => m.id !== id));
     } catch (error) {
       console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      showAlert('Error', 'An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -277,17 +271,17 @@ export default function EditEventScreen() {
 
   const validateForm = () => {
     if (!eventName.trim()) {
-      Alert.alert('Error', 'Please enter an event name');
+      showAlert('Error', 'Please enter an event name');
       return false;
     }
 
     if (startDate >= endDate) {
-      Alert.alert('Error', 'End date must be after start date');
+      showAlert('Error', 'End date must be after start date');
       return false;
     }
     
     if (!eventYear || isNaN(parseInt(eventYear))) {
-      Alert.alert('Error', 'Please enter a valid event year');
+      showAlert('Error', 'Please enter a valid event year');
       return false;
     }
 
@@ -314,7 +308,7 @@ export default function EditEventScreen() {
 
       if (eventError) {
         console.error('Error updating event:', eventError);
-        Alert.alert('Error', 'Failed to update event');
+        showAlert('Error', 'Failed to update event');
         return;
       }
 
@@ -331,7 +325,7 @@ export default function EditEventScreen() {
 
         if (newMilestonesError) {
           console.error('Error adding new milestones:', newMilestonesError);
-          Alert.alert('Warning', 'Event was updated but some milestones could not be added');
+          showAlert('Warning', 'Event was updated but some milestones could not be added');
         }
       }
 
@@ -352,7 +346,7 @@ export default function EditEventScreen() {
       }
 
       // Show success message
-      Alert.alert('Success', 'Event updated successfully');
+      showAlert('Success', 'Event updated successfully');
       
       // Perform direct navigation without depending on Alert's onPress
       console.log('Navigating to admin setup after event update');
@@ -363,7 +357,7 @@ export default function EditEventScreen() {
       
     } catch (error) {
       console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      showAlert('Error', 'An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -371,7 +365,7 @@ export default function EditEventScreen() {
 
   const searchCaptains = async () => {
     if (!captainSearchQuery.trim()) {
-      Alert.alert('Error', 'Please enter a search term');
+      showAlert('Error', 'Please enter a search term');
       return;
     }
 
@@ -385,14 +379,14 @@ export default function EditEventScreen() {
       
       if (error) {
         console.error('Error searching captains:', error);
-        Alert.alert('Error', 'Failed to search users');
+        showAlert('Error', 'Failed to search users');
         return;
       }
       
       setCaptainSearchResults(data || []);
     } catch (error) {
       console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      showAlert('Error', 'An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -400,7 +394,7 @@ export default function EditEventScreen() {
 
   const handleAddTeam = async () => {
     if (!newTeamName.trim()) {
-      Alert.alert('Error', 'Please enter a team name');
+      showAlert('Error', 'Please enter a team name');
       return;
     }
 
@@ -416,7 +410,7 @@ export default function EditEventScreen() {
       
       if (error) {
         console.error('Error adding team:', error);
-        Alert.alert('Error', 'Failed to add team');
+        showAlert('Error', 'Failed to add team');
         return;
       }
       
@@ -426,7 +420,7 @@ export default function EditEventScreen() {
       await fetchTeams();
     } catch (error) {
       console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      showAlert('Error', 'An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -434,7 +428,7 @@ export default function EditEventScreen() {
 
   const handleUpdateTeamName = async (teamId: string, newName: string) => {
     if (!newName.trim()) {
-      Alert.alert('Error', 'Team name cannot be empty');
+      showAlert('Error', 'Team name cannot be empty');
       return;
     }
 
@@ -447,7 +441,7 @@ export default function EditEventScreen() {
       
       if (error) {
         console.error('Error updating team:', error);
-        Alert.alert('Error', 'Failed to update team');
+        showAlert('Error', 'Failed to update team');
         return;
       }
       
@@ -455,7 +449,7 @@ export default function EditEventScreen() {
       await fetchTeams();
     } catch (error) {
       console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      showAlert('Error', 'An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -471,7 +465,7 @@ export default function EditEventScreen() {
       
       if (error) {
         console.error('Error setting team captain:', error);
-        Alert.alert('Error', 'Failed to set team captain');
+        showAlert('Error', 'Failed to set team captain');
         return;
       }
       
@@ -479,45 +473,38 @@ export default function EditEventScreen() {
       await fetchTeams();
     } catch (error) {
       console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      showAlert('Error', 'An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleRemoveTeam = async (teamId: string) => {
-    Alert.alert(
+    showAlertWithButtons(
       'Remove Team',
       'Are you sure you want to remove this team?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Remove', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setIsLoading(true);
-              const { error } = await supabase
-                .from('teams')
-                .delete()
-                .eq('id', teamId);
-              
-              if (error) {
-                console.error('Error removing team:', error);
-                Alert.alert('Error', 'Failed to remove team');
-                return;
-              }
-              
-              await fetchTeams();
-            } catch (error) {
-              console.error('Unexpected error:', error);
-              Alert.alert('Error', 'An unexpected error occurred');
-            } finally {
-              setIsLoading(false);
-            }
-          }
-        }
-      ]
+      async () => {
+				try {
+					setIsLoading(true);
+					const { error } = await supabase
+						.from('teams')
+						.delete()
+						.eq('id', teamId);
+					
+					if (error) {
+						console.error('Error removing team:', error);
+						showAlert('Error', 'Failed to remove team');
+						return;
+					}
+					
+					await fetchTeams();
+				} catch (error) {
+					console.error('Unexpected error:', error);
+					showAlert('Error', 'An unexpected error occurred');
+				} finally {
+					setIsLoading(false);
+				}
+      }
     );
   };
 
@@ -620,7 +607,7 @@ export default function EditEventScreen() {
           ) : (
             <TouchableOpacity 
               style={styles.dateButton}
-              onPress={() => Alert.alert('Use Native Date Picker', 'This feature is only available in native apps')}
+              onPress={() => showAlert('Use Native Date Picker', 'This feature is only available in native apps')}
             >
               <ThemedText>{formatDate(startDate)}</ThemedText>
             </TouchableOpacity>
@@ -647,7 +634,7 @@ export default function EditEventScreen() {
           ) : (
             <TouchableOpacity 
               style={styles.dateButton}
-              onPress={() => Alert.alert('Use Native Date Picker', 'This feature is only available in native apps')}
+              onPress={() => showAlert('Use Native Date Picker', 'This feature is only available in native apps')}
             >
               <ThemedText>{formatDate(endDate)}</ThemedText>
             </TouchableOpacity>
@@ -909,6 +896,7 @@ export default function EditEventScreen() {
   );
 }
 
+const isMobile = Dimensions.get('window').width < 500;
 const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
@@ -994,11 +982,12 @@ const styles = StyleSheet.create({
   },
   milestoneInputGroup: {
     flex: 1,
+		flexWrap: 'wrap',
     flexDirection: 'row',
   },
   milestoneInput: {
     flex: 1,
-    marginRight: 10,
+    marginRight: isMobile ? 0 : 10,
   },
   milestoneNameInput: {
     flex: 2,
