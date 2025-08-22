@@ -9,6 +9,7 @@ import {
   Text,
   TouchableOpacity,
   Platform,
+	Dimensions
 } from "react-native";
 import { supabase } from "@/lib/supabase";
 import { router } from "expo-router";
@@ -53,6 +54,8 @@ type UserProfile = {
   avatar_url: string | null;
   created_at: string;
 };
+
+const HEADER_HEIGHT = Dimensions.get('window').height * .21;
 
 export default function ProfileScreen() {
   const { user } = useAuth();
@@ -245,6 +248,7 @@ export default function ProfileScreen() {
     <View style={styles.container}>
       <ResponsiveHeader
         source={require('@/assets/images/gym-equipment.png')}
+				style={{height: HEADER_HEIGHT}}
       >
         <LinearGradient
           colors={[Colors.light.blue, "rgba(0, 0, 0, 0.7)"]}
@@ -254,32 +258,32 @@ export default function ProfileScreen() {
             <ThemedText variant="h1" style={styles.headerTitle}>
               Profile
             </ThemedText>
+						<View style={styles.profileSection}>
+							<View style={styles.avatarContainer}>
+								{profile?.avatar_url ? (
+									<Image
+										source={{ uri: profile.avatar_url }}
+										style={styles.avatar}
+									/>
+								) : (
+									<View style={styles.avatarPlaceholder}>
+										<ThemedText style={styles.avatarText}>
+											{profile?.full_name?.charAt(0) || "U"}
+										</ThemedText>
+									</View>
+								)}
+							</View>
+							<ThemedText variant="h2" style={styles.userName}>
+								{profile?.full_name || "User"}
+							</ThemedText>
+            <ThemedText style={styles.userEmail}>{user?.email}</ThemedText>
+          </View>
             <TouchableOpacity
               onPress={handleLogout}
               style={styles.logoutButton}
             >
               <ThemedText style={styles.logoutText}>Sign Out</ThemedText>
             </TouchableOpacity>
-          </View>
-          <View style={styles.profileSection}>
-            <View style={styles.avatarContainer}>
-              {profile?.avatar_url ? (
-                <Image
-                  source={{ uri: profile.avatar_url }}
-                  style={styles.avatar}
-                />
-              ) : (
-                <View style={styles.avatarPlaceholder}>
-                  <ThemedText style={styles.avatarText}>
-                    {profile?.full_name?.charAt(0) || "U"}
-                  </ThemedText>
-                </View>
-              )}
-            </View>
-            <ThemedText variant="h2" style={styles.userName}>
-              {profile?.full_name || "User"}
-            </ThemedText>
-            <ThemedText style={styles.userEmail}>{user?.email}</ThemedText>
           </View>
         </LinearGradient>
       </ResponsiveHeader>
@@ -395,7 +399,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
     padding: 16,
     paddingTop: Platform.OS === "ios" ? 60 : 16,
 		paddingLeft: 16,
@@ -443,17 +447,14 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   profileSection: {
-    flex: 1,
-    justifyContent: "center",
     alignItems: "center",
-    paddingVertical: 20,
   },
   avatarContainer: {
-    marginBottom: 16,
+    marginBottom: 6,
   },
   avatar: {
-    width: 80,
-    height: 80,
+    width: 60,
+    height: 60,
     borderRadius: 40,
   },
   avatarPlaceholder: {
@@ -473,7 +474,6 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 24,
     fontWeight: "600",
-    marginBottom: 4,
   },
   userEmail: {
     color: "rgba(255, 255, 255, 0.8)",
