@@ -53,7 +53,7 @@ type UserProfile = {
 };
 
 export default function ProfileScreen() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const isFocused = useIsFocused();
   const [loading, setLoading] = useState(false);
   const [activities, setActivities] = useState<UserActivity[]>([]);
@@ -225,7 +225,7 @@ export default function ProfileScreen() {
               Profile
             </ThemedText>
             <TouchableOpacity
-              onPress={handleLogout}
+              onPress={signOut}
               style={styles.logoutButton}
             >
               <ThemedText style={styles.logoutText}>Sign Out</ThemedText>
