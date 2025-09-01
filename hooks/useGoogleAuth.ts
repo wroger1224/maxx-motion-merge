@@ -22,7 +22,8 @@ export function useGoogleAuth() {
     
     // For iOS/Android
     const scheme = Constants.expoConfig?.scheme || 'maxx-motion';
-    return `${scheme}://`;
+    // return `${scheme}://`;
+    return `${scheme}://auth-callback`;
   };
 
   // Check for auth state on mount for web platforms
@@ -97,16 +98,42 @@ export function useGoogleAuth() {
             throw new Error('Authentication cancelled');
           }
           
-          // Get the session immediately to check if we're logged in
-          const { data: session } = await supabase.auth.getSession();
-          
-          if (!session?.session) {
-            console.warn('No session found after authentication');
-            throw new Error('Authentication failed - no session found');
+          // If successful, we need to process the OAuth tokens from the URL
+          if (result.type === 'success' && result.url) {
+            console.log('Processing OAuth response URL...');
+            
+            // Extract the hash fragment from the URL
+            const urlParts = result.url.split('#');
+            if (urlParts.length > 1) {
+              const hashParams = new URLSearchParams(urlParts[1]);
+              const accessToken = hashParams.get('access_token');
+              const refreshToken = hashParams.get('refresh_token');
+              
+              if (accessToken) {
+                console.log('Access token found, setting session...');
+                
+                // Set the session with the tokens
+                const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+                  access_token: accessToken,
+                  refresh_token: refreshToken || ''
+                });
+                
+                if (sessionError) {
+                  console.error('Error setting session:', sessionError);
+                  throw sessionError;
+                }
+                
+                if (sessionData?.session) {
+                  console.log('Authentication successful, session established');
+                  return true;
+                }
+              }
+            }
           }
           
-          console.log('Authentication successful, session established');
-          return true;
+          // If we get here, something went wrong
+          console.warn('Failed to process OAuth response');
+          throw new Error('Authentication failed - could not process OAuth response');
         }
       } catch (e) {
         console.error('Authentication error:', e);
