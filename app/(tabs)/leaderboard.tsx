@@ -8,6 +8,7 @@ import {
   Text,
   ActivityIndicator,
   Modal,
+	Dimensions
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -21,6 +22,7 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import ActivityItem from "@/components/ActivityItem";
 import { IconSymbol } from "@/components/ui/IconSymbol";
+import { ResponsiveHeader } from '@/components/ui/responsiveHeader';
 
 interface TeamRankingItemProps {
   rank: number;
@@ -822,10 +824,8 @@ export default function LeaderboardScreen() {
 
   return (
     <View style={styles.container}>
-      <ImageBackground
-        source={require("@/assets/images/gym-equipment.png")}
-        style={styles.headerBackground}
-        resizeMode="cover"
+      <ResponsiveHeader
+        source={require('@/assets/images/gym-equipment.png')}
       >
 				<LinearGradient
 					colors={[Colors.light.blue, "rgba(0, 0, 0, 0.7)"]}
@@ -844,7 +844,7 @@ export default function LeaderboardScreen() {
             </Text>
           </View>
         </LinearGradient>
-      </ImageBackground>
+      </ResponsiveHeader>
 
       <View style={styles.tabContainer}>
         <TouchableOpacity
@@ -1314,22 +1314,23 @@ function getOrdinal(n: number): string {
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 
+const isMobile = Dimensions.get('window').width < 500;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.light.background,
   },
-  headerBackground: {
-    height: 300,
-  },
   headerOverlay: {
     flex: 1,
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingLeft: 16,
+		paddingTop: 16,
+		paddingRight: 16,
     zIndex: 1,
   },
   headerTitle: {
@@ -1437,7 +1438,9 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   filterRow: {
-    flexDirection: "row",
+    flexDirection: 'row',
+		justifyContent: 'center',
+		flexWrap: 'wrap',
     padding: 16,
     gap: 8,
   },
@@ -1462,7 +1465,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     backgroundColor: "#2196F3",
-    marginLeft: "auto",
+    marginLeft: isMobile ? undefined : 'auto',
   },
   refreshButtonText: {
     color: "#fff",

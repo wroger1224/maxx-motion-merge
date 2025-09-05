@@ -5,6 +5,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { useUser } from '../../contexts/UserContext';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { showAlert } from '../utils/showAlert';
 
 // Define types for our data
 type Event = {
@@ -57,7 +58,7 @@ export default function AdminSetupScreen() {
 
       if (error) {
         console.error('Error fetching events:', error);
-        Alert.alert('Error', 'Failed to load events');
+        showAlert('Error', 'Failed to load events');
         return;
       }
 
@@ -71,7 +72,7 @@ export default function AdminSetupScreen() {
       }
     } catch (error) {
       console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      showAlert('Error', 'An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -88,14 +89,14 @@ export default function AdminSetupScreen() {
 
       if (error) {
         console.error('Error fetching teams:', error);
-        Alert.alert('Error', 'Failed to load teams');
+        showAlert('Error', 'Failed to load teams');
         return;
       }
 
       setTeams(data || []);
     } catch (error) {
       console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      showAlert('Error', 'An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -166,16 +167,16 @@ export default function AdminSetupScreen() {
 
       if (error) {
         console.error('Error updating event status:', error);
-        Alert.alert('Error', 'Failed to update event status');
+        showAlert('Error', 'Failed to update event status');
         return;
       }
 
       // Refresh events list
       await fetchEvents();
-      Alert.alert('Success', `Event status updated to ${newStatus}`);
+      showAlert('Success', `Event status updated to ${newStatus}`);
     } catch (error) {
       console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      showAlert('Error', 'An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -283,6 +284,43 @@ export default function AdminSetupScreen() {
                           Registrations: {eventStats[item.id].totalRegistrations}
                         </ThemedText>
                       )}
+
+<View style={styles.actionButtons}>
+                        <TouchableOpacity 
+                          style={styles.actionButton} 
+                          onPress={() => navigateToEditEvent(item.id)}
+                        >
+                          <ThemedText style={styles.actionButtonText}>Edit</ThemedText>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity 
+                          style={styles.actionButton} 
+                          onPress={() => navigateToManageMilestones(item.id)}
+                        >
+                          <ThemedText style={styles.actionButtonText}>Milestones</ThemedText>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity 
+                          style={styles.actionButton} 
+                          onPress={() => updateEventStatus(item.id, 'Upcoming')}
+                        >
+                          <ThemedText style={styles.actionButtonText}>Set Upcoming</ThemedText>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity 
+                          style={styles.actionButton} 
+                          onPress={() => updateEventStatus(item.id, 'Active')}
+                        >
+                          <ThemedText style={styles.actionButtonText}>Set Active</ThemedText>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity 
+                          style={styles.actionButton} 
+                          onPress={() => updateEventStatus(item.id, 'Archive')}
+                        >
+                          <ThemedText style={styles.actionButtonText}>Set Complete</ThemedText>
+                        </TouchableOpacity>
+                      </View>
                     </TouchableOpacity>
                   </ThemedView>
                 )}

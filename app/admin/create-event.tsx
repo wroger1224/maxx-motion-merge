@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator, Platform, FlatList } from 'react-native';
+import { StyleSheet, View, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator, Platform, FlatList, Dimensions } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useUser } from '../../contexts/UserContext';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { showAlert } from '../utils/showAlert';
 
 type Milestone = {
   id: string;
@@ -147,7 +148,7 @@ export default function CreateEventScreen() {
 
   const searchCaptains = async () => {
     if (!captainSearchQuery.trim()) {
-      Alert.alert('Error', 'Please enter a search term');
+      showAlert('Error', 'Please enter a search term');
       return;
     }
 
@@ -161,14 +162,14 @@ export default function CreateEventScreen() {
       
       if (error) {
         console.error('Error searching captains:', error);
-        Alert.alert('Error', 'Failed to search users');
+        showAlert('Error', 'Failed to search users');
         return;
       }
       
       setCaptainSearchResults(data || []);
     } catch (error) {
       console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      showAlert('Error', 'An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -176,7 +177,7 @@ export default function CreateEventScreen() {
 
   const handleAddTeam = () => {
     if (!newTeamName.trim()) {
-      Alert.alert('Error', 'Please enter a team name');
+      showAlert('Error', 'Please enter a team name');
       return;
     }
 
@@ -192,7 +193,7 @@ export default function CreateEventScreen() {
 
   const handleUpdateTeamName = (teamId: string, newName: string) => {
     if (!newName.trim()) {
-      Alert.alert('Error', 'Team name cannot be empty');
+      showAlert('Error', 'Team name cannot be empty');
       return;
     }
 
@@ -224,22 +225,22 @@ export default function CreateEventScreen() {
 
   const validateForm = () => {
     if (!eventName.trim()) {
-      Alert.alert('Error', 'Please enter an event name');
+      showAlert('Error', 'Please enter an event name');
       return false;
     }
 
     if (startDate >= endDate) {
-      Alert.alert('Error', 'End date must be after start date');
+      showAlert('Error', 'End date must be after start date');
       return false;
     }
     
     if (!eventYear || isNaN(parseInt(eventYear))) {
-      Alert.alert('Error', 'Please enter a valid event year');
+      showAlert('Error', 'Please enter a valid event year');
       return false;
     }
 
     if (milestones.length === 0) {
-      Alert.alert('Error', 'Please add at least one milestone');
+      showAlert('Error', 'Please add at least one milestone');
       return false;
     }
 
@@ -266,7 +267,7 @@ export default function CreateEventScreen() {
 
       if (eventError) {
         console.error('Error creating event:', eventError);
-        Alert.alert('Error', 'Failed to create event');
+        showAlert('Error', 'Failed to create event');
         return;
       }
 
@@ -285,7 +286,7 @@ export default function CreateEventScreen() {
 
       if (milestonesError) {
         console.error('Error creating milestones:', milestonesError);
-        Alert.alert('Warning', 'Event was created but milestones could not be added');
+        showAlert('Warning', 'Event was created but milestones could not be added');
       }
 
       // Create the teams
@@ -302,12 +303,12 @@ export default function CreateEventScreen() {
 
         if (teamsError) {
           console.error('Error creating teams:', teamsError);
-          Alert.alert('Warning', 'Event was created but teams could not be added');
+          showAlert('Warning', 'Event was created but teams could not be added');
         }
       }
 
       // Show success message
-      Alert.alert('Success', 'Event created successfully');
+      showAlert('Success', 'Event created successfully');
       
       // Perform direct navigation without depending on Alert's onPress
       console.log('Navigating to admin setup after event creation');
@@ -318,7 +319,7 @@ export default function CreateEventScreen() {
       
     } catch (error) {
       console.error('Unexpected error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      showAlert('Error', 'An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -674,6 +675,7 @@ export default function CreateEventScreen() {
   );
 }
 
+const isMobile = Dimensions.get('window').width < 500;
 const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
@@ -736,11 +738,12 @@ const styles = StyleSheet.create({
   },
   milestoneInputGroup: {
     flex: 1,
+		flexWrap: 'wrap',
     flexDirection: 'row',
   },
   milestoneInput: {
     flex: 1,
-    marginRight: 10,
+    marginRight: isMobile ? 0 : 10,
   },
   milestoneNameInput: {
     flex: 2,
