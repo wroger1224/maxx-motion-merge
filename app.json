@@ -58,6 +58,13 @@
         }
       ],
       [
+        "react-native-health",
+        {
+          "healthSharePermission": "This app requires access to your health data to track fitness metrics and provide personalized insights.",
+          "healthUpdatePermission": "This app requires permission to write health data for tracking your fitness activities."
+        }
+      ],
+      [
         "expo-build-properties",
         {
           "android": {
