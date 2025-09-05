@@ -1,17 +1,36 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, TextInput, Image, Pressable, Platform, Text, ActivityIndicator, TouchableOpacity, Modal, Alert, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
-import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/lib/auth';
-import { useIsFocused } from '@react-navigation/native';
+import React, { useState, useEffect } from "react";
+import {
+  StyleSheet,
+  View,
+  TextInput,
+  Image,
+  Pressable,
+  Platform,
+  ImageBackground,
+  Text,
+  ActivityIndicator,
+  TouchableOpacity,
+  Modal,
+  Alert,
+  ScrollView,
+} from "react-native";
+import { useRouter } from "expo-router";
+import Animated, {
+  useAnimatedStyle,
+  withSpring,
+} from "react-native-reanimated";
+import { LinearGradient } from "expo-linear-gradient";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/lib/auth";
+import { useIsFocused } from "@react-navigation/native";
+import { Colors } from "@/constants/Colors";
 
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import MemberDetails from '@/app/screens/MemberDetails';
+import { ThemedText } from "@/components/ThemedText";
+import { ThemedView } from "@/components/ThemedView";
+import MemberDetails from "@/app/screens/MemberDetails";
 import { ResponsiveHeader } from '@/components/ui/responsiveHeader';
 import { showAlert } from '../utils/showAlert';
+
 
 type TeamMember = {
   id: string; // UUID from team_members table
@@ -39,7 +58,7 @@ type Event = {
   name: string;
   start_date: string;
   end_date: string;
-  status: 'Upcoming' | 'Active' | 'Archive';
+  status: "Upcoming" | "Active" | "Archive";
 };
 
 // Type for the nested data structure returned by the team members query
@@ -56,9 +75,9 @@ type TeamMembershipQueryResult = {
       name: string;
       start_date: string;
       end_date: string;
-      status: 'Upcoming' | 'Active' | 'Archive';
-    }
-  }
+      status: "Upcoming" | "Active" | "Archive";
+    };
+  };
 };
 
 export default function TeamScreen() {
@@ -69,7 +88,7 @@ export default function TeamScreen() {
   const [showAllMembers, setShowAllMembers] = useState(false);
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [filteredMembers, setFilteredMembers] = useState<TeamMember[]>([]);
 
   // New state variables for database data
@@ -87,10 +106,12 @@ export default function TeamScreen() {
     avgMinPerMember: 0,
   });
   const [goalEditModalVisible, setGoalEditModalVisible] = useState(false);
-  const [newGoalValue, setNewGoalValue] = useState('');
+  const [newGoalValue, setNewGoalValue] = useState("");
 
-  const [selectedMemberActivityCount, setSelectedMemberActivityCount] = useState<number | null>(null);
-  const [isMemberActivityCountLoading, setIsMemberActivityCountLoading] = useState(false);
+  const [selectedMemberActivityCount, setSelectedMemberActivityCount] =
+    useState<number | null>(null);
+  const [isMemberActivityCountLoading, setIsMemberActivityCountLoading] =
+    useState(false);
 
   const isFocused = useIsFocused();
 
@@ -127,16 +148,18 @@ export default function TeamScreen() {
   // Update the useEffect to debounce search and prevent performance issues
   useEffect(() => {
     const debounceTimeout = setTimeout(() => {
-      if (searchQuery.trim() === '') {
+      if (searchQuery.trim() === "") {
         setFilteredMembers(teamMembers);
       } else {
         const query = searchQuery.toLowerCase().trim();
-        const results = teamMembers.filter(member => {
+        const results = teamMembers.filter((member) => {
           const fullName = member.full_name.toLowerCase();
-          const nameParts = fullName.split(' ');
+          const nameParts = fullName.split(" ");
 
-          return fullName.includes(query) ||
-            nameParts.some(part => part.includes(query));
+          return (
+            fullName.includes(query) ||
+            nameParts.some((part) => part.includes(query))
+          );
         });
 
         // Sort results by relevance
@@ -175,72 +198,74 @@ export default function TeamScreen() {
     try {
       setLoading(true);
 
-      console.log('Fetching teams for user:', user?.id);
+      console.log("Fetching teams for user:", user?.id);
 
       // Get user's team memberships
       const { data: memberships, error: membershipError } = await supabase
-        .from('team_members')
-        .select('team_id, teams!inner(id, team_name, team_minute_goal, captain_id, event_id, events!inner(id, name, start_date, end_date, status))')
-        .eq('user_id', user?.id);
+        .from("team_members")
+        .select(
+          "team_id, teams!inner(id, team_name, team_minute_goal, captain_id, event_id, events!inner(id, name, start_date, end_date, status))"
+        )
+        .eq("user_id", user?.id);
 
       if (membershipError) {
-        console.error('Error fetching team memberships:', membershipError);
+        console.error("Error fetching team memberships:", membershipError);
         setLoading(false);
         return;
       }
 
-      console.log('Team memberships found:', memberships?.length || 0);
-      console.log('Raw membership data:', JSON.stringify(memberships));
+      console.log("Team memberships found:", memberships?.length || 0);
+      console.log("Raw membership data:", memberships);
 
       if (!memberships || memberships.length === 0) {
         // User is not part of any team
-        console.log('No team memberships found for user');
+        console.log("No team memberships found for user");
         setLoading(false);
         return;
       }
+
+			const typedMemberships = memberships as unknown as TeamMembershipQueryResult[]
 
       // Find active event team first
       let activeEventTeam = null;
 
       // Try to find an active event
-      for (const membership of memberships) {
+      for (const typedMembership of typedMemberships) {
+				console.log(typedMembership)
         // Access nested properties safely - handle teams as an array
-        const teamsArray = membership?.teams;
-        if (teamsArray && Array.isArray(teamsArray) && teamsArray.length > 0) {
-          const team = teamsArray[0];
-          console.log('Checking team:', team?.team_name);
+        const { teams } = typedMembership;
+        if (teams) {
+          console.log("Checking team:", teams?.team_name);
 
-          const eventsArray = team.events;
-          if (eventsArray && Array.isArray(eventsArray) && eventsArray.length > 0) {
-            const event = eventsArray[0];
-            console.log('Found event with status:', event?.status);
+          const { events } = teams;
+					console.log("event: ", events);
+          if (events) {
+            console.log("Found event with status:", events?.status);
 
-            if (event.status === 'Active') {
-              console.log('Active event found:', event?.name);
-              activeEventTeam = membership;
+            if (events.status === "Active") {
+              console.log("Active event found:", events?.name);
+              activeEventTeam = typedMembership;
               break;
             }
           } else {
-            console.log('No events found for team');
+            console.log("No event found for team");
           }
         } else {
-          console.log('Teams array is empty or not properly structured');
+          console.log("Teams object does not exist");
         }
       }
 
       // If no active event, look for upcoming event
       if (!activeEventTeam) {
-        console.log('No active event found, looking for upcoming events');
-        for (const membership of memberships) {
-          const teamsArray = membership?.teams;
-          if (teamsArray && Array.isArray(teamsArray) && teamsArray.length > 0) {
-            const team = teamsArray[0];
-            const eventsArray = team.events;
-            if (eventsArray && Array.isArray(eventsArray) && eventsArray.length > 0) {
-              const event = eventsArray[0];
-              if (event.status === 'Upcoming') {
-                console.log('Upcoming event found:', event?.name);
-                activeEventTeam = membership;
+        console.log("No active event found, looking for upcoming events");
+        for (const typedMembership of typedMemberships) {
+          const { teams } = typedMembership;
+          if (teams) {
+            const { events } = teams;
+            if (events) {
+              if (events.status === "Upcoming") {
+                console.log("Upcoming event found:", events?.name);
+                activeEventTeam = typedMembership;
                 break;
               }
             }
@@ -250,86 +275,68 @@ export default function TeamScreen() {
 
       // If neither active nor upcoming, use the first one (likely archived)
       if (!activeEventTeam && memberships.length > 0) {
-        console.log('No active or upcoming events found, using first available membership');
-        activeEventTeam = memberships[0];
+        console.log(
+          "No active or upcoming events found, using first available membership"
+        );
+        activeEventTeam = typedMemberships[0];
       }
 
       if (activeEventTeam) {
-        console.log('Selected team membership:', activeEventTeam);
-        const teamsArray = activeEventTeam.teams;
+        console.log("Selected team membership:", activeEventTeam);
+        const { teams } = activeEventTeam ;
 
-        // Check if teams is already an object rather than an array
-        if (teamsArray && typeof teamsArray === 'object') {
-          let team;
-          let eventsData;
+				if (teams) {
+					console.log("Team found:", teams.team_name);
 
-          // Handle both array and direct object cases
-          if (Array.isArray(teamsArray)) {
-            console.log('Teams is an array with length:', teamsArray.length);
-            if (teamsArray.length > 0) {
-              team = teamsArray[0];
-            }
-          } else {
-            console.log('Teams is a direct object');
-            team = teamsArray;
-          }
+					const teamData = {
+						id: teams.id || "",
+						team_name: teams.team_name || "",
+						team_minute_goal: teams.team_minute_goal || 10000,
+						captain_id: teams.captain_id || "",
+						event_id: teams.event_id || "",
+					};
 
-          if (team) {
-            console.log('Team found:', team.team_name);
+					if (teams.events) {
+				
+						const eventsData = teams.events;
 
-            const teamData = {
-              id: team.id || '',
-              team_name: team.team_name || '',
-              team_minute_goal: team.team_minute_goal || 10000,
-              captain_id: team.captain_id || '',
-              event_id: team.event_id || ''
-            };
+						if (eventsData) {
+							console.log(
+								"Event found:",
+								eventsData.name,
+								"with status:",
+								eventsData.status
+							);
 
-            // Handle events the same way - could be array or direct object
-            if (team.events) {
-              if (Array.isArray(team.events)) {
-                console.log('Events is an array with length:', team.events.length);
-                if (team.events.length > 0) {
-                  eventsData = team.events[0];
-                }
-              } else {
-                console.log('Events is a direct object');
-                eventsData = team.events;
-              }
+							const eventData = {
+								id: eventsData.id || "",
+								name: eventsData.name || "",
+								start_date: eventsData.start_date || "",
+								end_date: eventsData.end_date || "",
+								status:
+									(eventsData.status as "Upcoming" | "Active" | "Archive") ||
+									"Archive",
+							};
 
-              if (eventsData) {
-                console.log('Event found:', eventsData.name, 'with status:', eventsData.status);
+							console.log("Setting user team:", teamData);
+							console.log("Setting user event:", eventData);
 
-                const eventData = {
-                  id: eventsData.id || '',
-                  name: eventsData.name || '',
-                  start_date: eventsData.start_date || '',
-                  end_date: eventsData.end_date || '',
-                  status: (eventsData.status as 'Upcoming' | 'Active' | 'Archive') || 'Archive'
-                };
-
-                console.log('Setting user team:', teamData);
-                console.log('Setting user event:', eventData);
-
-                setUserTeam(teamData);
-                setUserEvent(eventData);
-              } else {
-                console.log('No valid event data found');
-              }
-            } else {
-              console.log('No events property found on team');
-            }
-          } else {
-            console.log('No valid team found');
-          }
-        } else {
-          console.log('Teams property is not an object or is undefined');
-        }
+							setUserTeam(teamData);
+							setUserEvent(eventData);
+						} else {
+							console.log("No valid event data found");
+						}
+					} else {
+						console.log("No events property found on team");
+					}
+				} else {
+					console.log("No valid team found");
+				}
       } else {
-        console.log('No active team membership found');
+        console.log("No active team membership found");
       }
     } catch (err) {
-      console.error('Error fetching user team:', err);
+      console.error("Error fetching user team:", err);
     } finally {
       setLoading(false);
     }
@@ -366,12 +373,14 @@ export default function TeamScreen() {
 
       // Get all team members
       const { data: members, error: membersError } = await supabase
-        .from('team_members')
-        .select('id, team_id, user_id, joined_at, profiles!inner(id, full_name, avatar_url)')
-        .eq('team_id', userTeam.id);
+        .from("team_members")
+        .select(
+          "id, team_id, user_id, joined_at, profiles!inner(id, full_name, avatar_url)"
+        )
+        .eq("team_id", userTeam.id);
 
       if (membersError) {
-        console.error('Error fetching team members:', membersError);
+        console.error("Error fetching team members:", membersError);
         return;
       }
 
@@ -388,7 +397,7 @@ export default function TeamScreen() {
         .in('user_id', memberUserIds);
 
       if (activitiesError) {
-        console.error('Error fetching activities:', activitiesError);
+        console.error("Error fetching activities:", activitiesError);
       }
 
       console.log('Activities fetched for team:', activities);
@@ -396,15 +405,19 @@ export default function TeamScreen() {
 
       // Calculate minutes for each member
       const memberMinutes: { [key: string]: number } = {};
-      activities?.forEach(activity => {
-        memberMinutes[activity.user_id] = (memberMinutes[activity.user_id] || 0) + activity.activity_minutes;
+      activities?.forEach((activity) => {
+        memberMinutes[activity.user_id] =
+          (memberMinutes[activity.user_id] || 0) + activity.activity_minutes;
       });
 
       console.log('Member minutes calculated:', memberMinutes);
 
       // Calculate total minutes for the team
-      const totalMinutes = Object.values(memberMinutes).reduce((sum, minutes) => sum + minutes, 0);
-      console.log('Total minutes calculated:', totalMinutes);
+      const totalMinutes = Object.values(memberMinutes).reduce(
+        (sum, minutes) => sum + minutes,
+        0
+      );
+      console.log("Total minutes calculated:", totalMinutes);
       setTotalTeamMinutes(totalMinutes);
 
       // Map members with their minutes and calculate contribution percentage
@@ -415,13 +428,16 @@ export default function TeamScreen() {
           if (member) {
             // Handle profiles as an array if needed
             const profileData = member.profiles;
-            const profile = Array.isArray(profileData) ? profileData[0] : profileData;
+            const profile = Array.isArray(profileData)
+              ? profileData[0]
+              : profileData;
 
             if (profile) {
               const userMinutes = memberMinutes[member.user_id] || 0;
-              const contributionPercentage = totalMinutes > 0
-                ? ((userMinutes / totalMinutes) * 100).toFixed(1) + '%'
-                : '0.0%';
+              const contributionPercentage =
+                totalMinutes > 0
+                  ? ((userMinutes / totalMinutes) * 100).toFixed(1) + "%"
+                  : "0.0%";
 
               mappedMembers.push({
                 id: member.id,
@@ -449,7 +465,7 @@ export default function TeamScreen() {
       setTeamMembers(mappedMembers);
       setFilteredMembers(mappedMembers);
     } catch (err) {
-      console.error('Error processing team members:', err);
+      console.error("Error processing team members:", err);
     }
   };
 
@@ -459,12 +475,15 @@ export default function TeamScreen() {
 
     try {
       // Get active members count (members with at least 1 minute logged)
-      const activeMembers = teamMembers.filter(member => member.total_minutes > 0).length;
+      const activeMembers = teamMembers.filter(
+        (member) => member.total_minutes > 0
+      ).length;
 
       // Calculate average minutes per member
-      const avgMinPerMember = teamMembers.length > 0
-        ? Math.round(totalTeamMinutes / teamMembers.length)
-        : 0;
+      const avgMinPerMember =
+        teamMembers.length > 0
+          ? Math.round(totalTeamMinutes / teamMembers.length)
+          : 0;
 
       // Calculate weekly growth
       let weeklyGrowth = 0;
@@ -484,33 +503,41 @@ export default function TeamScreen() {
         prevWeekEnd.setDate(currentWeekStart.getDate() - 1);
         prevWeekEnd.setHours(23, 59, 59, 999);
         // Get all team member user_ids
-        const memberUserIds = teamMembers.map(m => m.user_id);
+        const memberUserIds = teamMembers.map((m) => m.user_id);
         // Query activities for current week
         const { data: currentWeekActivities } = await supabase
-          .from('activities')
-          .select('activity_minutes, activity_date, user_id')
-          .eq('event_id', userTeam.event_id)
-          .in('user_id', memberUserIds)
-          .gte('activity_date', currentWeekStart.toISOString().split('T')[0])
-          .lte('activity_date', today.toISOString().split('T')[0]);
-        const currentWeekMinutes = currentWeekActivities?.reduce((sum, a) => sum + a.activity_minutes, 0) || 0;
+          .from("activities")
+          .select("activity_minutes, activity_date, user_id")
+          .eq("event_id", userTeam.event_id)
+          .in("user_id", memberUserIds)
+          .gte("activity_date", currentWeekStart.toISOString().split("T")[0])
+          .lte("activity_date", today.toISOString().split("T")[0]);
+        const currentWeekMinutes =
+          currentWeekActivities?.reduce(
+            (sum, a) => sum + a.activity_minutes,
+            0
+          ) || 0;
         // Query activities for previous week
         const { data: prevWeekActivities } = await supabase
-          .from('activities')
-          .select('activity_minutes, activity_date, user_id')
-          .eq('event_id', userTeam.event_id)
-          .in('user_id', memberUserIds)
-          .gte('activity_date', prevWeekStart.toISOString().split('T')[0])
-          .lte('activity_date', prevWeekEnd.toISOString().split('T')[0]);
-        const prevWeekMinutes = prevWeekActivities?.reduce((sum, a) => sum + a.activity_minutes, 0) || 0;
+          .from("activities")
+          .select("activity_minutes, activity_date, user_id")
+          .eq("event_id", userTeam.event_id)
+          .in("user_id", memberUserIds)
+          .gte("activity_date", prevWeekStart.toISOString().split("T")[0])
+          .lte("activity_date", prevWeekEnd.toISOString().split("T")[0]);
+        const prevWeekMinutes =
+          prevWeekActivities?.reduce((sum, a) => sum + a.activity_minutes, 0) ||
+          0;
         // Calculate growth
         if (prevWeekMinutes === 0) {
           weeklyGrowth = currentWeekMinutes > 0 ? 100 : 0;
         } else {
-          weeklyGrowth = Math.round(((currentWeekMinutes - prevWeekMinutes) / prevWeekMinutes) * 100);
+          weeklyGrowth = Math.round(
+            ((currentWeekMinutes - prevWeekMinutes) / prevWeekMinutes) * 100
+          );
         }
       } catch (err) {
-        console.error('Error calculating weekly growth:', err);
+        console.error("Error calculating weekly growth:", err);
         weeklyGrowth = 0;
       }
 
@@ -522,7 +549,7 @@ export default function TeamScreen() {
         avgMinPerMember,
       });
     } catch (err) {
-      console.error('Error calculating team stats:', err);
+      console.error("Error calculating team stats:", err);
     }
   };
 
@@ -533,27 +560,30 @@ export default function TeamScreen() {
     try {
       // Get all teams in the event
       const { data: teams, error: teamsError } = await supabase
-        .from('teams')
-        .select('id')
-        .eq('event_id', userTeam.event_id);
+        .from("teams")
+        .select("id")
+        .eq("event_id", userTeam.event_id);
 
       if (teamsError) {
-        console.error('Error fetching teams:', teamsError);
+        console.error("Error fetching teams:", teamsError);
         return;
       }
 
       // For each team, calculate total minutes
-      const teamMinutes: { id: string, totalMinutes: number }[] = [];
+      const teamMinutes: { id: string; totalMinutes: number }[] = [];
 
       for (const team of teams) {
         // Get activities for this team's members
         const { data: teamMemberIds, error: memberError } = await supabase
-          .from('team_members')
-          .select('user_id')
-          .eq('team_id', team.id);
+          .from("team_members")
+          .select("user_id")
+          .eq("team_id", team.id);
 
         if (memberError) {
-          console.error(`Error fetching members for team ${team.id}:`, memberError);
+          console.error(
+            `Error fetching members for team ${team.id}:`,
+            memberError
+          );
           continue;
         }
 
@@ -562,22 +592,28 @@ export default function TeamScreen() {
           continue;
         }
 
-        const userIds = teamMemberIds.map(m => m.user_id);
+        const userIds = teamMemberIds.map((m) => m.user_id);
 
         // Get activities for these users
         const { data: activities, error: activitiesError } = await supabase
-          .from('activities')
-          .select('activity_minutes')
-          .eq('event_id', userTeam.event_id)
-          .in('user_id', userIds);
+          .from("activities")
+          .select("activity_minutes")
+          .eq("event_id", userTeam.event_id)
+          .in("user_id", userIds);
 
         if (activitiesError) {
-          console.error(`Error fetching activities for team ${team.id}:`, activitiesError);
+          console.error(
+            `Error fetching activities for team ${team.id}:`,
+            activitiesError
+          );
           continue;
         }
 
-        const teamTotalMinutes = activities?.reduce((sum, activity) =>
-          sum + activity.activity_minutes, 0) || 0;
+        const teamTotalMinutes =
+          activities?.reduce(
+            (sum, activity) => sum + activity.activity_minutes,
+            0
+          ) || 0;
 
         teamMinutes.push({ id: team.id, totalMinutes: teamTotalMinutes });
       }
@@ -586,27 +622,30 @@ export default function TeamScreen() {
       teamMinutes.sort((a, b) => b.totalMinutes - a.totalMinutes);
 
       // Find our team's rank
-      const rank = teamMinutes.findIndex(team => team.id === userTeam.id) + 1;
+      const rank = teamMinutes.findIndex((team) => team.id === userTeam.id) + 1;
       setTeamRank(rank);
-
     } catch (err) {
-      console.error('Error calculating team rank:', err);
+      console.error("Error calculating team rank:", err);
     }
   };
 
   // Optimize memberRowStyles computation to use a stable reference
-  const getMemberRowStyle = (memberId: string, index: number, isSearchResult: boolean) => {
+  const getMemberRowStyle = (
+    memberId: string,
+    index: number,
+    isSearchResult: boolean
+  ) => {
     const isHovered = hoveredMemberId === memberId;
     const backgroundColor = isHovered
-      ? 'rgba(0, 0, 0, 0.15)'
+      ? "rgba(0, 0, 0, 0.15)"
       : index % 2 === 1
-        ? 'rgba(0, 0, 0, 0.03)'
-        : undefined;
+      ? "rgba(0, 0, 0, 0.03)"
+      : undefined;
 
     return {
       backgroundColor,
-      borderLeftWidth: isSearchResult && searchQuery.trim() !== '' ? 3 : 0,
-      borderLeftColor: '#C41E3A',
+      borderLeftWidth: isSearchResult && searchQuery.trim() !== "" ? 3 : 0,
+      borderLeftColor: "#C41E3A",
     };
   };
 
@@ -616,9 +655,9 @@ export default function TeamScreen() {
     setIsMemberActivityCountLoading(true);
     // Fetch activity count for this member
     const { count, error } = await supabase
-      .from('activities')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', member.user_id);
+      .from("activities")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", member.user_id);
     setSelectedMemberActivityCount(count || 0);
     setIsMemberActivityCountLoading(false);
   };
@@ -631,7 +670,7 @@ export default function TeamScreen() {
 
   // Show goal edit modal
   const showGoalEditModal = () => {
-    setNewGoalValue(userTeam?.team_minute_goal.toString() || '10000');
+    setNewGoalValue(userTeam?.team_minute_goal.toString() || "10000");
     setGoalEditModalVisible(true);
   };
 
@@ -650,52 +689,54 @@ export default function TeamScreen() {
 
     try {
       const { error } = await supabase
-        .from('teams')
+        .from("teams")
         .update({ team_minute_goal: goalValue })
-        .eq('id', userTeam.id);
+        .eq("id", userTeam.id);
 
       if (error) {
-        console.error('Error updating team goal:', error);
+        console.error("Error updating team goal:", error);
         return;
       }
 
       // Update local state
       setUserTeam({
         ...userTeam,
-        team_minute_goal: goalValue
+        team_minute_goal: goalValue,
       });
 
       // Update team stats
       setTeamStats({
         ...teamStats,
-        targetMinutes: goalValue
+        targetMinutes: goalValue,
       });
     } catch (err) {
-      console.error('Error updating team goal:', err);
+      console.error("Error updating team goal:", err);
     }
   };
 
   // Navigate to join event/team page
   const navigateToJoinEvent = () => {
-    router.push('/join-event');
+    router.push("/join-event");
   };
 
-  const displayedMembers = showAllMembers ? teamMembers : teamMembers.slice(0, 5);
+  const displayedMembers = showAllMembers
+    ? teamMembers
+    : teamMembers.slice(0, 5);
 
   // Calculate progress percentage
-  const progressPercentage = userTeam && teamStats.targetMinutes > 0
-    ? Math.min(100, (totalTeamMinutes / teamStats.targetMinutes) * 100)
-    : 0;
+  const progressPercentage =
+    userTeam && teamStats.targetMinutes > 0
+      ? Math.min(100, (totalTeamMinutes / teamStats.targetMinutes) * 100)
+      : 0;
 
   return (
     <View style={styles.container}>
       <ResponsiveHeader
         source={require('@/assets/images/gym-equipment.png')}
       >
-        <LinearGradient
-          colors={['rgba(196, 30, 58, 0.9)', 'rgba(128, 128, 128, 0.85)']}
-          locations={[0, 0.5]}
-          style={styles.headerOverlay}
+				<LinearGradient
+            colors={[Colors.light.blue, "rgba(0, 0, 0, 0.7)"]}
+            style={styles.headerOverlay}
         >
           <View style={styles.header}>
             <Text style={styles.headerTitle}>MAXX Motion</Text>
@@ -705,17 +746,28 @@ export default function TeamScreen() {
           </View>
           <View style={styles.headerContent}>
             <Text style={styles.pageTitle}>Team</Text>
-            <Text style={styles.tagline}>Track your motion. Reach your potential.</Text>
+            <Text style={styles.tagline}>
+              Track your motion. Reach your potential.
+            </Text>
           </View>
         </LinearGradient>
       </ResponsiveHeader>
 
       {!userTeam ? (
         <View style={styles.noTeamContainer}>
-          <ThemedText style={styles.noTeamTitle}>You're not part of any team yet</ThemedText>
-          <ThemedText style={styles.noTeamSubtext}>Join a team to start tracking your progress together!</ThemedText>
-          <TouchableOpacity style={styles.joinButton} onPress={navigateToJoinEvent}>
-            <ThemedText style={styles.joinButtonText}>Join an Event & Team</ThemedText>
+          <ThemedText style={styles.noTeamTitle}>
+            You're not part of any team yet
+          </ThemedText>
+          <ThemedText style={styles.noTeamSubtext}>
+            Join a team to start tracking your progress together!
+          </ThemedText>
+          <TouchableOpacity
+            style={styles.joinButton}
+            onPress={navigateToJoinEvent}
+          >
+            <ThemedText style={styles.joinButtonText}>
+              Join an Event & Team
+            </ThemedText>
           </TouchableOpacity>
         </View>
       ) : loading ? (
@@ -730,16 +782,30 @@ export default function TeamScreen() {
               <View style={styles.teamInfo}>
                 <View style={styles.teamIcon}>
                   <ThemedText style={styles.teamIconText}>
-                    {userTeam.team_name.split(' ').map(word => word[0]).join('').substring(0, 2).toUpperCase()}
+                    {userTeam.team_name
+                      .split(" ")
+                      .map((word) => word[0])
+                      .join("")
+                      .substring(0, 2)
+                      .toUpperCase()}
                   </ThemedText>
                 </View>
                 <View style={styles.teamDetails}>
-                  <ThemedText style={styles.teamName}>{userTeam.team_name}</ThemedText>
+                  <ThemedText style={styles.teamName}>
+                    {userTeam.team_name}
+                  </ThemedText>
                   <ThemedText style={styles.teamSubtext}>
-                    {teamMembers.length} Members • Captain: {teamMembers.find(m => m.is_captain)?.full_name || 'Unknown'}
+                    {teamMembers.length} Members • Captain:{" "}
+                    {teamMembers.find((m) => m.is_captain)?.full_name ||
+                      "Unknown"}
                   </ThemedText>
                   <View style={styles.progressContainer}>
-                    <View style={[styles.progressBar, { width: `${progressPercentage}%` }]} />
+                    <View
+                      style={[
+                        styles.progressBar,
+                        { width: `${progressPercentage}%` },
+                      ]}
+                    />
                     <ThemedText style={styles.progressText}>
                       {totalTeamMinutes} / {teamStats.targetMinutes} minutes
                     </ThemedText>
@@ -749,35 +815,70 @@ export default function TeamScreen() {
 
               <View style={styles.teamActions}>
                 <Pressable
-                  style={[styles.actionButton, hoveredButton === 'rank' && styles.actionButtonHovered]}
-                  onHoverIn={() => setHoveredButton('rank')}
+                  style={[
+                    styles.actionButton,
+                    hoveredButton === "rank" && styles.actionButtonHovered,
+                  ]}
+                  onHoverIn={() => setHoveredButton("rank")}
                   onHoverOut={() => setHoveredButton(null)}
                 >
-                  <ThemedText style={[
-                    styles.actionButtonText,
-                    hoveredButton === 'rank' && styles.actionButtonTextHovered
-                  ]}>RANK: {teamRank ? `${teamRank}${teamRank === 1 ? 'st' : teamRank === 2 ? 'nd' : teamRank === 3 ? 'rd' : 'th'}` : '...'}</ThemedText>
+                  <ThemedText
+                    style={[
+                      styles.actionButtonText,
+                      hoveredButton === "rank" &&
+                        styles.actionButtonTextHovered,
+                    ]}
+                  >
+                    RANK:{" "}
+                    {teamRank
+                      ? `${teamRank}${
+                          teamRank === 1
+                            ? "st"
+                            : teamRank === 2
+                            ? "nd"
+                            : teamRank === 3
+                            ? "rd"
+                            : "th"
+                        }`
+                      : "..."}
+                  </ThemedText>
                 </Pressable>
                 <Pressable
-                  style={[styles.actionButton, hoveredButton === 'edit' && styles.actionButtonHovered]}
-                  onHoverIn={() => setHoveredButton('edit')}
+                  style={[
+                    styles.actionButton,
+                    hoveredButton === "edit" && styles.actionButtonHovered,
+                  ]}
+                  onHoverIn={() => setHoveredButton("edit")}
                   onHoverOut={() => setHoveredButton(null)}
                   onPress={showGoalEditModal}
                 >
-                  <ThemedText style={[
-                    styles.actionButtonText,
-                    hoveredButton === 'edit' && styles.actionButtonTextHovered
-                  ]}>EDIT GOAL</ThemedText>
+                  <ThemedText
+                    style={[
+                      styles.actionButtonText,
+                      hoveredButton === "edit" &&
+                        styles.actionButtonTextHovered,
+                    ]}
+                  >
+                    EDIT GOAL
+                  </ThemedText>
                 </Pressable>
                 <Pressable
-                  style={[styles.actionButton, hoveredButton === 'invite' && styles.actionButtonHovered]}
-                  onHoverIn={() => setHoveredButton('invite')}
+                  style={[
+                    styles.actionButton,
+                    hoveredButton === "invite" && styles.actionButtonHovered,
+                  ]}
+                  onHoverIn={() => setHoveredButton("invite")}
                   onHoverOut={() => setHoveredButton(null)}
                 >
-                  <ThemedText style={[
-                    styles.actionButtonText,
-                    hoveredButton === 'invite' && styles.actionButtonTextHovered
-                  ]}>INVITE</ThemedText>
+                  <ThemedText
+                    style={[
+                      styles.actionButtonText,
+                      hoveredButton === "invite" &&
+                        styles.actionButtonTextHovered,
+                    ]}
+                  >
+                    INVITE
+                  </ThemedText>
                 </Pressable>
               </View>
             </ThemedView>
@@ -786,28 +887,44 @@ export default function TeamScreen() {
           <ScrollView style={styles.scrollContent}>
             <View style={styles.content}>
               <ThemedView style={styles.card}>
-                <ThemedText style={[styles.sectionTitle, { marginBottom: 16 }]}>Team Statistics</ThemedText>
+                <ThemedText style={[styles.sectionTitle, { marginBottom: 16 }]}>
+                  Team Statistics
+                </ThemedText>
                 <View style={styles.statsRow}>
                   <View style={styles.statCard}>
-                    <ThemedText style={styles.statValue}>{teamStats.avgMinPerMember}</ThemedText>
-                    <ThemedText style={styles.statLabel}>Avg Min/Member</ThemedText>
-                  </View>
-                  <View style={styles.statCard}>
-                    <ThemedText style={styles.statValue}>{teamStats.activeMembers}</ThemedText>
-                    <ThemedText style={styles.statLabel}>Active Members</ThemedText>
+                    <ThemedText style={styles.statValue}>
+                      {teamStats.avgMinPerMember}
+                    </ThemedText>
+                    <ThemedText style={styles.statLabel}>
+                      Avg Min/Member
+                    </ThemedText>
                   </View>
                   <View style={styles.statCard}>
                     <ThemedText style={styles.statValue}>
-                      {teamStats.weeklyGrowth > 0 ? `+${teamStats.weeklyGrowth}%` : `${teamStats.weeklyGrowth}%`}
+                      {teamStats.activeMembers}
                     </ThemedText>
-                    <ThemedText style={styles.statLabel}>Weekly Growth</ThemedText>
+                    <ThemedText style={styles.statLabel}>
+                      Active Members
+                    </ThemedText>
+                  </View>
+                  <View style={styles.statCard}>
+                    <ThemedText style={styles.statValue}>
+                      {teamStats.weeklyGrowth > 0
+                        ? `+${teamStats.weeklyGrowth}%`
+                        : `${teamStats.weeklyGrowth}%`}
+                    </ThemedText>
+                    <ThemedText style={styles.statLabel}>
+                      Weekly Growth
+                    </ThemedText>
                   </View>
                 </View>
               </ThemedView>
 
               <ThemedView style={styles.card}>
                 <View style={styles.membersHeader}>
-                  <ThemedText style={styles.sectionTitle}>Team Members</ThemedText>
+                  <ThemedText style={styles.sectionTitle}>
+                    Team Members
+                  </ThemedText>
                   <TextInput
                     placeholder="Search members..."
                     style={styles.searchInput}
@@ -820,17 +937,30 @@ export default function TeamScreen() {
                   <ThemedText style={styles.headerMember}>MEMBER</ThemedText>
                   <ThemedText style={styles.headerRole}>ROLE</ThemedText>
                   <ThemedText style={styles.headerMinutes}>MINUTES</ThemedText>
-                  <ThemedText style={styles.headerContrib}>CONTRIB/RANK</ThemedText>
+                  <ThemedText style={styles.headerContrib}>
+                    CONTRIB/RANK
+                  </ThemedText>
                 </View>
 
                 <View style={styles.membersList}>
-                  {(searchQuery.trim() === '' ? displayedMembers : filteredMembers).map((member, index) => {
-                    const isSearchResult = searchQuery.trim() !== '' && filteredMembers.includes(member);
+                  {(searchQuery.trim() === ""
+                    ? displayedMembers
+                    : filteredMembers
+                  ).map((member, index) => {
+                    const isSearchResult =
+                      searchQuery.trim() !== "" &&
+                      filteredMembers.includes(member);
 
                     return (
                       <View key={member.id} style={styles.memberItemContainer}>
                         <Image
-                          source={{ uri: member.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.full_name)}&background=random` }}
+                          source={{
+                            uri:
+                              member.avatar_url ||
+                              `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                member.full_name
+                              )}&background=random`,
+                          }}
                           style={styles.memberAvatar}
                         />
                         <Pressable
@@ -839,47 +969,62 @@ export default function TeamScreen() {
                           onPress={() => handleMemberPress(member)}
                           style={[
                             styles.memberItem,
-                            getMemberRowStyle(member.id, index, isSearchResult)
+                            getMemberRowStyle(member.id, index, isSearchResult),
                           ]}
                         >
                           <View style={styles.memberColumnContent}>
                             <View style={styles.memberDetails}>
-                              <ThemedText style={styles.memberName}>{member.full_name}</ThemedText>
+                              <ThemedText style={styles.memberName}>
+                                {member.full_name}
+                              </ThemedText>
                               <ThemedText style={styles.memberLastActive}>
-                                Active since {new Date(member.joined_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                Active since{" "}
+                                {new Date(member.joined_at).toLocaleDateString(
+                                  "en-US",
+                                  { month: "short", day: "numeric" }
+                                )}
                               </ThemedText>
                             </View>
                           </View>
                           <View style={styles.roleColumnContent}>
-                            <ThemedText style={styles.memberRole}>{member.is_captain ? 'Captain' : 'Member'}</ThemedText>
+                            <ThemedText style={styles.memberRole}>
+                              {member.is_captain ? "Captain" : "Member"}
+                            </ThemedText>
                           </View>
                           <View style={styles.minutesColumnContent}>
-                            <ThemedText style={styles.memberMinutes}>{member.total_minutes}</ThemedText>
+                            <ThemedText style={styles.memberMinutes}>
+                              {member.total_minutes}
+                            </ThemedText>
                           </View>
                           <View style={styles.contribColumnContent}>
-                            <ThemedText style={styles.memberContribution}>{member.contribution_percentage}</ThemedText>
-                            <ThemedText style={styles.memberRank}>#{member.rank}</ThemedText>
+                            <ThemedText style={styles.memberContribution}>
+                              {member.contribution_percentage}
+                            </ThemedText>
+                            <ThemedText style={styles.memberRank}>
+                              #{member.rank}
+                            </ThemedText>
                           </View>
                         </Pressable>
                       </View>
                     );
                   })}
 
-                  {searchQuery.trim() !== '' && filteredMembers.length === 0 && (
-                    <View style={styles.noResultsContainer}>
-                      <ThemedText style={styles.noResultsText}>
-                        No members found matching "{searchQuery}"
-                      </ThemedText>
-                    </View>
-                  )}
+                  {searchQuery.trim() !== "" &&
+                    filteredMembers.length === 0 && (
+                      <View style={styles.noResultsContainer}>
+                        <ThemedText style={styles.noResultsText}>
+                          No members found matching "{searchQuery}"
+                        </ThemedText>
+                      </View>
+                    )}
                 </View>
 
-                {searchQuery.trim() === '' && teamMembers.length > 5 && (
-                  <Pressable
-                    onPress={() => setShowAllMembers(!showAllMembers)}
-                  >
+                {searchQuery.trim() === "" && teamMembers.length > 5 && (
+                  <Pressable onPress={() => setShowAllMembers(!showAllMembers)}>
                     <ThemedText style={styles.seeAllMembers}>
-                      {showAllMembers ? 'SHOW LESS' : `SEE ALL MEMBERS (${teamMembers.length})`}
+                      {showAllMembers
+                        ? "SHOW LESS"
+                        : `SEE ALL MEMBERS (${teamMembers.length})`}
                     </ThemedText>
                   </Pressable>
                 )}
@@ -892,16 +1037,26 @@ export default function TeamScreen() {
       <MemberDetails
         isVisible={isModalVisible}
         onClose={() => setIsModalVisible(false)}
-        member={selectedMember ? {
-          full_name: selectedMember.full_name,
-          joined_at: selectedMember.joined_at,
-          rank: selectedMember.rank,
-          total_minutes: selectedMember.total_minutes,
-          activities_logged: isMemberActivityCountLoading || selectedMemberActivityCount == null ? 0 : selectedMemberActivityCount,
-          current_milestone: `${Math.floor(selectedMember.total_minutes / 100) * 100} minutes`,
-          contribution_percentage: selectedMember.contribution_percentage,
-          avatar_url: selectedMember.avatar_url || '',
-        } : null}
+        member={
+          selectedMember
+            ? {
+                full_name: selectedMember.full_name,
+                joined_at: selectedMember.joined_at,
+                rank: selectedMember.rank,
+                total_minutes: selectedMember.total_minutes,
+                activities_logged:
+                  isMemberActivityCountLoading ||
+                  selectedMemberActivityCount == null
+                    ? 0
+                    : selectedMemberActivityCount,
+                current_milestone: `${
+                  Math.floor(selectedMember.total_minutes / 100) * 100
+                } minutes`,
+                contribution_percentage: selectedMember.contribution_percentage,
+                avatar_url: selectedMember.avatar_url || "",
+              }
+            : null
+        }
       />
 
       {/* Edit Goal Modal */}
@@ -945,47 +1100,47 @@ export default function TeamScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#fff",
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#333',
+    color: "#333",
   },
   noTeamContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   noTeamTitle: {
     fontSize: 22,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 12,
-    textAlign: 'center',
+    textAlign: "center",
   },
   noTeamSubtext: {
     fontSize: 16,
-    color: '#666',
+    color: "#666",
     marginBottom: 24,
-    textAlign: 'center',
+    textAlign: "center",
   },
   joinButton: {
-    backgroundColor: '#C41E3A',
+    backgroundColor: "#C41E3A",
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
   },
   joinButtonText: {
-    color: 'white',
+    color: "white",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   headerOverlay: {
     flex: 1,
@@ -1000,45 +1155,48 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   headerTitle: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 20,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   userIcon: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
   },
   userIconText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#C41E3A',
+    fontWeight: "600",
+    color: "#C41E3A",
   },
   headerContent: {
     flex: 1,
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 40,
   },
   pageTitle: {
     fontSize: 32,
-    fontWeight: '700',
-    color: '#fff',
-    textAlign: 'center',
+    fontWeight: "700",
+    color: "#fff",
+    textAlign: "center",
     marginBottom: 8,
   },
   tagline: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.8)',
-    textAlign: 'center',
+    color: "rgba(255, 255, 255, 0.8)",
+    textAlign: "center",
   },
   mainContent: {
     padding: 16,
+    backgroundColor: Colors.light.background,
   },
   scrollContent: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.light.background,
   },
   content: {
     flex: 1,
@@ -1046,76 +1204,76 @@ const styles = StyleSheet.create({
     paddingBottom: 100, // Extra padding to account for tab bar
   },
   card: {
-    backgroundColor: 'white',
+    backgroundColor: "#fff",
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
   teamInfo: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     marginBottom: 16,
-    position: 'relative',
+    position: "relative",
     minHeight: 60,
   },
   teamIcon: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#007AFF',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: Colors.light.mimosa,
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 16,
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     top: 0,
     zIndex: 2,
   },
   teamIconText: {
-    color: 'white',
+    color: "white",
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   teamDetails: {
     flex: 1,
-    marginLeft: 76,  // Account for avatar width + margin
+    marginLeft: 76, // Account for avatar width + margin
   },
   teamName: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 4,
-    color: '#333333',
+    color: "#333333",
   },
   teamSubtext: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
     marginBottom: 8,
   },
   progressContainer: {
     height: 4,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: "#E0E0E0",
     borderRadius: 2,
     marginBottom: 8,
   },
   progressBar: {
-    position: 'absolute',
-    height: '100%',
-    backgroundColor: '#4CAF50',
+    position: "absolute",
+    height: "100%",
+    backgroundColor: "#4CAF50",
     borderRadius: 2,
   },
   progressText: {
     fontSize: 14,
-    color: '#007AFF',
+    color: Colors.light.blue,
     marginTop: 8,
   },
   teamActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     gap: 8,
     marginTop: 16,
   },
@@ -1123,149 +1281,149 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 8,
     borderRadius: 20,
-    alignItems: 'center',
-    cursor: 'pointer',
+    alignItems: "center",
+    cursor: "pointer",
     borderWidth: 1,
-    borderColor: '#007AFF',
-    backgroundColor: 'transparent',
+    borderColor: Colors.light.blue,
+    backgroundColor: "transparent",
   },
   actionButtonHovered: {
-    backgroundColor: '#007AFF',
+    backgroundColor: Colors.light.redOrange,
   },
   actionButtonText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#007AFF',
+    fontWeight: "600",
+    color: "#007AFF",
   },
   actionButtonTextHovered: {
-    color: 'white',
+    color: "white",
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 0,
-    color: '#333333',
+    color: "#333333",
   },
   statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   statCard: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   statValue: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 4,
-    color: '#333333',
+    color: "#333333",
   },
   statLabel: {
     fontSize: 14,
-    color: '#666666',
-    fontWeight: '500',
+    color: "#666666",
+    fontWeight: "500",
   },
   membersHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
   },
   searchInput: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: "#F5F5F5",
     padding: 10,
     paddingHorizontal: 16,
     borderRadius: 8,
     fontSize: 14,
     borderWidth: 1,
-    borderColor: '#BDBDBD',
-    width: '50%',
+    borderColor: "#BDBDBD",
+    width: "50%",
     maxWidth: 300,
   },
   tableHeader: {
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: "#E0E0E0",
   },
   headerMember: {
     flex: 3,
     fontSize: 12,
-    fontWeight: '600',
-    color: '#444444',
+    fontWeight: "600",
+    color: "#444444",
   },
   headerRole: {
     flex: 2,
     fontSize: 12,
-    fontWeight: '600',
-    color: '#444444',
-    textAlign: 'left',
+    fontWeight: "600",
+    color: "#444444",
+    textAlign: "left",
   },
   headerMinutes: {
     flex: 2,
     fontSize: 12,
-    fontWeight: '600',
-    color: '#444444',
-    textAlign: 'center',
+    fontWeight: "600",
+    color: "#444444",
+    textAlign: "center",
   },
   headerContrib: {
     flex: 2,
     fontSize: 12,
-    fontWeight: '600',
-    color: '#444444',
-    textAlign: 'right',
+    fontWeight: "600",
+    color: "#444444",
+    textAlign: "right",
   },
   membersList: {
     gap: 0,
   },
   memberItemContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    position: 'relative',
+    flexDirection: "row",
+    alignItems: "center",
+    position: "relative",
     minHeight: 64,
     paddingLeft: 64,
     marginBottom: 4,
   },
   memberItem: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 12,
     paddingHorizontal: 16,
-    cursor: 'pointer',
+    cursor: "pointer",
     marginLeft: 0,
     borderRadius: 4,
   },
   memberItemAlt: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: "#F8F9FA",
   },
   memberAvatar: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    position: 'absolute',
+    position: "absolute",
     left: 16,
-    top: '50%',
+    top: "50%",
     transform: [{ translateY: -18 }],
     zIndex: 3,
   },
   memberColumnContent: {
     flex: 3,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingLeft: 8,
   },
   roleColumnContent: {
     flex: 2,
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
   },
   minutesColumnContent: {
     flex: 2,
-    alignItems: 'center',
+    alignItems: "center",
   },
   contribColumnContent: {
     flex: 2,
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   memberDetails: {
     flex: 1,
@@ -1274,69 +1432,69 @@ const styles = StyleSheet.create({
   },
   memberName: {
     fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333333',
+    fontWeight: "bold",
+    color: "#333333",
   },
   memberRole: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
   },
   memberLastActive: {
     fontSize: 12,
-    color: '#999',
+    color: "#999",
     marginTop: 2,
   },
   memberMinutes: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333333',
+    fontWeight: "bold",
+    color: "#333333",
   },
   memberContribution: {
     fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '600',
+    color: Colors.light.blue,
+    fontWeight: "600",
   },
   memberRank: {
     fontSize: 12,
-    color: '#666666',
-    fontWeight: '500',
+    color: "#666666",
+    fontWeight: "500",
   },
   seeAllMembers: {
-    textAlign: 'center',
-    color: '#007AFF',
+    textAlign: "center",
+    color: Colors.light.blue,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     marginTop: 16,
   },
   memberItemSearchResult: {
     borderLeftWidth: 3,
-    borderLeftColor: '#C41E3A',
+    borderLeftColor: "#C41E3A",
   },
 
   noResultsContainer: {
     padding: 20,
-    alignItems: 'center',
+    alignItems: "center",
   },
 
   noResultsText: {
     fontSize: 16,
-    color: '#666666',
-    fontStyle: 'italic',
+    color: "#666666",
+    fontStyle: "italic",
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalContent: {
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderRadius: 12,
     padding: 24,
-    width: '80%',
+    width: "80%",
     maxWidth: 400,
-    alignItems: 'center',
-    shadowColor: '#000',
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
@@ -1344,43 +1502,43 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 16,
-    color: '#333',
+    color: "#333",
   },
   goalInput: {
-    width: '100%',
+    width: "100%",
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: "#ccc",
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
     marginBottom: 20,
   },
   modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
   },
   modalButton: {
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 8,
     minWidth: 100,
-    alignItems: 'center',
+    alignItems: "center",
   },
   cancelButton: {
-    backgroundColor: '#f2f2f2',
+    backgroundColor: "#f2f2f2",
   },
   cancelButtonText: {
-    color: '#666',
-    fontWeight: '600',
+    color: "#666",
+    fontWeight: "600",
   },
   saveButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: Colors.light.blue,
   },
   saveButtonText: {
-    color: 'white',
-    fontWeight: '600',
+    color: "white",
+    fontWeight: "600",
   },
-}); 
+});

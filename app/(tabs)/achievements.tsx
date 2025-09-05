@@ -1,13 +1,29 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, FlatList, Animated, TouchableOpacity, Modal, Dimensions, Platform, Image, ScrollView } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { StatusBar } from 'expo-status-bar';
-import Constants from 'expo-constants';
-import { FontAwesome5 } from '@expo/vector-icons';
-import { supabase } from '@/lib/supabase';
-import { useUser } from '@/contexts/UserContext';
-import { useRouter } from 'expo-router';
-import { ResponsiveHeader } from '@/components/ui/responsiveHeader';
+import React, { useState, useEffect, useRef} from "react";
+import {
+  StyleSheet,
+  View,
+  Text,
+  FlatList,
+  Animated,
+  TouchableOpacity,
+  Modal,
+  Dimensions,
+  Platform,
+  Image,
+  ImageBackground,
+  ScrollView,
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { StatusBar } from "expo-status-bar";
+import Constants from "expo-constants";
+import { FontAwesome5 } from "@expo/vector-icons";
+import { supabase } from "@/lib/supabase";
+import { useUser } from "@/contexts/UserContext";
+import { useRouter } from "expo-router";
+import { Colors } from "@/constants/Colors";
+import { ThemedText } from "@/components/ThemedText";
+import { ResponsiveHeader } from '@/components/ui/responsiveHeader'
+import { useAuth } from "@/lib/auth";
 
 const WIDTH = Dimensions.get('window').width;
 const BADGE_SIZE = WIDTH > 768 ? (WIDTH - 48) / 3 : WIDTH - 48;
@@ -32,154 +48,166 @@ interface Badge {
 const defaultBadges: Badge[] = [
   // Step-Based Goals
   {
-    id: '1',
-    name: 'Step Starter',
-    icon: 'shoe-prints',
-    description: '10k Steps in one day',
+    id: "1",
+    name: "Step Starter",
+    icon: "shoe-prints",
+    description: "5k Steps in one day",
+    isUnlocked: true,
+    progress: 5000,
+    total: 5000,
+    category: "Steps",
+    emoji: "👣",
+    imageUrl:
+      "https://images.unsplash.com/photo-1571008887538-b36bb32f4571?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
+  },
+  {
+    id: "2",
+    name: "Step Master",
+    icon: "walking",
+    description: "10k Steps in one day",
     isUnlocked: false,
-    progress: 0,
+    progress: 7500,
     total: 10000,
-    category: 'Steps',
-    emoji: '👣',
-    imageUrl: 'https://images.unsplash.com/photo-1571008887538-b36bb32f4571?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
+    category: "Steps",
+    emoji: "👟",
+    imageUrl:
+      "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
   },
   {
-    id: '2',
-    name: 'Step Master',
-    icon: 'walking',
-    description: '20k Steps in one day',
+    id: "3",
+    name: "Step Champion",
+    icon: "running",
+    description: "20k Steps in one day",
     isUnlocked: false,
-    progress: 0,
+    progress: 12000,
     total: 20000,
-    category: 'Steps',
-    emoji: '👟',
-    imageUrl: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
-  },
-  {
-    id: '3',
-    name: 'Step Champion',
-    icon: 'running',
-    description: '40k Steps in one day',
-    isUnlocked: false,
-    progress: 0,
-    total: 40000,
-    category: 'Steps',
-    emoji: '👟',
-    imageUrl: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
+    category: "Steps",
+    emoji: "👟",
+    imageUrl:
+      "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
   },
 
   // Workout Milestones
   {
-    id: '4',
-    name: 'Workout Beginner',
-    icon: 'dumbbell',
-    description: '10 Total Workouts',
+    id: "4",
+    name: "Workout Beginner",
+    icon: "dumbbell",
+    description: "10 Total Workouts",
     isUnlocked: true,
     progress: 10,
     total: 10,
-    category: 'Workouts',
-    emoji: '🏋️',
-    imageUrl: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
+    category: "Workouts",
+    emoji: "🏋️",
+    imageUrl:
+      "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
   },
   {
-    id: '5',
-    name: 'Workout Expert',
-    icon: 'dumbbell',
-    description: '50 Total Workouts',
+    id: "5",
+    name: "Workout Expert",
+    icon: "dumbbell",
+    description: "50 Total Workouts",
     isUnlocked: false,
     progress: 25,
     total: 50,
-    category: 'Workouts',
-    emoji: '🏋️',
-    imageUrl: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
+    category: "Workouts",
+    emoji: "🏋️",
+    imageUrl:
+      "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
   },
   {
-    id: '6',
-    name: 'Workout Master',
-    icon: 'award',
-    description: '100 Total Workouts',
+    id: "6",
+    name: "Workout Master",
+    icon: "award",
+    description: "100 Total Workouts",
     isUnlocked: false,
     progress: 45,
     total: 100,
-    category: 'Workouts',
-    emoji: '🏆',
-    imageUrl: 'https://images.unsplash.com/photo-1549060279-7e168fcee0c2?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
+    category: "Workouts",
+    emoji: "🏋️",
+    imageUrl:
+      "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
   },
 
-  // Activity-Specific
+  // Activity Goals
   {
-    id: '7',
-    name: 'Runner\'s Badge',
-    icon: 'running',
-    description: 'Complete a 5k Run',
-    isUnlocked: false,
-    progress: 3,
-    total: 5,
-    category: 'Activities',
-    emoji: '🏃',
-    imageUrl: 'https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
-  },
-  {
-    id: '8',
-    name: 'Cyclist\'s Badge',
-    icon: 'bicycle',
-    description: 'Bike 25 Miles',
-    isUnlocked: false,
-    progress: 15,
-    total: 25,
-    category: 'Activities',
-    emoji: '🚴',
-    imageUrl: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
-  },
-  {
-    id: '9',
-    name: 'Yogi\'s Badge',
-    icon: 'pray',
-    description: '10 Yoga Sessions',
-    isUnlocked: false,
-    progress: 6,
-    total: 10,
-    category: 'Activities',
-    emoji: '🧘‍♂️',
-    imageUrl: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
-  },
-
-  // Time-Based Challenges
-  {
-    id: '10',
-    name: 'Early Bird',
-    icon: 'sun',
-    description: 'Workout Before 7 AM',
+    id: "7",
+    name: "Activity Explorer",
+    icon: "route",
+    description: "5 Different Activities",
     isUnlocked: true,
     progress: 5,
     total: 5,
-    category: 'Time',
-    emoji: '🌅',
-    imageUrl: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
+    category: "Activities",
+    emoji: "🚴",
+    imageUrl:
+      "https://images.unsplash.com/photo-1544551763-46a013bb70d5?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
   },
   {
-    id: '11',
-    name: 'Weekend Warrior',
-    icon: 'calendar',
-    description: '5 Weekend Workouts',
+    id: "8",
+    name: "Activity Adventurer",
+    icon: "mountain",
+    description: "10 Different Activities",
     isUnlocked: false,
-    progress: 3,
-    total: 5,
-    category: 'Time',
-    emoji: '💪',
-    imageUrl: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
+    progress: 7,
+    total: 10,
+    category: "Activities",
+    emoji: "🏔️",
+    imageUrl:
+      "https://images.unsplash.com/photo-1551632811-561732d1e306?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
   },
   {
-    id: '12',
-    name: 'Night Owl',
-    icon: 'moon',
-    description: 'Workout After 10 PM',
+    id: "9",
+    name: "Activity Pioneer",
+    icon: "compass",
+    description: "15 Different Activities",
     isUnlocked: false,
-    progress: 2,
-    total: 5,
-    category: 'Time',
-    emoji: '🌙',
-    imageUrl: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60'
+    progress: 12,
+    total: 15,
+    category: "Activities",
+    emoji: "🧭",
+    imageUrl:
+      "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
+  },
+
+  // Time-Based Goals
+  {
+    id: "10",
+    name: "Time Tracker",
+    icon: "clock",
+    description: "30 Days of Tracking",
+    isUnlocked: true,
+    progress: 30,
+    total: 30,
+    category: "Time",
+    emoji: "⏰",
+    imageUrl:
+      "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
+  },
+  {
+    id: "11",
+    name: "Time Master",
+    icon: "calendar-alt",
+    description: "90 Days of Tracking",
+    isUnlocked: false,
+    progress: 65,
+    total: 90,
+    category: "Time",
+    emoji: "📅",
+    imageUrl:
+      "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
+  },
+  {
+    id: "12",
+    name: "Time Legend",
+    icon: "trophy",
+    description: "365 Days of Tracking",
+    isUnlocked: false,
+    progress: 120,
+    total: 365,
+    category: "Time",
+    emoji: "🏆",
+    imageUrl:
+      "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
   },
 ];
 
@@ -194,14 +222,21 @@ type Milestone = {
 };
 
 export default function AchievementsScreen() {
-  const { userProfile } = useUser();
-  const [currentStreak, setCurrentStreak] = useState(0);
+  const [selectedBadge, setSelectedBadge] = useState<Badge | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [badgeProgress, setBadgeProgress] = useState<Record<string, number>>(
+    {}
+  );
+	const [badges, setBadges] = useState<Badge[]>(defaultBadges);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [totalMinutes, setTotalMinutes] = useState(0);
-  const [badgeProgress, setBadgeProgress] = useState<Record<string, number>>({});
-  const [badges, setBadges] = useState<Badge[]>(defaultBadges);
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const [currentStreak, setCurrentStreak] = useState(0);
+  const [showAchievement, setShowAchievement] = useState(false);
+  const [achievementBadge, setAchievementBadge] = useState<Badge | null>(null);
+  const { user } = useAuth();
+	const { userProfile } = useUser();
   const router = useRouter();
+	const scaleAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     fetchMilestones();
@@ -280,6 +315,7 @@ export default function AchievementsScreen() {
       console.error('Error in fetchMilestones:', error);
     }
   };
+
 
   const fetchBadges = async () => {
     try {
@@ -417,6 +453,7 @@ export default function AchievementsScreen() {
       console.error('Error in fetchBadgeProgress:', error);
     }
   };
+
 
   const fetchStreak = async () => {
     try {
@@ -566,7 +603,7 @@ export default function AchievementsScreen() {
           key={i}
           name="fire"
           size={16}
-          color={i < currentStreak ? '#C41E3A' : '#E0E0E0'}
+          color={i < currentStreak ? Colors.light.redOrange : "#E0E0E0"} // Updated to use Hackathon colors
           style={styles.streakFlame}
         />
       );
@@ -576,16 +613,16 @@ export default function AchievementsScreen() {
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case 'Steps':
-        return '#4CAF50';
-      case 'Workouts':
-        return '#2196F3';
-      case 'Activities':
-        return '#FF9800';
-      case 'Time':
-        return '#9C27B0';
+      case "Steps":
+        return Colors.light.mimosa; // Updated to use Hackathon colors
+      case "Workouts":
+        return Colors.light.orange; // Updated to use Hackathon colors
+      case "Activities":
+        return Colors.light.chartreuse; // Updated to use Hackathon colors
+      case "Time":
+        return Colors.light.blue; // Updated to use Hackathon colors
       default:
-        return '#666';
+        return Colors.light.redOrange; // Updated to use Hackathon colors
     }
   };
 
@@ -598,7 +635,7 @@ export default function AchievementsScreen() {
       <View style={styles.emojiContainer}>
         {[...Array(totalEmojis)].map((_, index) => (
           <Text key={index} style={styles.emoji}>
-            {index < filledEmojis ? badge.emoji : '⚪️'}
+            {index < filledEmojis ? badge.emoji : "⚪️"}
           </Text>
         ))}
       </View>
@@ -606,22 +643,52 @@ export default function AchievementsScreen() {
   };
 
   const renderBadge = ({ item, index }: { item: Badge; index: number }) => {
+		const scaleAnim = new Animated.Value(1);
     const progress = badgeProgress[item.id] || 0;
     const isUnlocked = progress >= item.total;
     const categoryColor = getCategoryColor(item.category);
 
+		const onPressIn = () => {
+      Animated.spring(scaleAnim, {
+        toValue: 0.95,
+        friction: 5,
+        useNativeDriver: true,
+      }).start();
+    };
+
+    const onPressOut = () => {
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 5,
+        useNativeDriver: true,
+      }).start();
+      setSelectedBadge({ ...item, isUnlocked, progress });
+			setModalVisible(true);
+    };
+
     return (
-      <View style={styles.badgeContainer}>
-        <View
-          style={[
-            styles.badge,
-            isUnlocked ? styles.badgeUnlocked : styles.badgeLocked,
-          ]}
-        >
+      <TouchableOpacity
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+        activeOpacity={1}
+        style={styles.badgeContainer}
+      >
+				<Animated.View
+					style={[
+						styles.badge,
+						isUnlocked ? styles.badgeUnlocked : styles.badgeLocked,
+						{ transform: [{ scale: scaleAnim }] },
+					]}
+				>
           {isUnlocked && (
             <View style={styles.unlockedOverlay}>
               <View style={styles.unlockedIndicator}>
-                <FontAwesome5 name="check-circle" size={24} color="#4CAF50" />
+                <FontAwesome5
+                  name="check-circle"
+                  size={24}
+                  color={Colors.light.mimosa}
+                />{" "}
+                {/* Updated to use Hackathon colors */}
               </View>
             </View>
           )}
@@ -633,64 +700,151 @@ export default function AchievementsScreen() {
           />
 
           <View style={styles.badgeContent}>
-            <Text style={[styles.badgeName, !isUnlocked && styles.badgeNameLocked]}>
+            <ThemedText variant="h4" style={styles.badgeName}>
               {item.name}
-            </Text>
-            <View style={[styles.categoryContainer, { backgroundColor: categoryColor }]}>
-              <Text style={styles.badgeCategory}>{item.category}</Text>
-            </View>
+            </ThemedText>
+            <ThemedText style={styles.badgeDescription}>
+              {item.description}
+            </ThemedText>
+            {renderProgressEmojis(item)}
+            <ThemedText style={styles.badgeProgress}>
+              {progress} / {item.total}
+            </ThemedText>
           </View>
 
-          <View style={styles.emojiContainer}>
-            {renderProgressEmojis(item)}
+          <View
+            style={[
+              styles.categoryIndicator,
+              { backgroundColor: categoryColor },
+            ]}
+          />
+        </Animated.View>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderBadgeModal = (badge: Badge) => {
+    const progress = badgeProgress[badge.id] || 0;
+    const isUnlocked = progress >= badge.total;
+    const categoryColor = getCategoryColor(badge.category);
+
+    return (
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <ThemedText variant="h2" style={styles.modalTitle}>
+                {badge.name}
+              </ThemedText>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setModalVisible(false)}
+              >
+                <ThemedText style={styles.modalCloseText}>×</ThemedText>
+              </TouchableOpacity>
+            </View>
+
+            <Image
+              source={{ uri: badge.imageUrl }}
+              style={styles.modalBadgeImage}
+              resizeMode="cover"
+            />
+
+            <ThemedText style={styles.modalDescription}>
+              {badge.description}
+            </ThemedText>
+
+            <View style={styles.modalProgressContainer}>
+              <View style={styles.modalProgressBar}>
+                <View
+                  style={[
+                    styles.modalProgressFill,
+                    { width: `${(progress / badge.total) * 100}%` },
+                  ]}
+                />
+              </View>
+              <ThemedText style={styles.modalProgressText}>
+                {progress} / {badge.total}
+              </ThemedText>
+            </View>
+
+            <View
+              style={[
+                styles.modalCategoryBadge,
+                { backgroundColor: categoryColor },
+              ]}
+            >
+              <ThemedText style={styles.modalCategoryText}>
+                {badge.category}
+              </ThemedText>
+            </View>
+
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setModalVisible(false)}
+            >
+              <ThemedText style={styles.modalCloseText}>Close</ThemedText>
+            </TouchableOpacity>
           </View>
-          <Text style={styles.progressText}>
-            {progress}/{item.total}
-          </Text>
         </View>
-      </View>
+      </Modal>
     );
   };
 
   const renderMilestoneProgress = () => {
-    if (milestones.length === 0) return null;
-
     return (
       <View style={styles.milestoneSection}>
-        <Text style={styles.milestoneTitle}>Activity Milestones</Text>
+        <ThemedText variant="h2" style={styles.milestoneTitle}>
+          Milestones
+        </ThemedText>
+        <ThemedText style={styles.milestoneSubtitle}>
+          Track your progress towards fitness goals
+        </ThemedText>
+
         <View style={styles.totalMinutesContainer}>
-          <Text style={styles.totalMinutesLabel}>Total Minutes:</Text>
-          <Text style={styles.totalMinutesValue}>{totalMinutes}</Text>
+          <ThemedText style={styles.totalMinutesLabel}>
+            Total Minutes:
+          </ThemedText>
+          <ThemedText style={styles.totalMinutesValue}>
+            {totalMinutes}
+          </ThemedText>
         </View>
 
-        {milestones.map((milestone, index) => (
+        {milestones.map((milestone) => (
           <View key={milestone.id} style={styles.milestoneCard}>
             <View style={styles.milestoneHeader}>
-              <Text style={styles.milestoneName}>{milestone.milestone_name}</Text>
-              <Text style={styles.milestoneMinutes}>{milestone.milestone_minutes} minutes</Text>
+              <ThemedText style={styles.milestoneName}>
+                {milestone.milestone_name}
+              </ThemedText>
+              <ThemedText style={styles.milestoneMinutes}>
+                {milestone.milestone_minutes} min
+              </ThemedText>
             </View>
-
-            <View style={styles.milestoneProgressContainer}>
+						<View style={styles.milestoneProgressContainer}>
               <View style={[
                 styles.milestoneProgressBar,
                 { width: `${Math.min(100, (totalMinutes / milestone.milestone_minutes) * 100)}%` }
               ]} />
             </View>
-
             <View style={styles.milestoneStatus}>
               {milestone.achieved ? (
                 <View style={styles.achievedBadge}>
-                  <Text style={styles.achievedText}>
-                    {milestone.rewarded ? '🏆 Rewarded' : '✨ Achieved'}
-                  </Text>
-                  <Text style={styles.achievedDate}>
-                    {milestone.achieved_at ? new Date(milestone.achieved_at).toLocaleDateString() : ''}
-                  </Text>
+                  <ThemedText style={styles.achievedText}>
+										{milestone.rewarded ? '🏆 Rewarded' : '✨ Achieved'}
+                  </ThemedText>
+                  <ThemedText style={styles.achievedDate}>
+                    {milestone.achieved_at
+                      ? new Date(milestone.achieved_at).toLocaleDateString()
+                      : ""}
+                  </ThemedText>
                 </View>
               ) : (
-                <Text style={styles.pendingText}>
-                  {milestone.milestone_minutes - totalMinutes} minutes to go
-                </Text>
+                <ThemedText style={styles.pendingText}>{milestone.milestone_minutes - totalMinutes} minutes to go</ThemedText>
               )}
             </View>
           </View>
@@ -706,41 +860,87 @@ export default function AchievementsScreen() {
         source={require('@/assets/images/gym-equipment.png')}
       >
         <LinearGradient
-          colors={['rgba(196, 30, 58, 0.9)', 'rgba(128, 128, 128, 0.85)']}
+          colors={[Colors.light.blue, "rgba(0, 0, 0, 0.7)"]}
           style={styles.headerOverlay}
-          locations={[0, 0.5]}
         >
-          <View style={styles.header}>
+					<View style={styles.header}>
             <Text style={styles.headerTitle}>MAXX Motion</Text>
             <View style={styles.userIcon}>
               <Text style={styles.userIconText}>U</Text>
-            </View>
+          	</View>
           </View>
           <View style={styles.headerContent}>
-            <Text style={styles.pageTitle}>Achievements</Text>
-            <Text style={styles.tagline}>Track your motion. Reach your potential.</Text>
+					<Text style={styles.pageTitle}>Achievements</Text>
+						<ThemedText style={styles.tagline}>
+								Unlock badges and track your progress
+						</ThemedText>
           </View>
         </LinearGradient>
       </ResponsiveHeader>
 
-      {renderStreak()}
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Streak Section */}
+        <View style={styles.streakSection}>
+          <ThemedText variant="h2" style={styles.streakTitle}>
+            Current Streak
+          </ThemedText>
+          <View style={styles.streakContainer}>{renderStreak()}</View>
+        </View>
 
-      <View style={styles.achievementsSection}>
-        <FlatList
-          ListHeaderComponent={
-            <>
-              {renderMilestoneProgress()}
-              <Text style={styles.achievementsTitle}>My Achievements</Text>
-            </>
-          }
-          data={badges}
-          renderItem={renderBadge}
-          keyExtractor={item => item.id}
-          numColumns={NUM_COLUMNS}
-          scrollEnabled={true}
-          contentContainerStyle={styles.badgesGrid}
-        />
-      </View>
+        {/* Milestones Section */}
+        {renderMilestoneProgress()}
+
+        {/* Badges Section */}
+					<View style={styles.achievementsSection}>
+						<FlatList
+							ListHeaderComponent={
+								<>
+									<Text style={styles.achievementsTitle}>My Achievements</Text>
+								</>
+							}
+							data={badges}
+							renderItem={renderBadge}
+							keyExtractor={item => item.id}
+							numColumns={NUM_COLUMNS}
+							scrollEnabled={true}
+							contentContainerStyle={styles.badgesGrid}
+						/>
+				</View>
+      </ScrollView>
+
+      {/* Badge Modal */}
+      {selectedBadge && renderBadgeModal(selectedBadge)}
+
+      {/* Achievement Celebration Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={showAchievement}
+        onRequestClose={() => setShowAchievement(false)}
+      >
+        <View style={styles.achievementOverlay}>
+          <View style={styles.achievementContent}>
+            <FontAwesome5
+              name="trophy"
+              size={64}
+              color={Colors.light.mimosa} // Updated to use Hackathon colors
+              style={styles.celebrationIcon}
+            />
+            <ThemedText variant="h1" style={styles.achievementTitle}>
+              Achievement Unlocked!
+            </ThemedText>
+            <ThemedText style={styles.achievementDescription}>
+              {achievementBadge?.name}
+            </ThemedText>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setShowAchievement(false)}
+            >
+              <ThemedText style={styles.modalCloseText}>Continue</ThemedText>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -748,8 +948,7 @@ export default function AchievementsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
-    paddingTop: Constants.statusBarHeight,
+    backgroundColor: Colors.light.background, // Updated to use Hackathon colors
   },
   headerOverlay: {
     flex: 1,
@@ -764,49 +963,43 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   headerTitle: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 20,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   userIcon: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: Colors.light.background,
+    alignItems: "center",
+    justifyContent: "center",
   },
   userIconText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#C41E3A',
+    fontWeight: "600",
+    color: Colors.light.redOrange,
   },
-  headerContent: {
+	headerContent: {
     flex: 1,
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 40,
   },
   pageTitle: {
     fontSize: 32,
-    fontWeight: '700',
-    color: '#fff',
+    fontWeight: "700",
+    color: "#fff",
+    textAlign: "center",
     marginBottom: 8,
   },
   tagline: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: "rgba(255, 255, 255, 0.8)",
+    textAlign: "center",
   },
-  streakContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#fff',
-    margin: 16,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+  content: {
+    flex: 1,
   },
   streakIconContainer: {
     width: 50,
@@ -820,17 +1013,15 @@ const styles = StyleSheet.create({
   streakInfo: {
     flex: 1,
   },
-  streakTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 8,
-  },
   streakSubtitle: {
     fontSize: 14,
     color: '#666',
     marginTop: 4,
   },
+	streakSection: {
+    padding: 16,
+    backgroundColor: "#fff",
+	},
   streakFlamesContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -864,93 +1055,99 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
     position: 'relative',
   },
-  badgeLocked: {
-    opacity: 0.8,
+  streakTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 16,
+    color: Colors.light.text, // Updated to use Hackathon colors
   },
-  badgeUnlocked: {
-    backgroundColor: '#E8F5E9',
+  streakContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+		alignItems: 'center',
+    marginBottom: 16,
+		width: '100%'
   },
-  unlockedOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(76, 175, 80, 0.2)',
-    zIndex: 1,
-  },
-  unlockedIndicator: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 12,
-    padding: 4,
-    zIndex: 2,
-  },
-  badgeImage: {
-    width: '100%',
-    height: 90,
-    backgroundColor: '#f0f0f0',
-  },
-  badgeContent: {
-    padding: 8,
-  },
-  badgeName: {
+  streakText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  badgeNameLocked: {
-    color: '#999',
-  },
-  categoryContainer: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginTop: 4,
-    alignSelf: 'center',
-  },
-  badgeCategory: {
-    fontSize: 10,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  emojiContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 8,
-  },
-  emoji: {
-    fontSize: 16,
-    marginHorizontal: 2,
-  },
-  progressText: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-    marginTop: 4,
-    marginBottom: 8,
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 20,
   },
   achievementsSection: {
     flex: 1,
-    marginTop: 16,
+		marginTop: 16,
     paddingHorizontal: GRID_PADDING,
   },
-  achievementsTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#333',
+	modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 24,
+    width: "90%",
+    maxWidth: 400,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
   },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: "600",
+    color: Colors.light.text, // Updated to use Hackathon colors
+  },
+  modalCloseButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    backgroundColor: Colors.light.redOrange, // Updated to use Hackathon colors
+    borderRadius: 8,
+  },
+  modalCloseText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  achievementOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  achievementContent: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 24,
+    alignItems: "center",
+    width: "80%",
+  },
+  celebrationIcon: {
+    marginBottom: 16,
+  },
+  achievementTitle: {
+    fontSize: 24,
+    fontWeight: "600",
+    color: "#000",
+    marginBottom: 8,
+  },
+  achievementDescription: {
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
+	},
   milestoneSection: {
     padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 12,
     margin: 16,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -958,85 +1155,92 @@ const styles = StyleSheet.create({
   },
   milestoneTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 8,
-    color: '#000',
+    color: Colors.light.text, // Updated to use Hackathon colors
   },
   milestoneSubtitle: {
     fontSize: 16,
-    color: '#666',
+    color: "#666",
     marginBottom: 16,
   },
   totalMinutesContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 16,
   },
   totalMinutesLabel: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: "600",
+    color: Colors.light.text, // Updated to use Hackathon colors
     marginRight: 8,
   },
   totalMinutesValue: {
     fontSize: 32,
-    fontWeight: '700',
-    color: '#C41E3A',
+    fontWeight: "700",
+    color: Colors.light.redOrange, // Updated to use Hackathon colors
   },
   milestoneCard: {
-    backgroundColor: '#f8f8f8',
+    backgroundColor: "#f8f8f8",
     borderRadius: 8,
     padding: 12,
     marginBottom: 12,
   },
   milestoneHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 8,
   },
   milestoneName: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
+    fontWeight: "600",
+    color: "#000",
   },
   milestoneMinutes: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
   },
   milestoneStatus: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   achievedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   achievedText: {
     fontSize: 14,
-    color: '#4CAF50',
+    color: Colors.light.mimosa, // Updated to use Hackathon colors
     marginRight: 8,
   },
   achievedDate: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
   },
   pendingText: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
+  },
+
+  achievementsTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: Colors.light.text, // Updated to use Hackathon colors
+    marginBottom: 16,
   },
   milestoneProgressContainer: {
     height: 8,
-    backgroundColor: '#eee',
+    backgroundColor: "#eee",
     borderRadius: 4,
-    overflow: 'hidden',
+    overflow: "hidden",
     marginBottom: 8,
   },
   milestoneProgressBar: {
-    height: '100%',
-    backgroundColor: '#C41E3A',
+    height: "100%",
+    backgroundColor: Colors.light.redOrange, // Updated to use Hackathon colors
     borderRadius: 4,
   },
   badgesGrid: {
@@ -1044,4 +1248,136 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: BADGE_PADDING,
   },
-}); 
+  badgeWrapper: {
+    width: BADGE_SIZE,
+    marginBottom: 16,
+  },
+  badgeUnlocked: {
+    borderWidth: 2,
+    borderColor: Colors.light.mimosa, // Updated to use Hackathon colors
+  },
+  badgeLocked: {
+    opacity: 0.8,
+  },
+  unlockedOverlay: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    zIndex: 1,
+  },
+  unlockedIndicator: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 2,
+  },
+  badgeImage: {
+    width: "100%",
+    height: 80,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  badgeContent: {
+    alignItems: "center",
+  },
+  badgeName: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: Colors.light.text, // Updated to use Hackathon colors
+    textAlign: "center",
+    marginBottom: 4,
+  },
+	badgeNameLocked: {
+    color: '#999',
+  },
+  badgeDescription: {
+    fontSize: 10,
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+	badgeCategory: {
+    fontSize: 10,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  emojiContainer: {
+    flexDirection: "row",
+    marginBottom: 4,
+  },
+  emoji: {
+    fontSize: 12,
+    marginHorizontal: 1,
+  },
+  badgeProgress: {
+    fontSize: 10,
+    color: "#666",
+    textAlign: "center",
+  },
+  categoryIndicator: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: 4,
+    height: "100%",
+    borderTopLeftRadius: 12,
+    borderBottomLeftRadius: 12,
+  },
+	categoryContainer: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginTop: 4,
+    alignSelf: 'center',
+  },
+  modalBadgeImage: {
+    width: "100%",
+    height: 200,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  modalDescription: {
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 16,
+  },
+  modalProgressContainer: {
+    marginBottom: 16,
+  },
+  modalProgressBar: {
+    height: 8,
+    backgroundColor: "#eee",
+    borderRadius: 4,
+    overflow: "hidden",
+    marginBottom: 8,
+  },
+  modalProgressFill: {
+    height: "100%",
+    backgroundColor: Colors.light.mimosa, // Updated to use Hackathon colors
+    borderRadius: 4,
+  },
+  modalProgressText: {
+    fontSize: 14,
+    color: "#666",
+    textAlign: "center",
+  },
+	progressText: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  modalCategoryBadge: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    marginBottom: 16,
+  },
+  modalCategoryText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+});

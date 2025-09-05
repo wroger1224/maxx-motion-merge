@@ -1,37 +1,44 @@
-import React from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import React from "react";
+import { TouchableOpacity, Text, StyleSheet } from "react-native";
+import { Colors } from "../../constants/Colors";
 
-export function Button({ 
-  label, 
-  onPress, 
-  variant = 'primary', 
+export function Button({
+  label,
+  onPress,
+  variant = "primary",
   disabled = false,
-  style = {}
+  style = {},
 }: {
   label: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary';
+  variant?: "primary" | "secondary" | "danger" | "mimosa" | "chartreuse";
   disabled?: boolean;
   style?: object;
 }) {
   const buttonStyles = [
     styles.button,
-    variant === 'primary' && styles.primaryButton,
-    variant === 'secondary' && styles.secondaryButton,
+    variant === "primary" && styles.primaryButton,
+    variant === "secondary" && styles.secondaryButton,
+    variant === "danger" && styles.dangerButton,
+    variant === "mimosa" && styles.mimosaButton,
+    variant === "chartreuse" && styles.chartreuseButton,
     disabled && styles.disabledButton,
-    style
+    style,
   ];
 
   const textStyles = [
     styles.text,
-    variant === 'primary' && styles.primaryText,
-    variant === 'secondary' && styles.secondaryText,
-    disabled && styles.disabledText
+    variant === "primary" && styles.primaryText,
+    variant === "secondary" && styles.secondaryText,
+    variant === "danger" && styles.dangerText,
+    variant === "mimosa" && styles.mimosaText,
+    variant === "chartreuse" && styles.chartreuseText,
+    disabled && styles.disabledText,
   ];
 
   return (
-    <TouchableOpacity 
-      style={buttonStyles} 
+    <TouchableOpacity
+      style={buttonStyles}
       onPress={onPress}
       disabled={disabled}
     >
@@ -43,33 +50,53 @@ export function Button({
 const styles = StyleSheet.create({
   button: {
     borderRadius: 8,
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 44,
   },
   primaryButton: {
-    backgroundColor: '#DC143C',
+    backgroundColor: Colors.light.redOrange,
   },
   secondaryButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: '#DC143C',
+    backgroundColor: "transparent",
+    borderWidth: 2,
+    borderColor: Colors.light.orange,
+  },
+  dangerButton: {
+    backgroundColor: Colors.light.redOrange,
+  },
+  mimosaButton: {
+    backgroundColor: Colors.light.mimosa,
+  },
+  chartreuseButton: {
+    backgroundColor: Colors.light.chartreuse,
   },
   disabledButton: {
     opacity: 0.5,
   },
   text: {
-    fontWeight: 'bold',
+    fontWeight: "bold",
     fontSize: 16,
+    textTransform: "uppercase" as any,
   },
   primaryText: {
-    color: '#fff',
+    color: "#fff",
   },
   secondaryText: {
-    color: '#DC143C',
+    color: Colors.light.orange,
+  },
+  dangerText: {
+    color: "#fff",
+  },
+  mimosaText: {
+    color: "#000",
+  },
+  chartreuseText: {
+    color: "#000",
   },
   disabledText: {
-    color: '#888',
+    color: "#888",
   },
-}); 
+});
