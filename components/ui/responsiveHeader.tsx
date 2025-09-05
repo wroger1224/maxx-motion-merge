@@ -12,7 +12,7 @@ export function ResponsiveHeader({
   return (
     <ImageBackground
         source={ source }
-        style={[style, styles.headerBackground]}
+        style={[styles.headerBackground, style ]}
         resizeMode="cover"
     >
          { children }

@@ -1,15 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, ActivityIndicator, Alert, View, ScrollView, Text, TouchableOpacity, Platform } from 'react-native';
-import { supabase } from '@/lib/supabase';
-import { router } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useAuth } from '@/lib/auth';
-import { useIsFocused } from '@react-navigation/native';
-
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import { Image } from 'react-native';
+import React, { useState, useEffect } from "react";
+import {
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
+  View,
+  ScrollView,
+  ImageBackground,
+  Text,
+  TouchableOpacity,
+  Platform,
+	Dimensions
+} from "react-native";
+import { supabase } from "@/lib/supabase";
+import { router } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
+import { useAuth } from "@/lib/auth";
+import { useIsFocused } from "@react-navigation/native";
+import { Colors } from "@/constants/Colors";
+import { ThemedText } from "@/components/ThemedText";
+import { ThemedView } from "@/components/ThemedView";
+import { IconSymbol } from "@/components/ui/IconSymbol";
+import { Image } from "react-native";
 import { ResponsiveHeader } from '@/components/ui/responsiveHeader';
 import { showAlert } from '../utils/showAlert';
 
@@ -44,6 +55,8 @@ type UserProfile = {
   created_at: string;
 };
 
+const HEADER_HEIGHT = Dimensions.get('window').height * .21;
+
 export default function ProfileScreen() {
   const { user } = useAuth();
   const isFocused = useIsFocused();
@@ -52,7 +65,9 @@ export default function ProfileScreen() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
-  const [activeTab, setActiveTab] = useState<'activities' | 'teams' | 'events'>('activities');
+  const [activeTab, setActiveTab] = useState<"activities" | "teams" | "events">(
+    "activities"
+  );
 
   useEffect(() => {
     if (user) {
@@ -72,9 +87,9 @@ export default function ProfileScreen() {
     if (!user) return;
     setLoading(true);
     const { data, error } = await supabase
-      .from('profiles')
-      .select('id, full_name, avatar_url, created_at')
-      .eq('id', user.id)
+      .from("profiles")
+      .select("id, full_name, avatar_url, created_at")
+      .eq("id", user.id)
       .single();
     if (!error && data) setProfile(data);
     setLoading(false);
@@ -83,9 +98,9 @@ export default function ProfileScreen() {
   const fetchUserTeams = async () => {
     if (!user) return;
     const { data, error } = await supabase
-      .from('team_members')
-      .select('joined_at, teams(id, team_name)')
-      .eq('user_id', user.id);
+      .from("team_members")
+      .select("joined_at, teams(id, team_name)")
+      .eq("user_id", user.id);
     if (!error && data) {
       setTeams(
         data.map((tm: any) => ({
@@ -170,195 +185,198 @@ export default function ProfileScreen() {
   };
 
   const ActivityCard = ({ activity }: { activity: UserActivity }) => (
-    <ThemedView style={styles.activityCard}>
-      <View style={styles.activityIconContainer}>
-        <ThemedText style={styles.activityIcon}>
-          {activity.activity_type_emoji || activity.activity_type.charAt(0)}
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <ThemedText variant="h4" style={styles.cardTitle}>
+          {activity.activity_type}
+        </ThemedText>
+        <ThemedText style={styles.cardDate}>
+          {new Date(activity.activity_date).toLocaleDateString()}
         </ThemedText>
       </View>
-      <View style={styles.activityInfo}>
-        <ThemedText style={styles.activityTitle}>{activity.activity_type}</ThemedText>
-        <ThemedText style={styles.activityDetails}>
-          {new Date(activity.activity_date).toLocaleDateString()} • {activity.activity_minutes} minutes
+      <View style={styles.cardContent}>
+        <ThemedText style={styles.cardMinutes}>
+          {activity.activity_minutes} minutes
         </ThemedText>
       </View>
-      <TouchableOpacity style={styles.editButton}>
-        <IconSymbol name="pencil" size={18} color="#666666" />
-      </TouchableOpacity>
-    </ThemedView>
+    </View>
   );
 
   const TeamCard = ({ team }: { team: Team }) => (
-    <ThemedView style={styles.teamCard}>
-      <View style={styles.teamIconContainer}>
-        <ThemedText style={styles.teamIcon}>
-          {team.team_name.split(' ').map((n: string) => n[0]).join('')}
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <ThemedText variant="h4" style={styles.cardTitle}>
+          {team.team_name}
         </ThemedText>
-      </View>
-      <View style={styles.teamInfo}>
-        <ThemedText style={styles.teamName}>{team.team_name}</ThemedText>
-        <ThemedText style={styles.teamDetails}>
+        <ThemedText style={styles.cardDate}>
           Joined {new Date(team.joined_at).toLocaleDateString()}
         </ThemedText>
       </View>
-    </ThemedView>
+    </View>
   );
 
   const EventCard = ({ event }: { event: Event }) => (
-    <ThemedView style={styles.eventCard}>
-      <View style={styles.eventHeader}>
-        <ThemedText style={styles.eventTitle}>{event.name}</ThemedText>
-        <View style={[
-          styles.eventStatusBadge,
-          event.status === 'Active' ? styles.activeEventBadge : styles.upcomingEventBadge
-        ]}>
-          <ThemedText style={styles.eventStatusText}>{event.status}</ThemedText>
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <ThemedText variant="h4" style={styles.cardTitle}>
+          {event.name}
+        </ThemedText>
+        <View
+          style={[styles.statusBadge, { backgroundColor: Colors.light.mimosa }]}
+        >
+          <ThemedText style={styles.statusText}>{event.status}</ThemedText>
         </View>
       </View>
-      <ThemedText style={styles.eventDetails}>
-        {`From ${new Date(event.start_date).toLocaleDateString()} to ${new Date(event.end_date).toLocaleDateString()}`}
-      </ThemedText>
-    </ThemedView>
+      <View style={styles.cardContent}>
+        <ThemedText style={styles.cardDate}>
+          {new Date(event.start_date).toLocaleDateString()} -{" "}
+          {new Date(event.end_date).toLocaleDateString()}
+        </ThemedText>
+      </View>
+    </View>
   );
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={Colors.light.redOrange} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <ResponsiveHeader
         source={require('@/assets/images/gym-equipment.png')}
+				style={{height: HEADER_HEIGHT}}
       >
         <LinearGradient
-          colors={['rgba(196, 30, 58, 0.9)', 'rgba(128, 128, 128, 0.85)']}
-          locations={[0, 0.5]}
+          colors={[Colors.light.blue, "rgba(0, 0, 0, 0.7)"]}
           style={styles.headerOverlay}
         >
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>MAXX Motion</Text>
-            <View style={styles.userIcon}>
-              <Text style={styles.userIconText}>U</Text>
-            </View>
+            <ThemedText variant="h1" style={styles.headerTitle}>
+              Profile
+            </ThemedText>
+						<View style={styles.profileSection}>
+							<View style={styles.avatarContainer}>
+								{profile?.avatar_url ? (
+									<Image
+										source={{ uri: profile.avatar_url }}
+										style={styles.avatar}
+									/>
+								) : (
+									<View style={styles.avatarPlaceholder}>
+										<ThemedText style={styles.avatarText}>
+											{profile?.full_name?.charAt(0) || "U"}
+										</ThemedText>
+									</View>
+								)}
+							</View>
+							<ThemedText variant="h2" style={styles.userName}>
+								{profile?.full_name || "User"}
+							</ThemedText>
+            <ThemedText style={styles.userEmail}>{user?.email}</ThemedText>
           </View>
-          <View style={styles.headerContent}>
-            <Text style={styles.pageTitle}>My Profile</Text>
-            <Text style={styles.tagline}>Track your motion. Reach your potential.</Text>
+            <TouchableOpacity
+              onPress={handleLogout}
+              style={styles.logoutButton}
+            >
+              <ThemedText style={styles.logoutText}>Sign Out</ThemedText>
+            </TouchableOpacity>
           </View>
         </LinearGradient>
       </ResponsiveHeader>
 
-      <ThemedView style={styles.profileCard}>
-        <View style={styles.profileHeader}>
-          <Image
-            source={{
-              uri:
-                (profile && (profile.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name)}&background=random`)) ||
-                'https://ui-avatars.com/api/?name=User&background=random'
-            }}
-            style={styles.profileAvatar}
-          />
-          <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{profile?.full_name || 'User'}</Text>
-            <Text style={styles.profileDetails}>
-              Member since {profile ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : ''}
-            </Text>
-          </View>
-        </View>
-      </ThemedView>
-
       <View style={styles.tabContainer}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'activities' && styles.activeTab]}
-          onPress={() => setActiveTab('activities')}
+          style={[styles.tab, activeTab === "activities" && styles.activeTab]}
+          onPress={() => setActiveTab("activities")}
         >
-          <Text style={[styles.tabText, activeTab === 'activities' && styles.activeTabText]}>
-            ACTIVITIES
-          </Text>
+          <ThemedText
+            style={[
+              styles.tabText,
+              activeTab === "activities" && styles.activeTabText,
+            ]}
+          >
+            Activities
+          </ThemedText>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'teams' && styles.activeTab]}
-          onPress={() => setActiveTab('teams')}
+          style={[styles.tab, activeTab === "teams" && styles.activeTab]}
+          onPress={() => setActiveTab("teams")}
         >
-          <Text style={[styles.tabText, activeTab === 'teams' && styles.activeTabText]}>
-            TEAMS
-          </Text>
+          <ThemedText
+            style={[
+              styles.tabText,
+              activeTab === "teams" && styles.activeTabText,
+            ]}
+          >
+            Teams
+          </ThemedText>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'events' && styles.activeTab]}
-          onPress={() => setActiveTab('events')}
+          style={[styles.tab, activeTab === "events" && styles.activeTab]}
+          onPress={() => setActiveTab("events")}
         >
-          <Text style={[styles.tabText, activeTab === 'events' && styles.activeTabText]}>
-            EVENTS
-          </Text>
+          <ThemedText
+            style={[
+              styles.tabText,
+              activeTab === "events" && styles.activeTabText,
+            ]}
+          >
+            Events
+          </ThemedText>
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content}>
-        <View style={styles.contentContainer}>
-          {activeTab === 'activities' && (
-            <View>
-              <View style={styles.sectionHeader}>
-                <ThemedText style={styles.sectionTitle}>Activity History</ThemedText>
-              </View>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {activeTab === "activities" && (
+          <View style={styles.tabContent}>
 
-              {loading ? (
+						{loading ? (
                 <ActivityIndicator size="large" color="#2196F3" />
               ) : activities.length === 0 ? (
-                <ThemedText style={styles.emptyStateText}>No activities logged yet</ThemedText>
+								<View style={styles.emptyState}>
+                <ThemedText style={styles.emptyStateText}>
+                  No activities yet
+                </ThemedText>
+              </View>
               ) : (
                 activities.map(activity => (
                   <ActivityCard key={activity.id} activity={activity} />
                 ))
-              )}
-            </View>
-          )}
+            )}
+          </View>
+        )}
 
-          {activeTab === 'teams' && (
-            <View>
-              <View style={styles.sectionHeader}>
-                <ThemedText style={styles.sectionTitle}>My Teams</ThemedText>
-              </View>
-
-              {teams.length === 0 ? (
-                <ThemedText style={styles.emptyStateText}>No teams joined yet</ThemedText>
-              ) : (
-                teams.map(team => (
-                  <TeamCard key={team.id} team={team} />
-                ))
-              )}
-            </View>
-          )}
-
-          {activeTab === 'events' && (
-            <View>
-              <View style={styles.sectionHeader}>
-                <ThemedText style={styles.sectionTitle}>Events</ThemedText>
-              </View>
-
-              {events.length === 0 ? (
-                <ThemedText style={styles.emptyStateText}>No events registered yet</ThemedText>
-              ) : (
-                events.map(event => (
-                  <EventCard key={event.id} event={event} />
-                ))
-              )}
-            </View>
-          )}
-        </View>
-
-        <View style={styles.logoutContainer}>
-          <TouchableOpacity 
-            style={styles.logoutButton} 
-            onPress={handleLogout}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
+        {activeTab === "teams" && (
+          <View style={styles.tabContent}>
+            {teams.length > 0 ? (
+              teams.map((team) => <TeamCard key={team.id} team={team} />)
             ) : (
-              <View style={styles.logoutButtonContent}>
-                <IconSymbol name="rectangle.portrait.and.arrow.right" color="#FFFFFF" size={18} />
-                <Text style={styles.logoutText}>Sign Out</Text>
+              <View style={styles.emptyState}>
+                <ThemedText style={styles.emptyStateText}>
+                  No teams joined yet
+                </ThemedText>
               </View>
             )}
-          </TouchableOpacity>
-        </View>
+          </View>
+        )}
+
+        {activeTab === "events" && (
+          <View style={styles.tabContent}>
+            {events.length > 0 ? (
+              events.map((event) => <EventCard key={event.id} event={event} />)
+            ) : (
+              <View style={styles.emptyState}>
+                <ThemedText style={styles.emptyStateText}>
+                  No active events
+                </ThemedText>
+              </View>
+            )}
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -367,17 +385,24 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.light.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: Colors.light.background,
   },
   headerOverlay: {
     flex: 1,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingLeft: 16,
-		paddingTop: 16,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    padding: 16,
+    paddingTop: Platform.OS === "ios" ? 60 : 16,
+		paddingLeft: 16,
 		paddingRight: 16,
     zIndex: 1,
   },
@@ -405,248 +430,144 @@ const styles = StyleSheet.create({
   },
   pageTitle: {
     fontSize: 32,
-    fontWeight: '700',
-    color: '#fff',
+    fontWeight: "700",
+		color: '#fff',
     textAlign: 'center',
     marginBottom: 8,
   },
-  tagline: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.8)',
-    textAlign: 'center',
+  logoutButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: Colors.light.redOrange,
+    borderRadius: 8,
   },
-  profileCard: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    margin: 16,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+  logoutText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  profileSection: {
+    alignItems: "center",
+  },
+  avatarContainer: {
+    marginBottom: 6,
+  },
+  avatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 40,
+  },
+  avatarPlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: Colors.light.orange,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  avatarText: {
+    fontSize: 32,
+    fontWeight: "600",
+    color: "#000",
+  },
+  userName: {
+    color: "#fff",
+    fontSize: 24,
+    fontWeight: "600",
+  },
+  userEmail: {
+    color: "rgba(255, 255, 255, 0.8)",
+    fontSize: 16,
+  },
+  tabContainer: {
+    flexDirection: "row",
+    backgroundColor: "#fff",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
-  profileHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  profileAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#4CAF50',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  profileInfo: {
-    flex: 1,
-  },
-  profileName: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
-  },
-  profileDetails: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-    backgroundColor: '#fff',
-  },
   tab: {
     flex: 1,
     paddingVertical: 12,
-    alignItems: 'center',
+    alignItems: "center",
+    borderRadius: 8,
   },
   activeTab: {
-    borderBottomWidth: 2,
-    borderBottomColor: '#2196F3',
+    backgroundColor: Colors.light.redOrange,
   },
   tabText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#757575',
+    fontWeight: "500",
+    color: Colors.light.text,
   },
   activeTabText: {
-    color: '#2196F3',
+    color: "#fff",
+    fontWeight: "600",
   },
   content: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.light.background,
   },
-  contentContainer: {
+  tabContent: {
     padding: 16,
-    paddingBottom: 32,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333333',
-  },
-  activityCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    padding: 14,
-    borderRadius: 10,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  activityIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#2196F3',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  activityIcon: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  activityInfo: {
-    flex: 1,
-  },
-  activityTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333333',
-    marginBottom: 2,
-  },
-  activityDetails: {
-    fontSize: 14,
-    color: '#666666',
-  },
-  editButton: {
-    padding: 8,
-  },
-  teamCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    padding: 14,
-    borderRadius: 10,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  teamIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#4CAF50',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  teamIcon: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  teamInfo: {
-    flex: 1,
-  },
-  teamName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333333',
-    marginBottom: 2,
-  },
-  teamDetails: {
-    fontSize: 14,
-    color: '#666666',
-  },
-  eventCard: {
-    backgroundColor: 'white',
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
     padding: 16,
-    borderRadius: 10,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  eventHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
   },
-  eventTitle: {
+  cardTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#333333',
+    fontWeight: "600",
+    color: Colors.light.text,
   },
-  eventStatusBadge: {
+  cardDate: {
+    fontSize: 12,
+    color: "#666",
+  },
+  cardContent: {
+    marginTop: 8,
+  },
+  cardMinutes: {
+    fontSize: 14,
+    color: Colors.light.redOrange,
+    fontWeight: "500",
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
     paddingVertical: 4,
-    paddingHorizontal: 10,
     borderRadius: 12,
   },
-  activeEventBadge: {
-    backgroundColor: '#4CAF50',
-  },
-  upcomingEventBadge: {
-    backgroundColor: '#FFC107',
-  },
-  eventStatusText: {
-    color: 'white',
+  statusText: {
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: "600",
+    color: "#000",
   },
-  eventDetails: {
-    fontSize: 14,
-    color: '#666666',
-  },
-  logoutContainer: {
-    padding: 16,
-    marginBottom: 40,
-  },
-  logoutButton: {
-    backgroundColor: '#C41E3A',
-    borderRadius: 8,
-    padding: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoutButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoutText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    marginLeft: 8,
+  emptyState: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 40,
   },
   emptyStateText: {
-    color: '#666',
     fontSize: 16,
-    textAlign: 'center',
+    color: "#666",
+    textAlign: "center",
   },
-}); 
+});

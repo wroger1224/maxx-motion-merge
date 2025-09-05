@@ -1,15 +1,25 @@
-import React from 'react';
-import { StyleSheet, View, TouchableOpacity, ScrollView, Text} from 'react-native';
-import { useEffect, useState } from 'react';
-import { ThemedView } from '@/components/ThemedView';
-import { ThemedText } from '@/components/ThemedText';
-import { useAuth } from '@/lib/auth';
-import { useUser } from '@/contexts/UserContext';
-import { LinearGradient } from 'expo-linear-gradient';
+import React from "react";
+import {
+  StyleSheet,
+  View,
+  TouchableOpacity,
+  ScrollView,
+  Text,
+  ImageBackground,
+} from "react-native";
+import { useEffect, useState } from "react";
+import { ThemedView } from "@/components/ThemedView";
+import { ThemedText } from "@/components/ThemedText";
+import { useAuth } from "@/lib/auth";
+import { useUser } from "@/contexts/UserContext";
+import { LinearGradient } from "expo-linear-gradient";
+import { Colors } from "@/constants/Colors";
+import { Layout, Spacing, CommonStyles } from "@/constants/Styles";
 import { ResponsiveHeader } from '@/components/ui/responsiveHeader';
 import { supabase } from '@/lib/supabase';
 import { useIsFocused } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
+import { Badge, UserBadge, fetchBadges, fetchUserBadges, calculateBadgeProgress } from '@/lib/services/badges';
 
 // Team interface for leaderboard
 interface Team {
@@ -35,11 +45,14 @@ interface Activity {
 
 export default function DashboardScreen() {
   const { user } = useAuth();
+	const { signOut } = useAuth();
   const { userProfile } = useUser();
   const [userProgress, setUserProgress] = useState({ current: 0, progressMin: 0, progressMax: 0, currentMilestone: '', nextMilestone: '' });
   const [teams, setTeams] = useState<Team[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [badges, setBadges] = useState<Badge[]>([]);
+  const [userBadges, setUserBadges] = useState<UserBadge[]>([]);
   const isFocused = useIsFocused();
 
   const badgeList = [
@@ -87,7 +100,7 @@ export default function DashboardScreen() {
   useEffect(() => {
     if (user && userProfile && isFocused) {
       fetchDashboardData();
-      fetchBadgeProgress();
+      fetchBadgeData();
     }
   }, [user, userProfile, isFocused]);
 
@@ -162,7 +175,7 @@ export default function DashboardScreen() {
       const { data: allTeams } = await supabase
         .from('teams')
         .select('id, team_name')
-				.eq('event_id', currentEvent.id);
+        .eq('event_id', currentEvent.id);
       const leaderboard: Team[] = [];
       for (const team of allTeams || []) {
         // Get members
@@ -215,56 +228,54 @@ export default function DashboardScreen() {
     }
   };
 
-  const fetchBadgeProgress = async () => {
+  const fetchBadgeData = async () => {
     if (!userProfile?.id) return;
-    // Get the current active event
-    const today = new Date().toISOString().split('T')[0];
-    const { data: eventData, error: eventError } = await supabase
-      .from('events')
-      .select('id')
-      .lte('start_date', today)
-      .gte('end_date', today)
-      .order('start_date', { ascending: false })
-      .limit(1);
-    if (eventError) return;
-    const currentEvent = eventData && eventData.length > 0 ? eventData[0] : null;
-    if (!currentEvent) return;
-    // Fetch user's activities
-    const { data: activitiesRaw } = await supabase
-      .from('activities')
-      .select('activity_minutes, activity_date, activity_type')
-      .eq('event_id', currentEvent.id)
-      .eq('user_id', userProfile.id);
-    const activities = activitiesRaw || [];
-    // Calculate progress for each badge type
-    const progress: Record<string, number> = {};
-    const maxSteps = Math.max(...activities.map(a => a.activity_minutes || 0), 0);
-    progress['1'] = Math.min(5000, maxSteps); // Step Starter
-    progress['2'] = Math.min(10000, maxSteps); // Step Master
-    progress['3'] = Math.min(20000, maxSteps); // Step Champion
-    const workoutCount = activities.filter(a => a.activity_type === 'workout').length;
-    progress['4'] = Math.min(10, workoutCount); // Workout Beginner
-    progress['5'] = Math.min(50, workoutCount); // Workout Expert
-    progress['6'] = Math.min(100, workoutCount); // Workout Master
-    const runningCount = activities.filter(a => a.activity_type?.toLowerCase() === 'running').length;
-    const cyclingCount = activities.filter(a => a.activity_type?.toLowerCase() === 'cycling').length;
-    const yogaCount = activities.filter(a => a.activity_type?.toLowerCase() === 'yoga').length;
-    progress['7'] = Math.min(5, runningCount); // Runner's Badge
-    progress['8'] = Math.min(25, cyclingCount);
-    progress['9'] = Math.min(10, yogaCount); // Yogi's Badge
-    const earlyWorkouts = activities.filter(a => { const hour = new Date(a.activity_date).getHours(); return hour < 7; }).length;
-    const weekendWorkouts = activities.filter(a => { const day = new Date(a.activity_date).getDay(); return day === 0 || day === 6; }).length;
-    const nightWorkouts = activities.filter(a => { const hour = new Date(a.activity_date).getHours(); return hour >= 22; }).length;
-    progress['10'] = Math.min(5, earlyWorkouts); // Early Bird
-    progress['11'] = Math.min(5, weekendWorkouts); // Weekend Warrior
-    progress['12'] = Math.min(5, nightWorkouts); // Night Owl
-    setBadgeProgress(progress);
-    // Find unlocked badges
-    const unlocked = badgeList.filter(b => progress[b.id] >= b.total);
-    // Sort by most recently achieved (if possible, else by badge id)
-    // For now, just sort by badge id descending as a proxy
-    unlocked.sort((a, b) => parseInt(b.id) - parseInt(a.id));
-    setRecentBadges(unlocked.slice(0, 3));
+
+    // Fetch all badges and user badges
+    const [allBadges, userBadgeData] = await Promise.all([
+      fetchBadges(),
+      fetchUserBadges(userProfile.id)
+    ]);
+
+    setBadges(allBadges);
+    setUserBadges(userBadgeData);
+
+    // Calculate badge progress
+    await calculateBadgeProgress(userProfile.id);
+  };
+
+  const renderRecentBadges = () => {
+    const unlockedBadges = userBadges
+      .filter(ub => ub.is_unlocked)
+      .map(ub => ub.badge)
+      .filter((badge): badge is Badge => badge !== undefined)
+      .sort((a, b) => {
+        const badgeA = userBadges.find(ub => ub.badge_id === a.id);
+        const badgeB = userBadges.find(ub => ub.badge_id === b.id);
+        return new Date(badgeB?.unlocked_at || '').getTime() - new Date(badgeA?.unlocked_at || '').getTime();
+      })
+      .slice(0, 3);
+
+    if (unlockedBadges.length === 0) {
+      return (
+        <Text style={{ color: '#888', fontStyle: 'italic', textAlign: 'center', marginTop: 8 }}>
+          You have not yet earned any achievement badges.
+        </Text>
+      );
+    }
+
+    return (
+      <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 8 }}>
+        {unlockedBadges.map(badge => (
+          <View key={badge.id} style={{ alignItems: 'center', marginHorizontal: 8 }}>
+            <View style={{ width: 56, height: 56, borderRadius: 28, overflow: 'hidden', backgroundColor: '#eee', marginBottom: 4 }}>
+              <FontAwesome5 name={badge.icon} size={32} color="#C41E3A" style={{ textAlign: 'center', marginTop: 12 }} />
+            </View>
+            <Text style={{ fontSize: 12, fontWeight: '600', color: '#333', textAlign: 'center' }}>{badge.name}</Text>
+          </View>
+        ))}
+      </View>
+    );
   };
 
   return (
@@ -272,24 +283,33 @@ export default function DashboardScreen() {
       <ResponsiveHeader
         source={require('@/assets/images/gym-equipment.png')}
       >
-        <LinearGradient
-          colors={['rgba(196, 30, 58, 0.9)', 'rgba(128, 128, 128, 0.85)']}
-          locations={[0, 0.5]}
-          style={styles.headerOverlay}
-        >
-          <View style={styles.header}>
-            <ThemedText style={styles.headerTitle}>MAXX Motion</ThemedText>
-          </View>
-          <View style={styles.headerContent}>
-            <ThemedText style={styles.pageTitle}>Dashboard</ThemedText>
-            <ThemedText style={styles.tagline}>Track your motion. Reach your potential.</ThemedText>
-          </View>
-        </LinearGradient>
+          <LinearGradient
+            colors={[Colors.light.blue, "rgba(0, 0, 0, 0.7)"]}
+            style={styles.headerOverlay}
+          >
+            <View style={styles.header}>
+              <ThemedText style={styles.headerTitle}>Dashboard</ThemedText>
+              <TouchableOpacity onPress={signOut}>
+                <ThemedText style={styles.headerTitle}>Sign Out</ThemedText>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.headerContent}>
+              <ThemedText variant="h1" style={styles.pageTitle}>
+                Welcome back!
+              </ThemedText>
+              <ThemedText style={styles.tagline}>
+                Keep moving, keep competing
+              </ThemedText>
+            </View>
+          </LinearGradient>
       </ResponsiveHeader>
 
-      <ScrollView style={styles.scrollContent}>
-        <ThemedView style={styles.section}>
-          <ThemedText style={styles.sectionTitle}>Your Progress</ThemedText>
+			<ScrollView style={styles.scrollContent}>
+        {/* Progress Section */}
+        <View style={styles.section}>
+          <ThemedText variant="h2" style={styles.sectionTitle}>
+            Your Progress
+          </ThemedText>
           <View style={styles.progressContainer}>
             <View style={styles.progressBar}>
               <View
@@ -302,40 +322,42 @@ export default function DashboardScreen() {
             <ThemedText style={styles.progressText}>
               {userProgress.current} / {userProgress.progressMax} min
             </ThemedText>
+            <ThemedText style={styles.milestoneText}>
+              Current: {userProgress.currentMilestone}
+            </ThemedText>
+            <ThemedText style={styles.milestoneText}>
+              Next: {userProgress.nextMilestone}
+            </ThemedText>
           </View>
-          <ThemedText style={styles.milestoneText}>
-            Current Milestone: {userProgress.currentMilestone}
-          </ThemedText>
-          <ThemedText style={styles.milestoneText}>
-            Next Milestone: {userProgress.nextMilestone}
-          </ThemedText>
           <TouchableOpacity style={styles.shareButton}>
-            <ThemedText style={styles.shareButtonText}>Share</ThemedText>
+            <ThemedText style={styles.shareButtonText}>
+              Share Progress
+            </ThemedText>
           </TouchableOpacity>
-          <ThemedText type="subtitle">Your Activity</ThemedText>
-          <Text style={styles.comingSoon}>Activity summary coming soon</Text>
-        </ThemedView>
+        </View>
 
         {/* Team Leaderboard Section */}
-        <ThemedView style={styles.section}>
-          <ThemedText style={styles.sectionTitle}>Team Leaderboard</ThemedText>
-          {teams.map(team => (
+        <View style={styles.section}>
+          <ThemedText variant="h2" style={styles.sectionTitle}>
+            Team Leaderboard
+          </ThemedText>
+          {teams.map((team, index) => (
             <View
               key={team.id}
-              style={[
-                styles.teamItem,
-                team.isUserTeam && styles.userTeamItem
-              ]}
+              style={[styles.teamItem, team.isUserTeam && styles.userTeamItem]}
             >
-              <View style={[styles.rankContainer, { backgroundColor: getRankColor(team.rank) }]}>
+              <View
+                style={[
+                  styles.rankContainer,
+                  { backgroundColor: getRankColor(team.rank) },
+                ]}
+              >
                 <ThemedText style={styles.rankText}>{team.rank}</ThemedText>
               </View>
               <View style={styles.teamDetails}>
-                <ThemedText style={styles.teamName}>
-                  {team.name} {team.isUserTeam && "(Your Team)"}
-                </ThemedText>
+                <ThemedText style={styles.teamName}>{team.name}</ThemedText>
                 <ThemedText style={styles.teamSubtext}>
-                  {team.members} members • {team.totalMinutes} minutes
+                  {team.members} members • {team.totalMinutes} total minutes
                 </ThemedText>
               </View>
               <ThemedText style={styles.teamMetric}>
@@ -343,42 +365,46 @@ export default function DashboardScreen() {
               </ThemedText>
             </View>
           ))}
-          <ThemedText type="subtitle">Your Team</ThemedText>
-          <Text style={styles.comingSoon}>Team summary coming soon</Text>
-        </ThemedView>
+        </View>
 
         {/* Recent Activities Section */}
-        <ThemedView style={styles.section}>
-          <ThemedText style={styles.sectionTitle}>Recent Activities</ThemedText>
-          {activities.map(activity => (
+        <View style={styles.section}>
+          <ThemedText variant="h2" style={styles.sectionTitle}>
+            Recent Activities
+          </ThemedText>
+          {activities.map((activity) => (
             <View key={activity.id} style={styles.activityItem}>
-              <View style={[styles.activityIcon, { backgroundColor: activity.color }]}>
-                <ThemedText style={styles.activityInitial}>{activity.initial}</ThemedText>
+              <View
+                style={[
+                  styles.activityIcon,
+                  { backgroundColor: activity.color },
+                ]}
+              >
+                <ThemedText style={styles.activityInitial}>
+                  {activity.initial}
+                </ThemedText>
               </View>
               <View style={styles.activityDetails}>
-                <ThemedText style={styles.activityType}>{activity.type}</ThemedText>
-                <ThemedText style={styles.activityTime}>{activity.time} • {activity.duration} minutes</ThemedText>
+                <ThemedText style={styles.activityType}>
+                  {activity.type}
+                </ThemedText>
+                <ThemedText style={styles.activityTime}>
+                  {activity.time} • {activity.duration} minutes
+                </ThemedText>
+                <ThemedText style={styles.activitySource}>
+                  {activity.source}
+                </ThemedText>
               </View>
-              <ThemedText style={styles.activitySource}>{activity.source}</ThemedText>
             </View>
           ))}
-          <ThemedText type="subtitle">Recent Achievements</ThemedText>
-          {recentBadges.length > 0 ? (
-            <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 8 }}>
-              {recentBadges.map(badge => (
-                <View key={badge.id} style={{ alignItems: 'center', marginHorizontal: 8 }}>
-                  <View style={{ width: 56, height: 56, borderRadius: 28, overflow: 'hidden', backgroundColor: '#eee', marginBottom: 4 }}>
-                    <FontAwesome5 name={badge.icon} size={32} color="#C41E3A" style={{ textAlign: 'center', marginTop: 12 }} />
-                  </View>
-                  <Text style={{ fontSize: 12, fontWeight: '600', color: '#333', textAlign: 'center' }}>{badge.name}</Text>
-                </View>
-              ))}
-            </View>
-          ) : (
-            <Text style={{ color: '#888', fontStyle: 'italic', textAlign: 'center', marginTop: 8 }}>
-              You have not yet earned any achievement badges.
-            </Text>
-          )}
+        </View>
+        <ThemedView style={[styles.section, styles.sectionLast]}>
+          <ThemedText variant="h2" style={styles.sectionTitle}>
+            Achievements
+          </ThemedText>
+          <ThemedText>
+						{renderRecentBadges()}
+          </ThemedText>
         </ThemedView>
       </ScrollView>
     </View>
@@ -389,139 +415,143 @@ export default function DashboardScreen() {
 function getRankColor(rank: number): string {
   switch (rank) {
     case 1:
-      return '#2196F3'; // Blue for first place
+      return Colors.light.redOrange; // Red Orange for first place
     case 2:
-      return '#2196F3'; // Blue for second place
+      return Colors.light.orange; // Orange for second place
     case 3:
-      return '#2196F3'; // Blue for third place
+      return Colors.light.mimosa; // Mimosa for third place
     case 4:
-      return '#2196F3'; // Blue for fourth place
+      return Colors.light.chartreuse; // Chartreuse for fourth place
     default:
-      return '#F5F5F5';
+      return Colors.light.blue; // Blue for other places
   }
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.light.background,
   },
   scrollContent: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.light.background,
   },
   headerOverlay: {
     flex: 1,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingLeft: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+		paddingLeft: 16,
 		paddingTop: 16,
 		paddingRight: 16,
     zIndex: 1,
   },
   headerTitle: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 20,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   headerContent: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingVertical: 40,
   },
   pageTitle: {
     fontSize: 32,
-    fontWeight: '700',
-    color: '#fff',
-    textAlign: 'center',
+    fontWeight: "700",
+    color: "#fff",
+    textAlign: "center",
     marginBottom: 8,
   },
   tagline: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.8)',
-    textAlign: 'center',
+    color: "rgba(255, 255, 255, 0.8)",
+    textAlign: "center",
   },
   section: {
-    padding: 16,
-    marginBottom: 16,
-    backgroundColor: '#fff',
+    padding: Spacing.md,
+    marginTop: Spacing.md,
+    backgroundColor: "#fff",
     borderRadius: 8,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
-    marginHorizontal: 16,
+    marginHorizontal: Spacing.md,
   },
+	sectionLast: {
+		marginBottom: Spacing.md
+	},
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 16,
-    color: '#333',
+    fontWeight: "600",
+    marginBottom: Spacing.md,
+    color: Colors.light.text,
   },
   progressContainer: {
     marginBottom: 12,
   },
   progressBar: {
     height: 24,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: "#E0E0E0",
     borderRadius: 12,
-    overflow: 'hidden',
+    overflow: "hidden",
     marginBottom: 8,
   },
   progressFill: {
-    height: '100%',
-    backgroundColor: '#4CAF50',
+    height: "100%",
+    backgroundColor: Colors.light.mimosa, // Updated to use Hackathon colors
     borderRadius: 12,
   },
   progressText: {
-    textAlign: 'center',
-    fontWeight: '600',
-    color: '#333',
+    textAlign: "center",
+    fontWeight: "600",
+    color: Colors.light.text,
   },
   milestoneText: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
     marginBottom: 4,
   },
   shareButton: {
-    alignSelf: 'flex-end',
+    alignSelf: "flex-end",
     paddingVertical: 6,
     paddingHorizontal: 12,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: Colors.light.chartreuse, // Updated to use Hackathon colors
     borderRadius: 16,
     marginTop: 8,
   },
   shareButtonText: {
     fontSize: 12,
-    color: '#757575',
+    color: "#000", // Dark text on light background
+    fontWeight: "600",
   },
   teamItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 12,
     paddingHorizontal: 0,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: "#F0F0F0",
   },
   userTeamItem: {
-    backgroundColor: '#F9F9F9',
+    backgroundColor: "#F9F9F9",
   },
   rankContainer: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
   },
   rankText: {
-    color: '#fff',
-    fontWeight: '700',
+    color: "#fff",
+    fontWeight: "700",
     fontSize: 14,
   },
   teamDetails: {
@@ -529,59 +559,80 @@ const styles = StyleSheet.create({
   },
   teamName: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: "600",
+    color: Colors.light.text,
   },
   teamSubtext: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
   },
   teamMetric: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#2196F3',
+    fontWeight: "600",
+    color: Colors.light.blue, // Updated to use Hackathon colors
   },
   activityItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: "#F0F0F0",
   },
   activityIcon: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
   },
   activityInitial: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   activityDetails: {
     flex: 1,
   },
   activityType: {
     fontSize: 15,
-    fontWeight: '500',
-    color: '#333',
+    fontWeight: "500",
+    color: Colors.light.text,
   },
   activityTime: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
   },
   activitySource: {
     fontSize: 12,
-    color: '#757575',
+    color: "#757575",
+  },
+  fab: {
+    position: "absolute",
+    right: 16,
+    bottom: 16,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.light.redOrange, // Updated to use Hackathon colors
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+  },
+  fabIcon: {
+    fontSize: 24,
+    color: "#fff",
+    fontWeight: "600",
   },
   comingSoon: {
     fontSize: 14,
-    color: '#888',
-    fontStyle: 'italic',
-    textAlign: 'center',
+    color: "#888",
+    fontStyle: "italic",
+    textAlign: "center",
     marginTop: 8,
   },
 });
