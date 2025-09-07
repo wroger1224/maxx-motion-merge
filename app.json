@@ -22,7 +22,21 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.maxxpotential.maxxmotion2"
+      "package": "com.maxxpotential.maxxmotion2",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "maxx-motion"
+            },
+            {
+              "scheme": "com.maxxpotential.maxxmotion2"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "bundler": "metro",
