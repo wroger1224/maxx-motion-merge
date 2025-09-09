@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { healthService } from '../lib/healthService';
+import { healthService } from '@/lib/healthService';
 
 export function useHealthConnect() {
   const [isAvailable, setIsAvailable] = useState<boolean>(false);
