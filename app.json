@@ -10,10 +10,11 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.maxxpotential.maxxmotion",
+      "bundleIdentifier": "com.maxxpotential.maxxmotion2",
       "infoPlist": {
         "NSHealthShareUsageDescription": "This app requires access to your health data to track fitness metrics and provide personalized insights.",
-        "NSHealthUpdateUsageDescription": "This app requires permission to write health data for tracking your fitness activities."
+        "NSHealthUpdateUsageDescription": "This app requires permission to write health data for tracking your fitness activities.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -21,7 +22,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.maxxpotential.maxxmotion"
+      "package": "com.maxxpotential.maxxmotion2"
     },
     "web": {
       "bundler": "metro",
@@ -56,14 +57,21 @@
           ]
         }
       ],
-			[
-				"expo-build-properties",
-				{
-					"android": {
-						"minSdkVersion": 26
-					}
-				}
-			]
+      [
+        "react-native-health",
+        {
+          "healthSharePermission": "This app requires access to your health data to track fitness metrics and provide personalized insights.",
+          "healthUpdatePermission": "This app requires permission to write health data for tracking your fitness activities."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
@@ -73,8 +81,9 @@
         "origin": false
       },
       "eas": {
-        "projectId": "310c2824-96b9-4a0d-913d-aa279d98c378"
+        "projectId": "7b35374a-38fd-4683-8ea4-4c5d7a5ff070"
       }
-    }
+    },
+    "owner": "maxx-motion"
   }
 }
