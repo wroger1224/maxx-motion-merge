@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View, Text } from 'react-native';
 import { router } from 'expo-router';
+import { Colors } from '@/constants/Colors';
 
 export type AdminMenuProps = {
   position?: 'topRight' | 'topLeft';
@@ -31,14 +32,14 @@ const styles = StyleSheet.create({
   },
   topRight: {
     top: 10,
-    right: 10,
+    right: 120,
   },
   topLeft: {
     top: 10,
     left: 10,
   },
   adminButton: {
-    backgroundColor: '#C41E3A',
+    backgroundColor: Colors.light.redOrange,
     padding: 10,
     borderRadius: 20,
   },

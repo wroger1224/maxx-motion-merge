@@ -15,11 +15,15 @@ import { useUser } from "@/contexts/UserContext";
 import { LinearGradient } from "expo-linear-gradient";
 import { Colors } from "@/constants/Colors";
 import { Layout, Spacing, CommonStyles } from "@/constants/Styles";
+
+import { AdminMenu } from "@/components/AdminMenu";
+
 import { ResponsiveHeader } from '@/components/ui/responsiveHeader';
 import { supabase } from '@/lib/supabase';
 import { useIsFocused } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { Badge, UserBadge, fetchBadges, fetchUserBadges, calculateBadgeProgress } from '@/lib/services/badges';
+
 
 // Team interface for leaderboard
 interface Team {
@@ -290,8 +294,9 @@ export default function DashboardScreen() {
             <View style={styles.header}>
               <ThemedText style={styles.headerTitle}>Dashboard</ThemedText>
               <TouchableOpacity onPress={signOut}>
-                <ThemedText style={styles.headerTitle}>Sign Out</ThemedText>
+                <ThemedText style={styles.headerButton}>Sign Out</ThemedText>
               </TouchableOpacity>
+              <AdminMenu position="topRight" />
             </View>
             <View style={styles.headerContent}>
               <ThemedText variant="h1" style={styles.pageTitle}>
@@ -458,6 +463,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingVertical: 40,
+  },
+  headerButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: Colors.light.redOrange,
+    borderRadius: 8,
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
   },
   pageTitle: {
     fontSize: 32,

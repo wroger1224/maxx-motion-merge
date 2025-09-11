@@ -793,9 +793,9 @@ export default function Activity() {
       <ResponsiveHeader
         source={require('../../assets/images/gym-equipment.png')}
       >
-				<LinearGradient
-            colors={[Colors.light.blue, "rgba(0, 0, 0, 0.7)"]}
-            style={styles.headerOverlay}
+        <LinearGradient
+          colors={[Colors.light.blue, "rgba(0, 0, 0, 0.7)"]}
+          style={styles.headerOverlay}
         >
           <View style={styles.header}>
             <Text style={styles.headerTitle}>MAXX Motion</Text>
@@ -828,10 +828,7 @@ export default function Activity() {
           </ThemedText>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[
-            styles.tab,
-            activeTab === "review" && styles.activeTab,
-          ]}
+          style={[styles.tab, activeTab === "review" && styles.activeTab]}
           onPress={() => setActiveTab("review")}
         >
           <ThemedText
@@ -1238,7 +1235,7 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "600",
   },
- 
+
   challengeCard: {
     marginHorizontal: 16,
     marginTop: 16,
@@ -1299,10 +1296,15 @@ const styles = StyleSheet.create({
   sectionHeader: {
     paddingHorizontal: 16,
     marginBottom: 8,
+    backgroundColor: "#fff",
+    padding: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#333",
   },
   content: {

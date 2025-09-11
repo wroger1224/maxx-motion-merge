@@ -58,7 +58,7 @@ type UserProfile = {
 const HEADER_HEIGHT = Dimensions.get('window').height * .21;
 
 export default function ProfileScreen() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const isFocused = useIsFocused();
   const [loading, setLoading] = useState(false);
   const [activities, setActivities] = useState<UserActivity[]>([]);
@@ -279,7 +279,7 @@ export default function ProfileScreen() {
             <ThemedText style={styles.userEmail}>{user?.email}</ThemedText>
           </View>
             <TouchableOpacity
-              onPress={handleLogout}
+              onPress={signOut}
               style={styles.logoutButton}
             >
               <ThemedText style={styles.logoutText}>Sign Out</ThemedText>
