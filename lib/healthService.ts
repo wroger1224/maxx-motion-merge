@@ -21,7 +21,6 @@ export interface WorkoutData {
 
 // Import platform-specific health libraries
 let AppleHealthKit: any;
-let HealthConnect: any;
 
 // Initialize Apple HealthKit for iOS
 if (Platform.OS === 'ios') {
@@ -35,12 +34,14 @@ if (Platform.OS === 'ios') {
   }
 }
 
-// Initialize Health Connect for Android
+// Import Health Connect for Android with named exports
+let HealthConnectModule: any = null;
 if (Platform.OS === 'android') {
   try {
-    HealthConnect = require('react-native-health-connect');
+    HealthConnectModule = require('react-native-health-connect');
+    console.log('[HealthService] Health Connect module loaded successfully');
   } catch (e) {
-    console.log('Health Connect not available');
+    console.log('[HealthService] Failed to load Health Connect module:', e);
   }
 }
 
@@ -57,18 +58,48 @@ class HealthService {
   }
 
   private async checkAvailability() {
+    console.log(`[HealthService] Checking availability for platform: ${this.platform}, isSimulator: ${this.isSimulator}`);
+    
     if (this.platform === 'ios' && !this.isSimulator && AppleHealthKit) {
       this.isAvailable = true;
-    } else if (this.platform === 'android' && HealthConnect) {
+      console.log('[HealthService] iOS: Apple HealthKit is available');
+    } else if (this.platform === 'android' && HealthConnectModule) {
       // Check if Health Connect is available on the device
       try {
-        const isAvailable = await HealthConnect.getSdkStatus();
-        this.isAvailable = isAvailable === HealthConnect.SdkAvailabilityStatus.SDK_AVAILABLE;
+        console.log('[HealthService] Android: Checking Health Connect SDK status...');
+        const status = await HealthConnectModule.getSdkStatus();
+        console.log(`[HealthService] Health Connect SDK status code: ${status}`);
+        
+        // Map status codes to readable strings
+        const statusMap: { [key: number]: string } = {
+          1: 'SDK_UNAVAILABLE',
+          2: 'SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED',
+          3: 'SDK_AVAILABLE'
+        };
+        
+        console.log(`[HealthService] Health Connect SDK status: ${statusMap[status] || 'UNKNOWN'} (${status})`);
+        
+        // Check if SDK is available (status === 3)
+        this.isAvailable = status === HealthConnectModule.SdkAvailabilityStatus?.SDK_AVAILABLE || status === 3;
+        
+        if (!this.isAvailable) {
+          if (status === 1) {
+            console.warn('[HealthService] Health Connect is not installed on this device');
+          } else if (status === 2) {
+            console.warn('[HealthService] Health Connect needs to be updated');
+          }
+        } else {
+          console.log('[HealthService] Health Connect is available and ready');
+        }
       } catch (e) {
-        this.isAvailable = true; // Assume available if check fails
+        console.error('[HealthService] Error checking Health Connect availability:', e);
+        // Try to initialize anyway in case the status check is not supported
+        this.isAvailable = true;
+        console.log('[HealthService] Assuming Health Connect is available despite error');
       }
     } else {
       this.isAvailable = false;
+      console.log(`[HealthService] Health tracking not available - Platform: ${this.platform}, Module loaded: ${!!HealthConnectModule}`);
     }
   }
 
@@ -124,24 +155,39 @@ class HealthService {
 
   private async initializeHealthConnect(): Promise<boolean> {
     try {
-      if (!HealthConnect) {
-        console.error('Health Connect not available');
+      if (!HealthConnectModule) {
+        console.error('[HealthService] Health Connect module not loaded');
         return false;
       }
 
-      // Initialize Health Connect
-      const isInitialized = await HealthConnect.initialize();
+      console.log('[HealthService] Initializing Health Connect...');
+      
+      // Initialize Health Connect - returns a boolean
+      const isInitialized = await HealthConnectModule.initialize();
+      
+      console.log(`[HealthService] Health Connect initialization result: ${isInitialized}`);
       
       if (!isInitialized) {
-        console.error('Failed to initialize Health Connect');
+        console.error('[HealthService] Failed to initialize Health Connect');
+        
+        // Try to get more information about why initialization failed
+        try {
+          const status = await HealthConnectModule.getSdkStatus();
+          console.error(`[HealthService] Current SDK status after failed init: ${status}`);
+        } catch (statusError) {
+          console.error('[HealthService] Could not get SDK status after failed init:', statusError);
+        }
+        
         return false;
       }
 
-      console.log('Health Connect initialized successfully');
+      console.log('[HealthService] ✅ Health Connect initialized successfully');
       this.isInitialized = true;
       return true;
-    } catch (error) {
-      console.error('Error initializing Health Connect:', error);
+    } catch (error: any) {
+      console.error('[HealthService] Error initializing Health Connect:', error);
+      console.error('[HealthService] Error message:', error?.message);
+      console.error('[HealthService] Error stack:', error?.stack);
       return false;
     }
   }
@@ -170,25 +216,39 @@ class HealthService {
 
   private async requestHealthConnectPermissions(): Promise<boolean> {
     try {
-      if (!HealthConnect) {
-        console.error('Health Connect module not available');
+      if (!HealthConnectModule) {
+        console.error('[HealthService] Health Connect module not available');
         return false;
       }
 
+      console.log('[HealthService] Starting Health Connect permission request flow...');
+      
       // First check if Health Connect is installed and available
-      if (HealthConnect.getSdkStatus) {
-        const status = await HealthConnect.getSdkStatus();
-        console.log('Health Connect SDK Status:', status);
+      if (HealthConnectModule.getSdkStatus) {
+        const status = await HealthConnectModule.getSdkStatus();
+        console.log(`[HealthService] Current SDK Status: ${status}`);
         
-        if (status !== HealthConnect.SdkAvailabilityStatus.SDK_AVAILABLE) {
-          console.error('Health Connect not available. Status:', status);
-          if (status === HealthConnect.SdkAvailabilityStatus.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED) {
-            console.error('Health Connect app needs to be updated');
-          } else if (status === HealthConnect.SdkAvailabilityStatus.SDK_UNAVAILABLE) {
-            console.error('Health Connect app needs to be installed');
+        const statusMap: { [key: number]: string } = {
+          1: 'SDK_UNAVAILABLE - Health Connect not installed',
+          2: 'SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED - Health Connect needs update',
+          3: 'SDK_AVAILABLE - Ready to use'
+        };
+        
+        console.log(`[HealthService] Status meaning: ${statusMap[status] || 'UNKNOWN STATUS'}`);        
+        
+        if (status !== 3) { // SDK_AVAILABLE = 3
+          console.error(`[HealthService] Health Connect not ready. Status code: ${status}`);
+          
+          if (status === 2) {
+            console.error('[HealthService] Health Connect app needs to be updated');
+          } else if (status === 1) {
+            console.error('[HealthService] Health Connect app needs to be installed');
+            console.log('[HealthService] Please install Health Connect from Google Play Store');
           }
           return false;
         }
+        
+        console.log('[HealthService] Health Connect is available, proceeding with permission request...');
       }
 
       // Request permissions for various health data types
@@ -201,33 +261,53 @@ class HealthService {
         { accessType: 'read', recordType: 'TotalCaloriesBurned' },
       ];
 
-      console.log('Requesting Health Connect permissions...');
-      const grantedPermissions = await HealthConnect.requestPermission(permissions);
+      console.log('[HealthService] Requesting the following permissions:');
+      permissions.forEach(p => console.log(`[HealthService]   - ${p.accessType} ${p.recordType}`));
       
-      console.log('Permission response:', grantedPermissions);
+      const grantedPermissions = await HealthConnectModule.requestPermission(permissions);
+      
+      console.log('[HealthService] Permission request completed');
+      console.log('[HealthService] Granted permissions:', JSON.stringify(grantedPermissions, null, 2));
       
       // Check if at least some permissions were granted
       const hasPermissions = grantedPermissions && grantedPermissions.length > 0;
       
       if (hasPermissions) {
-        console.log('Health Connect permissions granted:', grantedPermissions);
+        console.log(`[HealthService] ✅ ${grantedPermissions.length} permissions granted`);
+        grantedPermissions.forEach((p: any) => {
+          console.log(`[HealthService]   ✓ ${p.accessType || 'read'} ${p.recordType || p}`);
+        });
       } else {
-        console.log('No Health Connect permissions granted. You may need to manually open Health Connect settings.');
+        console.log('[HealthService] ⚠️ No Health Connect permissions granted');
+        console.log('[HealthService] User may need to manually grant permissions in Health Connect settings');
         
         // Try to open Health Connect settings if available
-        if (HealthConnect.openHealthConnectSettings) {
-          console.log('Opening Health Connect settings...');
-          await HealthConnect.openHealthConnectSettings();
+        if (HealthConnectModule.openHealthConnectSettings) {
+          console.log('[HealthService] Opening Health Connect settings for manual permission grant...');
+          try {
+            HealthConnectModule.openHealthConnectSettings();
+            console.log('[HealthService] Health Connect settings opened');
+          } catch (openError) {
+            console.error('[HealthService] Failed to open Health Connect settings:', openError);
+          }
         }
       }
 
       return hasPermissions;
-    } catch (error) {
-      console.error('Error requesting Health Connect permissions:', error);
+    } catch (error: any) {
+      console.error('[HealthService] ❌ Error requesting Health Connect permissions:', error);
+      console.error('[HealthService] Error type:', typeof error);
+      console.error('[HealthService] Error message:', error?.message);
+      console.error('[HealthService] Error code:', error?.code);
+      console.error('[HealthService] Error stack:', error?.stack);
       
-      // Try to provide more specific error information
-      if (error && typeof error === 'object' && 'message' in error) {
-        console.error('Error message:', error.message);
+      // Common error scenarios
+      if (error?.message?.includes('not installed')) {
+        console.error('[HealthService] Health Connect app is not installed. Please install it from Google Play Store.');
+      } else if (error?.message?.includes('permission')) {
+        console.error('[HealthService] Permission denied by user or system');
+      } else if (error?.message?.includes('initialize')) {
+        console.error('[HealthService] Health Connect not initialized. Try restarting the app.');
       }
       
       return false;
@@ -276,11 +356,15 @@ class HealthService {
 
   private async getHealthConnectSteps(startDate: Date, endDate: Date): Promise<number | null> {
     try {
-      if (!HealthConnect) {
+      if (!HealthConnectModule) {
+        console.error('[HealthService] Health Connect module not available for reading steps');
         return null;
       }
 
-      const result = await HealthConnect.readRecords('Steps', {
+      console.log('[HealthService] Reading steps from Health Connect');
+      console.log(`[HealthService] Date range: ${startDate.toISOString()} to ${endDate.toISOString()}`);
+      
+      const result = await HealthConnectModule.readRecords('Steps', {
         timeRangeFilter: {
           operator: 'between',
           startTime: startDate.toISOString(),
@@ -288,18 +372,25 @@ class HealthService {
         },
       });
 
+      console.log(`[HealthService] Steps query returned ${result?.records?.length || 0} records`);
+      
       if (!result || !result.records) {
+        console.log('[HealthService] No step records found');
         return null;
       }
 
       // Sum up all step counts
       const totalSteps = result.records.reduce((sum: number, record: any) => {
-        return sum + (record.count || 0);
+        const steps = record.count || 0;
+        console.log(`[HealthService] Step record: ${steps} steps at ${record.time || 'unknown time'}`);
+        return sum + steps;
       }, 0);
 
+      console.log(`[HealthService] Total steps: ${totalSteps}`);
       return totalSteps;
-    } catch (error) {
-      console.error('Error fetching steps from Health Connect:', error);
+    } catch (error: any) {
+      console.error('[HealthService] Error fetching steps from Health Connect:', error);
+      console.error('[HealthService] Error details:', error?.message);
       return null;
     }
   }
@@ -346,11 +437,15 @@ class HealthService {
 
   private async getHealthConnectHeartRate(startDate: Date, endDate: Date): Promise<number | null> {
     try {
-      if (!HealthConnect) {
+      if (!HealthConnectModule) {
+        console.error('[HealthService] Health Connect module not available for reading heart rate');
         return null;
       }
 
-      const result = await HealthConnect.readRecords('HeartRate', {
+      console.log('[HealthService] Reading heart rate from Health Connect');
+      console.log(`[HealthService] Date range: ${startDate.toISOString()} to ${endDate.toISOString()}`);
+      
+      const result = await HealthConnectModule.readRecords('HeartRate', {
         timeRangeFilter: {
           operator: 'between',
           startTime: startDate.toISOString(),
@@ -358,20 +453,40 @@ class HealthService {
         },
       });
 
+      console.log(`[HealthService] Heart rate query returned ${result?.records?.length || 0} records`);
+      
       if (!result || !result.records || result.records.length === 0) {
+        console.log('[HealthService] No heart rate records found');
         return null;
       }
 
       // Calculate average heart rate
-      const avgHeartRate = result.records.reduce((sum: number, record: any) => {
+      let totalSamples = 0;
+      let totalBPM = 0;
+      
+      result.records.forEach((record: any) => {
         const samples = record.samples || [];
-        const recordAvg = samples.reduce((s: number, sample: any) => s + (sample.beatsPerMinute || 0), 0) / samples.length;
-        return sum + recordAvg;
-      }, 0) / result.records.length;
-
-      return Math.round(avgHeartRate);
-    } catch (error) {
-      console.error('Error fetching heart rate from Health Connect:', error);
+        samples.forEach((sample: any) => {
+          if (sample.beatsPerMinute) {
+            totalBPM += sample.beatsPerMinute;
+            totalSamples++;
+            console.log(`[HealthService] Heart rate sample: ${sample.beatsPerMinute} bpm at ${sample.time || 'unknown time'}`);
+          }
+        });
+      });
+      
+      if (totalSamples === 0) {
+        console.log('[HealthService] No valid heart rate samples found');
+        return null;
+      }
+      
+      const avgHeartRate = Math.round(totalBPM / totalSamples);
+      console.log(`[HealthService] Average heart rate: ${avgHeartRate} bpm from ${totalSamples} samples`);
+      
+      return avgHeartRate;
+    } catch (error: any) {
+      console.error('[HealthService] Error fetching heart rate from Health Connect:', error);
+      console.error('[HealthService] Error details:', error?.message);
       return null;
     }
   }
@@ -418,11 +533,15 @@ class HealthService {
 
   private async getHealthConnectDistance(startDate: Date, endDate: Date): Promise<number | null> {
     try {
-      if (!HealthConnect) {
+      if (!HealthConnectModule) {
+        console.error('[HealthService] Health Connect module not available for reading distance');
         return null;
       }
 
-      const result = await HealthConnect.readRecords('Distance', {
+      console.log('[HealthService] Reading distance from Health Connect');
+      console.log(`[HealthService] Date range: ${startDate.toISOString()} to ${endDate.toISOString()}`);
+      
+      const result = await HealthConnectModule.readRecords('Distance', {
         timeRangeFilter: {
           operator: 'between',
           startTime: startDate.toISOString(),
@@ -430,18 +549,25 @@ class HealthService {
         },
       });
 
+      console.log(`[HealthService] Distance query returned ${result?.records?.length || 0} records`);
+      
       if (!result || !result.records) {
+        console.log('[HealthService] No distance records found');
         return null;
       }
 
       // Sum up all distances (in meters)
       const totalDistance = result.records.reduce((sum: number, record: any) => {
-        return sum + (record.distance?.inMeters || 0);
+        const distance = record.distance?.inMeters || 0;
+        console.log(`[HealthService] Distance record: ${distance} meters at ${record.time || 'unknown time'}`);
+        return sum + distance;
       }, 0);
 
+      console.log(`[HealthService] Total distance: ${totalDistance} meters (${(totalDistance / 1000).toFixed(2)} km)`);
       return totalDistance;
-    } catch (error) {
-      console.error('Error fetching distance from Health Connect:', error);
+    } catch (error: any) {
+      console.error('[HealthService] Error fetching distance from Health Connect:', error);
+      console.error('[HealthService] Error details:', error?.message);
       return null;
     }
   }
@@ -488,11 +614,15 @@ class HealthService {
 
   private async getHealthConnectCalories(startDate: Date, endDate: Date): Promise<number | null> {
     try {
-      if (!HealthConnect) {
+      if (!HealthConnectModule) {
+        console.error('[HealthService] Health Connect module not available for reading calories');
         return null;
       }
 
-      const result = await HealthConnect.readRecords('ActiveCaloriesBurned', {
+      console.log('[HealthService] Reading calories from Health Connect');
+      console.log(`[HealthService] Date range: ${startDate.toISOString()} to ${endDate.toISOString()}`);
+      
+      const result = await HealthConnectModule.readRecords('ActiveCaloriesBurned', {
         timeRangeFilter: {
           operator: 'between',
           startTime: startDate.toISOString(),
@@ -500,18 +630,26 @@ class HealthService {
         },
       });
 
+      console.log(`[HealthService] Calories query returned ${result?.records?.length || 0} records`);
+      
       if (!result || !result.records) {
+        console.log('[HealthService] No calorie records found');
         return null;
       }
 
       // Sum up all calories
       const totalCalories = result.records.reduce((sum: number, record: any) => {
-        return sum + (record.energy?.inKilocalories || 0);
+        const calories = record.energy?.inKilocalories || 0;
+        console.log(`[HealthService] Calorie record: ${calories} kcal at ${record.time || 'unknown time'}`);
+        return sum + calories;
       }, 0);
 
-      return Math.round(totalCalories);
-    } catch (error) {
-      console.error('Error fetching calories from Health Connect:', error);
+      const rounded = Math.round(totalCalories);
+      console.log(`[HealthService] Total calories burned: ${rounded} kcal`);
+      return rounded;
+    } catch (error: any) {
+      console.error('[HealthService] Error fetching calories from Health Connect:', error);
+      console.error('[HealthService] Error details:', error?.message);
       return null;
     }
   }
@@ -566,11 +704,15 @@ class HealthService {
 
   private async getHealthConnectWorkouts(startDate: Date, endDate: Date): Promise<WorkoutData[] | null> {
     try {
-      if (!HealthConnect) {
+      if (!HealthConnectModule) {
+        console.error('[HealthService] Health Connect module not available for reading workouts');
         return null;
       }
 
-      const result = await HealthConnect.readRecords('ExerciseSession', {
+      console.log('[HealthService] Reading workouts from Health Connect');
+      console.log(`[HealthService] Date range: ${startDate.toISOString()} to ${endDate.toISOString()}`);
+      
+      const result = await HealthConnectModule.readRecords('ExerciseSession', {
         timeRangeFilter: {
           operator: 'between',
           startTime: startDate.toISOString(),
@@ -578,17 +720,27 @@ class HealthService {
         },
       });
 
+      console.log(`[HealthService] Workout query returned ${result?.records?.length || 0} records`);
+      
       if (!result || !result.records) {
+        console.log('[HealthService] No workout records found');
         return null;
       }
 
-      const workouts = result.records.map((session: any) => {
+      const workouts = result.records.map((session: any, index: number) => {
         const start = new Date(session.startTime);
         const end = new Date(session.endTime);
         const durationMinutes = Math.round((end.getTime() - start.getTime()) / 60000);
+        const workoutType = this.mapExerciseType(session.exerciseType);
+        
+        console.log(`[HealthService] Workout ${index + 1}: ${workoutType}`);
+        console.log(`[HealthService]   Duration: ${durationMinutes} minutes`);
+        console.log(`[HealthService]   Calories: ${session.totalEnergyBurned?.inKilocalories || 0} kcal`);
+        console.log(`[HealthService]   Distance: ${session.distance?.inMeters || 0} meters`);
+        console.log(`[HealthService]   Time: ${start.toLocaleString()} - ${end.toLocaleString()}`);
 
         return {
-          type: this.mapExerciseType(session.exerciseType),
+          type: workoutType,
           duration: durationMinutes,
           calories: session.totalEnergyBurned?.inKilocalories || 0,
           distance: session.distance?.inMeters || 0,
@@ -597,9 +749,11 @@ class HealthService {
         };
       });
 
+      console.log(`[HealthService] Retrieved ${workouts.length} workouts`);
       return workouts;
-    } catch (error) {
-      console.error('Error fetching workouts from Health Connect:', error);
+    } catch (error: any) {
+      console.error('[HealthService] Error fetching workouts from Health Connect:', error);
+      console.error('[HealthService] Error details:', error?.message);
       return null;
     }
   }
@@ -649,6 +803,50 @@ class HealthService {
     };
 
     return exerciseTypeMap[exerciseType] || 'Other Activity';
+  }
+
+  // Debug helper to log current Health Connect state
+  async debugHealthConnectState(): Promise<void> {
+    console.log('========== Health Connect Debug Info ==========');
+    console.log(`[HealthService] Platform: ${this.platform}`);
+    console.log(`[HealthService] Is Simulator: ${this.isSimulator}`);
+    console.log(`[HealthService] Module Loaded: ${!!HealthConnectModule}`);
+    console.log(`[HealthService] Is Available: ${this.isAvailable}`);
+    console.log(`[HealthService] Is Initialized: ${this.isInitialized}`);
+    
+    if (this.platform === 'android' && HealthConnectModule) {
+      try {
+        // Check SDK status
+        if (HealthConnectModule.getSdkStatus) {
+          const status = await HealthConnectModule.getSdkStatus();
+          const statusMap: { [key: number]: string } = {
+            1: 'SDK_UNAVAILABLE - Not installed',
+            2: 'SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED - Needs update',
+            3: 'SDK_AVAILABLE - Ready'
+          };
+          console.log(`[HealthService] SDK Status: ${statusMap[status] || `Unknown (${status})`}`);
+        }
+        
+        // Check granted permissions
+        if (HealthConnectModule.getGrantedPermissions) {
+          try {
+            const granted = await HealthConnectModule.getGrantedPermissions();
+            console.log(`[HealthService] Granted Permissions: ${granted?.length || 0}`);
+            if (granted && granted.length > 0) {
+              granted.forEach((p: any) => {
+                console.log(`[HealthService]   - ${p.accessType || 'read'} ${p.recordType || p}`);
+              });
+            }
+          } catch (e) {
+            console.log('[HealthService] Could not check granted permissions');
+          }
+        }
+      } catch (error: any) {
+        console.error('[HealthService] Error getting debug info:', error?.message);
+      }
+    }
+    
+    console.log('================================================');
   }
 }
 

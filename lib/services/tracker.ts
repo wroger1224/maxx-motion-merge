@@ -87,21 +87,36 @@ class TrackerService {
 
   // Initialize the health tracking system
   async initialize(): Promise<void> {
-    console.log('Initializing TrackerService...', this.platformInfo);
+    console.log('[TrackerService] ========== INITIALIZATION START ==========');
+    console.log('[TrackerService] Platform info:', JSON.stringify(this.platformInfo, null, 2));
     
     try {
+      console.log('[TrackerService] Calling healthService.initialize()...');
       const initialized = await healthService.initialize();
       this.isInitialized = initialized;
       
       if (initialized) {
-        console.log('Health service initialized successfully');
+        console.log('[TrackerService] ✅ Health service initialized successfully');
       } else {
-        console.log('Health service initialization failed or not available');
+        console.log('[TrackerService] ⚠️ Health service initialization failed or not available');
+        console.log('[TrackerService] Possible reasons:');
+        console.log('[TrackerService] - Health Connect app not installed (Android)');
+        console.log('[TrackerService] - Running on simulator');
+        console.log('[TrackerService] - Platform not supported');
+        
+        // Try to get more debug info
+        if (healthService.debugHealthConnectState) {
+          await healthService.debugHealthConnectState();
+        }
       }
-    } catch (error) {
-      console.error('Error initializing health service:', error);
+    } catch (error: any) {
+      console.error('[TrackerService] ❌ Error initializing health service:', error);
+      console.error('[TrackerService] Error message:', error?.message);
+      console.error('[TrackerService] Stack trace:', error?.stack);
       this.isInitialized = false;
       throw error;
+    } finally {
+      console.log('[TrackerService] ========== INITIALIZATION END ==========');
     }
   }
 
@@ -112,16 +127,46 @@ class TrackerService {
 
   // Request necessary permissions from user
   async requestPermissions(): Promise<boolean> {
+    console.log('[TrackerService] ========== PERMISSION REQUEST START ==========');
+    console.log('[TrackerService] User initiated permission request');
+    
     if (!this.isAvailable()) {
-      console.log('Health tracking not available on this platform/device');
+      console.log('[TrackerService] Cannot request permissions - health tracking not available');
+      console.log(`[TrackerService] Platform: ${this.platformInfo.platform}`);
+      console.log(`[TrackerService] Is Simulator: ${this.platformInfo.isSimulator}`);
+      console.log(`[TrackerService] Health Service Available: ${healthService.isAvailable}`);
       return false;
     }
 
     try {
+      console.log('[TrackerService] Health tracking is available, requesting permissions...');
+      
+      // Debug current state before request
+      if (healthService.debugHealthConnectState) {
+        console.log('[TrackerService] Current health service state:');
+        await healthService.debugHealthConnectState();
+      }
+      
       const hasPermissions = await healthService.requestPermissions();
+      
+      console.log(`[TrackerService] Permission request completed`);
+      console.log(`[TrackerService] Result: ${hasPermissions ? '✅ GRANTED' : '❌ DENIED'}`);
+      
+      if (!hasPermissions) {
+        console.log('[TrackerService] Permissions not granted. User may need to:');
+        console.log('[TrackerService] 1. Grant permissions in Health Connect settings');
+        console.log('[TrackerService] 2. Install Health Connect app if not installed');
+        console.log('[TrackerService] 3. Update Health Connect app if outdated');
+      }
+      
+      console.log('[TrackerService] ========== PERMISSION REQUEST END ==========');
       return hasPermissions;
-    } catch (error) {
-      console.error('Failed to request permissions:', error);
+    } catch (error: any) {
+      console.error('[TrackerService] ❌ Failed to request permissions:', error);
+      console.error('[TrackerService] Error type:', typeof error);
+      console.error('[TrackerService] Error message:', error?.message);
+      console.error('[TrackerService] Error code:', error?.code);
+      console.log('[TrackerService] ========== PERMISSION REQUEST END (ERROR) ==========');
       return false;
     }
   }
@@ -297,50 +342,95 @@ class TrackerService {
 
   // Connect to specific tracker
   async connectTracker(trackerId: string): Promise<void> {
-    console.log(`Attempting to connect to tracker: ${trackerId}`);
+    console.log(`[TrackerService] ========== CONNECT TRACKER START ==========`);
+    console.log(`[TrackerService] User clicked "Connect Tracker" for: ${trackerId}`);
+    console.log(`[TrackerService] Current platform: ${this.platformInfo.platform}`);
+    console.log(`[TrackerService] Is simulator: ${this.platformInfo.isSimulator}`);
+    console.log(`[TrackerService] Health service available: ${healthService.isAvailable}`);
+    console.log(`[TrackerService] Already initialized: ${this.isInitialized}`);
+    
+    // Log debug state
+    if (healthService.debugHealthConnectState) {
+      console.log('[TrackerService] Current health service state:');
+      await healthService.debugHealthConnectState();
+    }
     
     switch (trackerId) {
       case 'apple':
         if (this.platformInfo.platform === 'ios' && !this.platformInfo.isSimulator) {
+          console.log('[TrackerService] Platform check passed for Apple Health');
+          console.log('[TrackerService] Initializing Apple Health connection...');
           await this.initialize();
+          console.log('[TrackerService] Apple Health connection completed');
         } else {
-          console.log('Apple Health not available on this platform/device');
+          console.log('[TrackerService] ❌ Apple Health not available');
+          console.log(`[TrackerService] Reason: Platform=${this.platformInfo.platform}, Simulator=${this.platformInfo.isSimulator}`);
           throw new Error('Apple Health is only available on iOS devices');
         }
         break;
       
       case 'google':
+        console.log('[TrackerService] User selected Google Fit');
         if (this.platformInfo.platform === 'android') {
-          await this.initialize();
+          console.log('[TrackerService] Platform check passed for Google Fit');
+          console.log('[TrackerService] Initializing Google Fit (Health Connect) connection...');
+          
+          try {
+            await this.initialize();
+            console.log('[TrackerService] ✅ Google Fit connection initialized');
+          } catch (error: any) {
+            console.error('[TrackerService] ❌ Failed to initialize Google Fit');
+            console.error('[TrackerService] Error:', error?.message);
+            console.log('[TrackerService] Troubleshooting tips:');
+            console.log('[TrackerService] 1. Check if Health Connect is installed from Play Store');
+            console.log('[TrackerService] 2. Ensure Health Connect is up to date');
+            console.log('[TrackerService] 3. Check device compatibility (Android 8.0+)');
+            console.log('[TrackerService] 4. Try opening Health Connect app manually first');
+            throw new Error(`Failed to connect to Google Fit: ${error?.message || 'Unknown error'}`);
+          }
         } else {
-          console.log('Google Fit (Health Connect) not available on this platform');
+          console.log('[TrackerService] ❌ Google Fit not available on this platform');
+          console.log(`[TrackerService] Current platform: ${this.platformInfo.platform}`);
           throw new Error('Google Fit is only available on Android devices');
         }
         break;
       
       case 'fitbit':
       case 'strava':
-        console.log(`${trackerId} integration not implemented yet`);
+        console.log(`[TrackerService] ${trackerId} integration not implemented yet`);
         throw new Error(`${trackerId} integration coming soon!`);
       
       default:
+        console.error(`[TrackerService] Unknown tracker ID: ${trackerId}`);
         throw new Error(`Unknown tracker: ${trackerId}`);
     }
+    
+    console.log(`[TrackerService] ========== CONNECT TRACKER END ==========`);
   }
 
   // Get platform status message
   getPlatformStatus(): string {
-    if (this.platformInfo.platform === 'ios') {
-      if (this.platformInfo.isSimulator) {
+    const platform = this.platformInfo.platform;
+    const isSimulator = this.platformInfo.isSimulator;
+    
+    console.log(`[TrackerService] Getting platform status`);
+    console.log(`[TrackerService] Platform: ${platform}`);
+    console.log(`[TrackerService] Is Simulator: ${isSimulator}`);
+    console.log(`[TrackerService] Health Service Available: ${healthService.isAvailable}`);
+    
+    if (platform === 'ios') {
+      if (isSimulator) {
         return 'Running on iOS Simulator - Health tracking not available';
       }
       return 'iOS Device - Apple Health available';
-    } else if (this.platformInfo.platform === 'android') {
+    } else if (platform === 'android') {
       if (healthService.isAvailable) {
+        console.log('[TrackerService] ✅ Health Connect is available on this Android device');
         return 'Android - Google Fit (Health Connect) available';
       }
+      console.log('[TrackerService] ⚠️ Health Connect not available on this Android device');
       return 'Android - Health Connect not available (app may need to be installed)';
-    } else if (this.platformInfo.platform === 'web') {
+    } else if (platform === 'web') {
       return 'Web - Health tracking not available';
     }
     return 'Platform not supported';
