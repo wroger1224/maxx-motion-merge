@@ -619,6 +619,8 @@ export default function CreateEventScreen() {
                             </TouchableOpacity>
                           )}
                           style={styles.searchResultsList}
+                          scrollEnabled={false}
+                          nestedScrollEnabled={true}
                         />
                       )}
                       

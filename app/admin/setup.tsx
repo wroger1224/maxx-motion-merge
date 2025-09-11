@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, ScrollView, TouchableOpacity, FlatList, Alert } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, FlatList, Alert } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useUser } from '../../contexts/UserContext';
@@ -228,167 +228,164 @@ export default function AdminSetupScreen() {
     return null;
   }
 
-  return (
-    <ScrollView style={styles.scrollView}>
-      <ThemedView style={styles.container}>
-        {/* Navigation tabs */}
-        <View style={styles.tabs}>
-          <TouchableOpacity
-            style={[styles.tab, activeSection === 'events' && styles.activeTab]}
-            onPress={() => setActiveSection('events')}
-          >
-            <ThemedText>Events</ThemedText>
-          </TouchableOpacity>
+  // Prepare data for the list
+  const listData = activeSection === 'events' ? events : teams;
+  const isEventsSection = activeSection === 'events';
 
-          {selectedEvent && (
-            <TouchableOpacity
-              style={[styles.tab, activeSection === 'teams' && styles.activeTab]}
-              onPress={() => setActiveSection('teams')}
-            >
-              <ThemedText>Teams</ThemedText>
-            </TouchableOpacity>
-          )}
+  // Render header component
+  const renderHeader = () => (
+    <ThemedView>
+      {/* Navigation tabs */}
+      <View style={styles.tabs}>
+        <TouchableOpacity
+          style={[styles.tab, activeSection === 'events' && styles.activeTab]}
+          onPress={() => setActiveSection('events')}
+        >
+          <ThemedText>Events</ThemedText>
+        </TouchableOpacity>
+
+        {selectedEvent && (
+          <TouchableOpacity
+            style={[styles.tab, activeSection === 'teams' && styles.activeTab]}
+            onPress={() => setActiveSection('teams')}
+          >
+            <ThemedText>Teams</ThemedText>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Section Header */}
+      <ThemedView style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <ThemedText type="subtitle">
+            {isEventsSection ? 'Event Management' : `Teams for ${selectedEvent?.name}`}
+          </ThemedText>
+          <TouchableOpacity
+            style={styles.createButton}
+            onPress={isEventsSection ? navigateToCreateEvent : () => navigateToCreateTeam(selectedEvent!.id)}
+          >
+            <ThemedText style={styles.createButtonText}>
+              {isEventsSection ? '+ Create Event' : '+ Add Team'}
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
+      </ThemedView>
+    </ThemedView>
+  );
+
+  // Render event item
+  const renderEventItem = ({ item }: { item: Event }) => (
+    <ThemedView style={styles.eventCard}>
+      <TouchableOpacity onPress={() => handleSelectEvent(item)}>
+        <ThemedText style={styles.eventTitle}>{item.name}</ThemedText>
+        <View style={styles.eventDetails}>
+          <ThemedText>Status: {item.status}</ThemedText>
+          <ThemedText>
+            {formatDate(item.start_date)} - {formatDate(item.end_date)}
+          </ThemedText>
         </View>
 
-        {/* Events Section */}
-        {activeSection === 'events' && (
-          <ThemedView style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <ThemedText type="subtitle">Event Management</ThemedText>
-              <TouchableOpacity
-                style={styles.createButton}
-                onPress={navigateToCreateEvent}
-              >
-                <ThemedText style={styles.createButtonText}>+ Create Event</ThemedText>
-              </TouchableOpacity>
-            </View>
-
-            {/* Event List */}
-            {events.length > 0 ? (
-              <FlatList
-                data={events}
-                keyExtractor={(item) => item.id}
-                renderItem={({ item }) => (
-                  <ThemedView style={styles.eventCard}>
-                    <TouchableOpacity onPress={() => handleSelectEvent(item)}>
-                      <ThemedText style={styles.eventTitle}>{item.name}</ThemedText>
-                      <View style={styles.eventDetails}>
-                        <ThemedText>Status: {item.status}</ThemedText>
-                        <ThemedText>
-                          {formatDate(item.start_date)} - {formatDate(item.end_date)}
-                        </ThemedText>
-                      </View>
-
-                      {eventStats[item.id] && (
-                        <ThemedText style={styles.registrationStats}>
-                          Registrations: {eventStats[item.id].totalRegistrations}
-                        </ThemedText>
-                      )}
-
-<View style={styles.actionButtons}>
-                        <TouchableOpacity 
-                          style={styles.actionButton} 
-                          onPress={() => navigateToEditEvent(item.id)}
-                        >
-                          <ThemedText style={styles.actionButtonText}>Edit</ThemedText>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity 
-                          style={styles.actionButton} 
-                          onPress={() => navigateToManageMilestones(item.id)}
-                        >
-                          <ThemedText style={styles.actionButtonText}>Milestones</ThemedText>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity 
-                          style={styles.actionButton} 
-                          onPress={() => updateEventStatus(item.id, 'Upcoming')}
-                        >
-                          <ThemedText style={styles.actionButtonText}>Set Upcoming</ThemedText>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity 
-                          style={styles.actionButton} 
-                          onPress={() => updateEventStatus(item.id, 'Active')}
-                        >
-                          <ThemedText style={styles.actionButtonText}>Set Active</ThemedText>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity 
-                          style={styles.actionButton} 
-                          onPress={() => updateEventStatus(item.id, 'Archive')}
-                        >
-                          <ThemedText style={styles.actionButtonText}>Set Complete</ThemedText>
-                        </TouchableOpacity>
-                      </View>
-                    </TouchableOpacity>
-                  </ThemedView>
-                )}
-                style={styles.list}
-              />
-            ) : (
-              <ThemedText style={styles.emptyText}>No events found. Create one to get started.</ThemedText>
-            )}
-          </ThemedView>
+        {eventStats[item.id] && (
+          <ThemedText style={styles.registrationStats}>
+            Registrations: {eventStats[item.id].totalRegistrations}
+          </ThemedText>
         )}
 
-        {/* Teams Section */}
-        {activeSection === 'teams' && selectedEvent && (
-          <ThemedView style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <ThemedText type="subtitle">Teams for {selectedEvent.name}</ThemedText>
-              <TouchableOpacity
-                style={styles.createButton}
-                onPress={() => navigateToCreateTeam(selectedEvent.id)}
-              >
-                <ThemedText style={styles.createButtonText}>+ Add Team</ThemedText>
-              </TouchableOpacity>
-            </View>
+        <View style={styles.actionButtons}>
+          <TouchableOpacity 
+            style={styles.actionButton} 
+            onPress={() => navigateToEditEvent(item.id)}
+          >
+            <ThemedText style={styles.actionButtonText}>Edit</ThemedText>
+          </TouchableOpacity>
 
-            {/* Team List */}
-            {teams.length > 0 ? (
-              <FlatList
-                data={teams}
-                keyExtractor={(item) => item.id}
-                renderItem={({ item }) => (
-                  <ThemedView style={styles.teamCard}>
-                    <ThemedText style={styles.teamTitle}>{item.team_name}</ThemedText>
+          <TouchableOpacity 
+            style={styles.actionButton} 
+            onPress={() => navigateToManageMilestones(item.id)}
+          >
+            <ThemedText style={styles.actionButtonText}>Milestones</ThemedText>
+          </TouchableOpacity>
 
-                    {eventStats[selectedEvent.id]?.teamRegistrations[item.id] !== undefined && (
-                      <ThemedText style={styles.registrationStats}>
-                        Members: {eventStats[selectedEvent.id].teamRegistrations[item.id]}
-                      </ThemedText>
-                    )}
+          <TouchableOpacity 
+            style={styles.actionButton} 
+            onPress={() => updateEventStatus(item.id, 'Upcoming')}
+          >
+            <ThemedText style={styles.actionButtonText}>Set Upcoming</ThemedText>
+          </TouchableOpacity>
 
-                    <View style={styles.actionButtons}>
-                      <TouchableOpacity
-                        style={styles.actionButton}
-                        onPress={() => router.push(`/admin/edit-team?id=${item.id}` as any)}
-                      >
-                        <ThemedText style={styles.actionButtonText}>Edit</ThemedText>
-                      </TouchableOpacity>
-                    </View>
-                  </ThemedView>
-                )}
-                style={styles.list}
-              />
-            ) : (
-              <ThemedText style={styles.emptyText}>No teams found for this event.</ThemedText>
-            )}
-          </ThemedView>
-        )}
-      </ThemedView>
-    </ScrollView>
+          <TouchableOpacity 
+            style={styles.actionButton} 
+            onPress={() => updateEventStatus(item.id, 'Active')}
+          >
+            <ThemedText style={styles.actionButtonText}>Set Active</ThemedText>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.actionButton} 
+            onPress={() => updateEventStatus(item.id, 'Archive')}
+          >
+            <ThemedText style={styles.actionButtonText}>Set Complete</ThemedText>
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </ThemedView>
+  );
+
+  // Render team item
+  const renderTeamItem = ({ item }: { item: Team }) => (
+    <ThemedView style={styles.teamCard}>
+      <ThemedText style={styles.teamTitle}>{item.team_name}</ThemedText>
+
+      {selectedEvent && eventStats[selectedEvent.id]?.teamRegistrations[item.id] !== undefined && (
+        <ThemedText style={styles.registrationStats}>
+          Members: {eventStats[selectedEvent.id].teamRegistrations[item.id]}
+        </ThemedText>
+      )}
+
+      <View style={styles.actionButtons}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => router.push(`/admin/edit-team?id=${item.id}` as any)}
+        >
+          <ThemedText style={styles.actionButtonText}>Edit</ThemedText>
+        </TouchableOpacity>
+      </View>
+    </ThemedView>
+  );
+
+  // Render empty state
+  const renderEmptyComponent = () => (
+    <ThemedView style={styles.emptyContainer}>
+      <ThemedText style={styles.emptyText}>
+        {isEventsSection 
+          ? 'No events found. Create one to get started.'
+          : 'No teams found for this event.'}
+      </ThemedText>
+    </ThemedView>
+  );
+
+  return (
+    <ThemedView style={styles.container}>
+      <FlatList
+        data={listData}
+        keyExtractor={(item) => item.id}
+        renderItem={isEventsSection ? renderEventItem : renderTeamItem}
+        ListHeaderComponent={renderHeader}
+        ListEmptyComponent={renderEmptyComponent}
+        contentContainerStyle={styles.listContent}
+        style={styles.list}
+      />
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollView: {
-    flex: 1,
-  },
   container: {
     flex: 1,
+  },
+  listContent: {
     padding: 20,
+    flexGrow: 1,
   },
   header: {
     flexDirection: 'row',
@@ -494,4 +491,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 12,
   },
-}); 
+  emptyContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+});
