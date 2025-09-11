@@ -388,8 +388,6 @@ export default function Activity() {
   const trackerOptions = [
     { id: "apple", name: "Apple Health", icon: "🍎" },
     { id: "google", name: "Google Fit", icon: "🏃" },
-    { id: "fitbit", name: "Fitbit", icon: "⌚" },
-    { id: "strava", name: "Strava", icon: "🚴" },
   ];
 
   const handleTrackerSelection = async (trackerId: string) => {
@@ -427,10 +425,9 @@ export default function Activity() {
       const hasPermissions = await tracker.requestPermissions();
       
       if (hasPermissions) {
-        // Calculate date range (last 7 days)
-        const endDate = new Date();
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - 7);
+        // Hard-coded date range: September 1-14, 2025
+        const startDate = new Date('2025-09-01');
+        const endDate = new Date('2025-09-14');
         
         // Fetch activity data
         const activities = await tracker.fetchActivityData(startDate, endDate);
@@ -464,9 +461,14 @@ export default function Activity() {
         }
         
         // Sync to Supabase
-        await tracker.syncToSupabase(activities, user.id, eventId);
+        const syncResult = await tracker.syncToSupabase(activities, user.id, eventId);
         
-        showSuccessToast(`Successfully imported ${activities.length} activities from Apple Health!`);
+        // Show appropriate message based on sync results
+        if (syncResult.newCount > 0) {
+          showSuccessToast(`Successfully imported ${syncResult.newCount} new activities from Apple Health!`);
+        } else {
+          showAlert('No New Activities', `No new activities found (${syncResult.skippedCount} duplicates skipped)`);
+        }
         
         // Update hasActivities flag if this was for the current event
         if (currentEvent && eventId === currentEvent.id) {

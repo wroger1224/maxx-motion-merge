@@ -305,10 +305,10 @@ class TrackerService {
   }
 
   // Sync fetched data to Supabase
-  async syncToSupabase(activities: ActivityData[], userId: string, eventId: string): Promise<void> {
+  async syncToSupabase(activities: ActivityData[], userId: string, eventId: string): Promise<{ newCount: number; skippedCount: number }> {
     if (activities.length === 0) {
       console.log('No activities to sync');
-      return;
+      return { newCount: 0, skippedCount: 0 };
     }
 
     try {
@@ -396,8 +396,10 @@ class TrackerService {
         }
 
         console.log(`Successfully synced ${newActivities.length} new activities to Supabase (${skippedCount} duplicates skipped)`);
+        return { newCount: newActivities.length, skippedCount };
       } else {
         console.log(`No new activities to sync (${skippedCount} duplicates skipped)`);
+        return { newCount: 0, skippedCount };
       }
     } catch (error) {
       console.error('Error syncing to Supabase:', error);
@@ -420,8 +422,6 @@ class TrackerService {
         break;
       
       case 'google':
-      case 'fitbit':
-      case 'strava':
         console.log(`${trackerId} integration not implemented yet`);
         throw new Error(`${trackerId} integration coming soon!`);
       
