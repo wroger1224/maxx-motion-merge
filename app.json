@@ -23,6 +23,30 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.maxxpotential.maxxmotion2",
+      "permissions": [
+        "android.permission.health.READ_STEPS",
+        "android.permission.health.WRITE_STEPS",
+        "android.permission.health.READ_DISTANCE",
+        "android.permission.health.WRITE_DISTANCE",
+        "android.permission.health.READ_HEART_RATE",
+        "android.permission.health.WRITE_HEART_RATE",
+        "android.permission.health.READ_EXERCISE",
+        "android.permission.health.WRITE_EXERCISE",
+        "android.permission.health.READ_TOTAL_CALORIES_BURNED",
+        "android.permission.health.WRITE_TOTAL_CALORIES_BURNED",
+        "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
+        "android.permission.health.WRITE_ACTIVE_CALORIES_BURNED",
+        "android.permission.health.READ_SLEEP",
+        "android.permission.health.WRITE_SLEEP",
+        "android.permission.health.READ_WEIGHT",
+        "android.permission.health.WRITE_WEIGHT",
+        "android.permission.health.READ_HEIGHT",
+        "android.permission.health.WRITE_HEIGHT",
+        "android.permission.health.READ_BLOOD_PRESSURE",
+        "android.permission.health.WRITE_BLOOD_PRESSURE",
+        "android.permission.health.READ_BLOOD_GLUCOSE",
+        "android.permission.health.WRITE_BLOOD_GLUCOSE"
+      ],
       "intentFilters": [
         {
           "action": "VIEW",
@@ -45,6 +69,7 @@
     },
     "plugins": [
       "expo-router",
+      "expo-dev-client",
       [
         "expo-splash-screen",
         {
@@ -66,8 +91,20 @@
             "WRITE_HEART_RATE",
             "READ_EXERCISE",
             "WRITE_EXERCISE",
-            "READ_CALORIES",
-            "WRITE_CALORIES"
+            "READ_TOTAL_CALORIES_BURNED",
+            "WRITE_TOTAL_CALORIES_BURNED",
+            "READ_ACTIVE_CALORIES_BURNED",
+            "WRITE_ACTIVE_CALORIES_BURNED",
+            "READ_SLEEP",
+            "WRITE_SLEEP",
+            "READ_WEIGHT",
+            "WRITE_WEIGHT",
+            "READ_HEIGHT",
+            "WRITE_HEIGHT",
+            "READ_BLOOD_PRESSURE",
+            "WRITE_BLOOD_PRESSURE",
+            "READ_BLOOD_GLUCOSE",
+            "WRITE_BLOOD_GLUCOSE"
           ]
         }
       ],
