@@ -373,6 +373,18 @@ class TrackerService {
         console.log('[TrackerService] User selected Google Fit');
         if (this.platformInfo.platform === 'android') {
           console.log('[TrackerService] Platform check passed for Google Fit');
+          console.log('[TrackerService] Checking Health Connect availability...');
+          
+          // Check Health Connect status before trying to initialize
+          const healthConnectStatus = await this.checkHealthConnectStatus();
+          console.log(`[TrackerService] Health Connect status: ${healthConnectStatus}`);
+          
+          if (healthConnectStatus === 'not_installed') {
+            throw new Error('Health Connect is not installed. Please install it from the Play Store to access Google Fit data.');
+          } else if (healthConnectStatus === 'needs_update') {
+            throw new Error('Health Connect needs to be updated. Please update it from the Play Store.');
+          }
+          
           console.log('[TrackerService] Initializing Google Fit (Health Connect) connection...');
           
           try {
@@ -386,7 +398,13 @@ class TrackerService {
             console.log('[TrackerService] 2. Ensure Health Connect is up to date');
             console.log('[TrackerService] 3. Check device compatibility (Android 8.0+)');
             console.log('[TrackerService] 4. Try opening Health Connect app manually first');
-            throw new Error(`Failed to connect to Google Fit: ${error?.message || 'Unknown error'}`);
+            
+            // Provide more specific error message based on the error
+            if (error?.message?.includes('SDK_UNAVAILABLE')) {
+              throw new Error('Health Connect is not available. Please install or update it from the Play Store.');
+            } else {
+              throw new Error(`Failed to connect to Health Connect: ${error?.message || 'Unknown error'}`);
+            }
           }
         } else {
           console.log('[TrackerService] ❌ Google Fit not available on this platform');
@@ -406,6 +424,31 @@ class TrackerService {
     }
     
     console.log(`[TrackerService] ========== CONNECT TRACKER END ==========`);
+  }
+  
+  // Check Health Connect installation status
+  private async checkHealthConnectStatus(): Promise<'available' | 'not_installed' | 'needs_update' | 'unknown'> {
+    if (this.platformInfo.platform !== 'android') {
+      return 'unknown';
+    }
+    
+    try {
+      // Try to get the SDK status from healthService
+      const status = await healthService.getHealthConnectStatus();
+      
+      if (status === 1) {
+        return 'not_installed';
+      } else if (status === 2) {
+        return 'needs_update';
+      } else if (status === 3) {
+        return 'available';
+      }
+      
+      return 'unknown';
+    } catch (error) {
+      console.error('[TrackerService] Error checking Health Connect status:', error);
+      return 'unknown';
+    }
   }
 
   // Get platform status message

@@ -277,6 +277,11 @@ class HealthService {
         grantedPermissions.forEach((p: any) => {
           console.log(`[HealthService]   ✓ ${p.accessType || 'read'} ${p.recordType || p}`);
         });
+        
+        // Important: After permissions are granted, give Health Connect a moment to process
+        console.log('[HealthService] Waiting for Health Connect to process permissions...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
       } else {
         console.log('[HealthService] ⚠️ No Health Connect permissions granted');
         console.log('[HealthService] User may need to manually grant permissions in Health Connect settings');
@@ -709,8 +714,19 @@ class HealthService {
         return null;
       }
 
-      console.log('[HealthService] Reading workouts from Health Connect');
-      console.log(`[HealthService] Date range: ${startDate.toISOString()} to ${endDate.toISOString()}`);
+      console.log('[HealthService] ====== READING WORKOUTS FROM HEALTH CONNECT ======');
+      console.log(`[HealthService] Date range: ${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}`);
+      console.log(`[HealthService] ISO dates: ${startDate.toISOString()} to ${endDate.toISOString()}`);
+      
+      // First, let's check what data sources are available
+      if (HealthConnectModule.getAvailableRecords) {
+        try {
+          const availableRecords = await HealthConnectModule.getAvailableRecords();
+          console.log('[HealthService] Available record types:', availableRecords);
+        } catch (e) {
+          console.log('[HealthService] Could not check available records');
+        }
+      }
       
       const result = await HealthConnectModule.readRecords('ExerciseSession', {
         timeRangeFilter: {
@@ -720,10 +736,34 @@ class HealthService {
         },
       });
 
-      console.log(`[HealthService] Workout query returned ${result?.records?.length || 0} records`);
+      console.log(`[HealthService] Workout query completed`);
+      console.log(`[HealthService] Raw result:`, JSON.stringify(result, null, 2).substring(0, 500));
+      console.log(`[HealthService] Number of records found: ${result?.records?.length || 0}`);
       
-      if (!result || !result.records) {
-        console.log('[HealthService] No workout records found');
+      if (!result || !result.records || result.records.length === 0) {
+        console.log('[HealthService] ⚠️ No workout records found in Health Connect');
+        console.log('[HealthService] Possible reasons:');
+        console.log('[HealthService] 1. Google Fit has not synced data to Health Connect');
+        console.log('[HealthService] 2. No workouts recorded in the specified date range');
+        console.log('[HealthService] 3. Permissions not granted for ExerciseSession data');
+        console.log('[HealthService] 4. Data source (Google Fit) not connected to Health Connect');
+        
+        // Try to provide more debug info
+        if (HealthConnectModule.getGrantedPermissions) {
+          try {
+            const granted = await HealthConnectModule.getGrantedPermissions();
+            console.log('[HealthService] Currently granted permissions:', granted);
+            const hasExercisePermission = granted?.some((p: any) => 
+              p.recordType === 'ExerciseSession' || p === 'ExerciseSession'
+            );
+            if (!hasExercisePermission) {
+              console.log('[HealthService] ❌ ExerciseSession permission NOT granted');
+            }
+          } catch (e) {
+            console.log('[HealthService] Could not check granted permissions');
+          }
+        }
+        
         return null;
       }
 
@@ -738,6 +778,7 @@ class HealthService {
         console.log(`[HealthService]   Calories: ${session.totalEnergyBurned?.inKilocalories || 0} kcal`);
         console.log(`[HealthService]   Distance: ${session.distance?.inMeters || 0} meters`);
         console.log(`[HealthService]   Time: ${start.toLocaleString()} - ${end.toLocaleString()}`);
+        console.log(`[HealthService]   Source: ${session.metadata?.dataOrigin || 'Unknown'}`);
 
         return {
           type: workoutType,
@@ -749,11 +790,21 @@ class HealthService {
         };
       });
 
-      console.log(`[HealthService] Retrieved ${workouts.length} workouts`);
+      console.log(`[HealthService] ✅ Successfully retrieved ${workouts.length} workouts`);
+      console.log('[HealthService] ====== END READING WORKOUTS ======');
       return workouts;
     } catch (error: any) {
-      console.error('[HealthService] Error fetching workouts from Health Connect:', error);
-      console.error('[HealthService] Error details:', error?.message);
+      console.error('[HealthService] ❌ Error fetching workouts from Health Connect:', error);
+      console.error('[HealthService] Error type:', typeof error);
+      console.error('[HealthService] Error message:', error?.message);
+      console.error('[HealthService] Error stack:', error?.stack);
+      
+      if (error?.message?.includes('permission')) {
+        console.error('[HealthService] This appears to be a permission issue');
+      } else if (error?.message?.includes('not found')) {
+        console.error('[HealthService] Record type might not be available');
+      }
+      
       return null;
     }
   }
@@ -847,6 +898,22 @@ class HealthService {
     }
     
     console.log('================================================');
+  }
+  
+  // Get Health Connect SDK status (Android only)
+  async getHealthConnectStatus(): Promise<number> {
+    if (this.platform !== 'android' || !HealthConnectModule) {
+      throw new Error('Health Connect status check is only available on Android');
+    }
+    
+    try {
+      const status = await HealthConnectModule.getSdkStatus();
+      console.log(`[HealthService] Health Connect SDK status: ${status}`);
+      return status;
+    } catch (error: any) {
+      console.error('[HealthService] Error getting Health Connect status:', error);
+      throw error;
+    }
   }
 }
 
