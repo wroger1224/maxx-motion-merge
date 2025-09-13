@@ -11,6 +11,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.maxxpotential.maxxmotion2",
+      "icon": "./assets/images/icon.png",
       "infoPlist": {
         "NSHealthShareUsageDescription": "This app requires access to your health data to track fitness metrics and provide personalized insights.",
         "NSHealthUpdateUsageDescription": "This app requires permission to write health data for tracking your fitness activities.",
@@ -18,8 +19,9 @@
       }
     },
     "android": {
+      "icon": "./assets/images/icon.png",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.maxxpotential.maxxmotion2"
@@ -28,6 +30,11 @@
       "bundler": "metro",
       "output": "static",
       "favicon": "./assets/images/favicon.png"
+    },
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
     },
     "plugins": [
       "expo-router",
