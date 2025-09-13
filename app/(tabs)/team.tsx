@@ -28,9 +28,9 @@ import { Colors } from "@/constants/Colors";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import MemberDetails from "@/app/screens/MemberDetails";
-import { ResponsiveHeader } from '@/components/ui/responsiveHeader';
-import { showAlert } from '../utils/showAlert';
-
+import { ResponsiveHeader } from "@/components/ui/responsiveHeader";
+import { showAlert } from "../utils/showAlert";
+import { Header } from "@/components/ui/header";
 
 type TeamMember = {
   id: string; // UUID from team_members table
@@ -82,7 +82,7 @@ type TeamMembershipQueryResult = {
 
 export default function TeamScreen() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [hoveredMemberId, setHoveredMemberId] = useState<string | null>(null);
   const [hoveredButton, setHoveredButton] = useState<string | null>(null);
   const [showAllMembers, setShowAllMembers] = useState(false);
@@ -224,21 +224,22 @@ export default function TeamScreen() {
         return;
       }
 
-			const typedMemberships = memberships as unknown as TeamMembershipQueryResult[]
+      const typedMemberships =
+        memberships as unknown as TeamMembershipQueryResult[];
 
       // Find active event team first
       let activeEventTeam = null;
 
       // Try to find an active event
       for (const typedMembership of typedMemberships) {
-				console.log(typedMembership)
+        console.log(typedMembership);
         // Access nested properties safely - handle teams as an array
         const { teams } = typedMembership;
         if (teams) {
           console.log("Checking team:", teams?.team_name);
 
           const { events } = teams;
-					console.log("event: ", events);
+          console.log("event: ", events);
           if (events) {
             console.log("Found event with status:", events?.status);
 
@@ -283,55 +284,54 @@ export default function TeamScreen() {
 
       if (activeEventTeam) {
         console.log("Selected team membership:", activeEventTeam);
-        const { teams } = activeEventTeam ;
+        const { teams } = activeEventTeam;
 
-				if (teams) {
-					console.log("Team found:", teams.team_name);
+        if (teams) {
+          console.log("Team found:", teams.team_name);
 
-					const teamData = {
-						id: teams.id || "",
-						team_name: teams.team_name || "",
-						team_minute_goal: teams.team_minute_goal || 10000,
-						captain_id: teams.captain_id || "",
-						event_id: teams.event_id || "",
-					};
+          const teamData = {
+            id: teams.id || "",
+            team_name: teams.team_name || "",
+            team_minute_goal: teams.team_minute_goal || 10000,
+            captain_id: teams.captain_id || "",
+            event_id: teams.event_id || "",
+          };
 
-					if (teams.events) {
-				
-						const eventsData = teams.events;
+          if (teams.events) {
+            const eventsData = teams.events;
 
-						if (eventsData) {
-							console.log(
-								"Event found:",
-								eventsData.name,
-								"with status:",
-								eventsData.status
-							);
+            if (eventsData) {
+              console.log(
+                "Event found:",
+                eventsData.name,
+                "with status:",
+                eventsData.status
+              );
 
-							const eventData = {
-								id: eventsData.id || "",
-								name: eventsData.name || "",
-								start_date: eventsData.start_date || "",
-								end_date: eventsData.end_date || "",
-								status:
-									(eventsData.status as "Upcoming" | "Active" | "Archive") ||
-									"Archive",
-							};
+              const eventData = {
+                id: eventsData.id || "",
+                name: eventsData.name || "",
+                start_date: eventsData.start_date || "",
+                end_date: eventsData.end_date || "",
+                status:
+                  (eventsData.status as "Upcoming" | "Active" | "Archive") ||
+                  "Archive",
+              };
 
-							console.log("Setting user team:", teamData);
-							console.log("Setting user event:", eventData);
+              console.log("Setting user team:", teamData);
+              console.log("Setting user event:", eventData);
 
-							setUserTeam(teamData);
-							setUserEvent(eventData);
-						} else {
-							console.log("No valid event data found");
-						}
-					} else {
-						console.log("No events property found on team");
-					}
-				} else {
-					console.log("No valid team found");
-				}
+              setUserTeam(teamData);
+              setUserEvent(eventData);
+            } else {
+              console.log("No valid event data found");
+            }
+          } else {
+            console.log("No events property found on team");
+          }
+        } else {
+          console.log("No valid team found");
+        }
       } else {
         console.log("No active team membership found");
       }
@@ -347,29 +347,32 @@ export default function TeamScreen() {
     if (!userTeam) return;
 
     try {
-      console.log('Fetching team members for team:', userTeam.id);
-      console.log('Current event ID:', userTeam.event_id);
+      console.log("Fetching team members for team:", userTeam.id);
+      console.log("Current event ID:", userTeam.event_id);
 
       // Get today's date in YYYY-MM-DD format
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Date().toISOString().split("T")[0];
 
       // Fetch current active event
       const { data: currentData, error: currentError } = await supabase
-        .from('events')
-        .select('*')
-        .lte('start_date', today)
-        .gte('end_date', today)
-        .order('start_date', { ascending: false })
+        .from("events")
+        .select("*")
+        .lte("start_date", today)
+        .gte("end_date", today)
+        .order("start_date", { ascending: false })
         .limit(1);
 
       if (currentError) {
-        console.error('Error fetching current event:', currentError);
+        console.error("Error fetching current event:", currentError);
         return;
       }
 
       // Use the current event if available, otherwise use the team's event
-      const eventId = currentData && currentData.length > 0 ? currentData[0].id : userTeam.event_id;
-      console.log('Using event ID:', eventId);
+      const eventId =
+        currentData && currentData.length > 0
+          ? currentData[0].id
+          : userTeam.event_id;
+      console.log("Using event ID:", eventId);
 
       // Get all team members
       const { data: members, error: membersError } = await supabase
@@ -384,24 +387,24 @@ export default function TeamScreen() {
         return;
       }
 
-      console.log('Found team members:', members?.length || 0);
+      console.log("Found team members:", members?.length || 0);
 
       // Get activities for all current team members only
-      const memberUserIds = members.map(m => m.user_id);
-      console.log('Fetching activities for user IDs:', memberUserIds);
+      const memberUserIds = members.map((m) => m.user_id);
+      console.log("Fetching activities for user IDs:", memberUserIds);
 
       const { data: activities, error: activitiesError } = await supabase
-        .from('activities')
-        .select('user_id, activity_minutes')
-        .eq('event_id', eventId)
-        .in('user_id', memberUserIds);
+        .from("activities")
+        .select("user_id, activity_minutes")
+        .eq("event_id", eventId)
+        .in("user_id", memberUserIds);
 
       if (activitiesError) {
         console.error("Error fetching activities:", activitiesError);
       }
 
-      console.log('Activities fetched for team:', activities);
-      console.log('Number of activities found:', activities?.length || 0);
+      console.log("Activities fetched for team:", activities);
+      console.log("Number of activities found:", activities?.length || 0);
 
       // Calculate minutes for each member
       const memberMinutes: { [key: string]: number } = {};
@@ -410,7 +413,7 @@ export default function TeamScreen() {
           (memberMinutes[activity.user_id] || 0) + activity.activity_minutes;
       });
 
-      console.log('Member minutes calculated:', memberMinutes);
+      console.log("Member minutes calculated:", memberMinutes);
 
       // Calculate total minutes for the team
       const totalMinutes = Object.values(memberMinutes).reduce(
@@ -683,7 +686,10 @@ export default function TeamScreen() {
     // Validate input
     const goalValue = parseInt(newGoalValue);
     if (isNaN(goalValue) || goalValue <= 0) {
-      showAlert('Invalid Value', 'Please enter a positive number for the team goal');
+      showAlert(
+        "Invalid Value",
+        "Please enter a positive number for the team goal"
+      );
       return;
     }
 
@@ -729,29 +735,12 @@ export default function TeamScreen() {
       ? Math.min(100, (totalTeamMinutes / teamStats.targetMinutes) * 100)
       : 0;
 
+  const handleSignOut = () => {
+    void signOut();
+  };
   return (
     <View style={styles.container}>
-      <ResponsiveHeader
-        source={require('@/assets/images/gym-equipment.png')}
-      >
-				<LinearGradient
-            colors={[Colors.light.blue, "rgba(0, 0, 0, 0.7)"]}
-            style={styles.headerOverlay}
-        >
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>MAXX Motion</Text>
-            <View style={styles.userIcon}>
-              <Text style={styles.userIconText}>U</Text>
-            </View>
-          </View>
-          <View style={styles.headerContent}>
-            <Text style={styles.pageTitle}>Team</Text>
-            <Text style={styles.tagline}>
-              Track your motion. Reach your potential.
-            </Text>
-          </View>
-        </LinearGradient>
-      </ResponsiveHeader>
+      <Header signOut={handleSignOut} title="Team" tagline="Track your motion. Reach your potential."/>
 
       {!userTeam ? (
         <View style={styles.noTeamContainer}>
@@ -778,7 +767,7 @@ export default function TeamScreen() {
       ) : (
         <>
           <View style={styles.mainContent}>
-            <ThemedView style={styles.card}>
+            <ThemedView style={[styles.card, { marginBottom: 0 }]}>
               <View style={styles.teamInfo}>
                 <View style={styles.teamIcon}>
                   <ThemedText style={styles.teamIconText}>
@@ -860,24 +849,6 @@ export default function TeamScreen() {
                     ]}
                   >
                     EDIT GOAL
-                  </ThemedText>
-                </Pressable>
-                <Pressable
-                  style={[
-                    styles.actionButton,
-                    hoveredButton === "invite" && styles.actionButtonHovered,
-                  ]}
-                  onHoverIn={() => setHoveredButton("invite")}
-                  onHoverOut={() => setHoveredButton(null)}
-                >
-                  <ThemedText
-                    style={[
-                      styles.actionButtonText,
-                      hoveredButton === "invite" &&
-                        styles.actionButtonTextHovered,
-                    ]}
-                  >
-                    INVITE
                   </ThemedText>
                 </Pressable>
               </View>
@@ -1100,7 +1071,7 @@ export default function TeamScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: Colors.light.background,
   },
   loadingContainer: {
     flex: 1,
@@ -1146,12 +1117,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingLeft: 16,
-		paddingTop: 16,
-		paddingRight: 16,
+    paddingTop: 16,
+    paddingRight: 16,
     zIndex: 1,
   },
   headerTitle: {
@@ -1178,13 +1149,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 40,
   },
-  pageTitle: {
-    fontSize: 32,
-    fontWeight: "700",
-    color: "#fff",
-    textAlign: "center",
-    marginBottom: 8,
-  },
+ 
   tagline: {
     fontSize: 16,
     color: "rgba(255, 255, 255, 0.8)",
@@ -1217,7 +1182,6 @@ const styles = StyleSheet.create({
   teamInfo: {
     flexDirection: "row",
     alignItems: "flex-start",
-    marginBottom: 16,
     position: "relative",
     minHeight: 60,
   },

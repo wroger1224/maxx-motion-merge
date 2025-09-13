@@ -189,12 +189,12 @@ export default function ActivityTypesScreen() {
   return (
     <ScrollView style={styles.scrollView} ref={scrollRef}>
       <ThemedView style={styles.container}>
-        <ThemedText type="title" style={styles.title}>Activity Types</ThemedText>
+        <ThemedText style={styles.title}>Activity Types</ThemedText>
 
         {/* Add/Edit Form */}
         {(isAdding || editingType) && (
           <ThemedView style={styles.formContainer}>
-            <ThemedText type="subtitle" style={[styles.formTitle, styles.strongButtonText]}>
+            <ThemedText style={[styles.formTitle, styles.strongButtonText]}>
               {editingType ? 'Edit Activity Type' : 'Add New Activity Type'}
             </ThemedText>
 
@@ -318,6 +318,8 @@ const styles = StyleSheet.create({
   },
   title: {
     marginBottom: 24,
+    fontWeight: "bold",
+    fontSize:24,
   },
   formContainer: {
     marginBottom: 24,

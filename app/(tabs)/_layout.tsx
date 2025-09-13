@@ -53,11 +53,11 @@ export default function TabLayout() {
   return (
     <View style={styles.wrapper}>
       {/* Admin Menu for admin users */}
-      {userProfile?.is_admin && (
+      {/*{userProfile?.is_admin && (
         <View style={styles.adminMenuContainer}>
           <AdminMenu position="topRight" />
         </View>
-      )}
+      )}*/}
       
 			{
 				isMobile ? (
@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   text: {
-    marginTop: 20,
+    marginTop:20,
     fontSize: 16,
     color: '#666',
   },

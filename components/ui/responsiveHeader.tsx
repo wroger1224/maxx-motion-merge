@@ -24,6 +24,7 @@ const height  = Dimensions.get('window').height * .2;
 const styles = StyleSheet.create({
 	headerBackground: {
 		height: height, 
+    
 	},
 
 }); 

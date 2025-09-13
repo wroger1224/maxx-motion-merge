@@ -1,11 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, ScrollView, TouchableOpacity, FlatList, Alert } from 'react-native';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { useUser } from '../../contexts/UserContext';
-import { router } from 'expo-router';
-import { supabase } from '@/lib/supabase';
-import { showAlert } from '../utils/showAlert';
+import React, { useState, useEffect } from "react";
+import {
+  StyleSheet,
+  View,
+  ScrollView,
+  TouchableOpacity,
+  FlatList,
+  Alert,
+} from "react-native";
+import { ThemedText } from "@/components/ThemedText";
+import { ThemedView } from "@/components/ThemedView";
+import { useUser } from "../../contexts/UserContext";
+import { router } from "expo-router";
+import { supabase } from "@/lib/supabase";
+import { showAlert } from "../utils/showAlert";
 
 // Define types for our data
 type Event = {
@@ -13,7 +20,7 @@ type Event = {
   name: string;
   start_date: string;
   end_date: string;
-  status: 'Upcoming' | 'Active' | 'Archive';
+  status: "Upcoming" | "Active" | "Archive";
 };
 
 type Team = {
@@ -26,17 +33,22 @@ export default function AdminSetupScreen() {
   const { userProfile, loading } = useUser();
   const [events, setEvents] = useState<Event[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
-  const [activeSection, setActiveSection] = useState<'events' | 'teams'>('events');
+  const [activeSection, setActiveSection] = useState<"events" | "teams">(
+    "events"
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
-  const [eventStats, setEventStats] = useState<{ [key: string]: { totalRegistrations: number, teamRegistrations: { [key: string]: number } } }>(
-    {}
-  );
+  const [eventStats, setEventStats] = useState<{
+    [key: string]: {
+      totalRegistrations: number;
+      teamRegistrations: { [key: string]: number };
+    };
+  }>({});
 
   // Redirect non-admin users
   React.useEffect(() => {
     if (!loading && userProfile && !userProfile.is_admin) {
-      router.replace('/(tabs)');
+      router.replace("/(tabs)");
     }
   }, [userProfile, loading]);
 
@@ -52,13 +64,13 @@ export default function AdminSetupScreen() {
     try {
       setIsLoading(true);
       const { data, error } = await supabase
-        .from('events')
-        .select('*')
-        .order('start_date', { ascending: false });
+        .from("events")
+        .select("*")
+        .order("start_date", { ascending: false });
 
       if (error) {
-        console.error('Error fetching events:', error);
-        showAlert('Error', 'Failed to load events');
+        console.error("Error fetching events:", error);
+        showAlert("Error", "Failed to load events");
         return;
       }
 
@@ -71,8 +83,8 @@ export default function AdminSetupScreen() {
         }
       }
     } catch (error) {
-      console.error('Unexpected error:', error);
-      showAlert('Error', 'An unexpected error occurred');
+      console.error("Unexpected error:", error);
+      showAlert("Error", "An unexpected error occurred");
     } finally {
       setIsLoading(false);
     }
@@ -83,20 +95,20 @@ export default function AdminSetupScreen() {
     try {
       setIsLoading(true);
       const { data, error } = await supabase
-        .from('teams')
-        .select('*')
-        .eq('event_id', eventId);
+        .from("teams")
+        .select("*")
+        .eq("event_id", eventId);
 
       if (error) {
-        console.error('Error fetching teams:', error);
-        showAlert('Error', 'Failed to load teams');
+        console.error("Error fetching teams:", error);
+        showAlert("Error", "Failed to load teams");
         return;
       }
 
       setTeams(data || []);
     } catch (error) {
-      console.error('Unexpected error:', error);
-      showAlert('Error', 'An unexpected error occurred');
+      console.error("Unexpected error:", error);
+      showAlert("Error", "An unexpected error occurred");
     } finally {
       setIsLoading(false);
     }
@@ -107,23 +119,23 @@ export default function AdminSetupScreen() {
     try {
       // Get total registrations for the event
       const { data: registrations, error: regError } = await supabase
-        .from('event_registrations')
-        .select('count')
-        .eq('event_id', eventId);
+        .from("event_registrations")
+        .select("count")
+        .eq("event_id", eventId);
 
       if (regError) {
-        console.error('Error fetching registrations:', regError);
+        console.error("Error fetching registrations:", regError);
         return;
       }
 
       // Get team registrations
       const { data: teams, error: teamError } = await supabase
-        .from('teams')
-        .select('id, team_name')
-        .eq('event_id', eventId);
+        .from("teams")
+        .select("id, team_name")
+        .eq("event_id", eventId);
 
       if (teamError) {
-        console.error('Error fetching teams:', teamError);
+        console.error("Error fetching teams:", teamError);
         return;
       }
 
@@ -132,51 +144,57 @@ export default function AdminSetupScreen() {
       if (teams) {
         for (const team of teams) {
           const { data: members, error: membersError } = await supabase
-            .from('team_members')
-            .select('count')
-            .eq('team_id', team.id);
+            .from("team_members")
+            .select("count")
+            .eq("team_id", team.id);
 
           if (membersError) {
-            console.error(`Error fetching members for team ${team.id}:`, membersError);
+            console.error(
+              `Error fetching members for team ${team.id}:`,
+              membersError
+            );
           } else if (members) {
             teamStats[team.id] = members[0]?.count || 0;
           }
         }
       }
 
-      setEventStats(prev => ({
+      setEventStats((prev) => ({
         ...prev,
         [eventId]: {
           totalRegistrations: registrations ? registrations[0]?.count || 0 : 0,
-          teamRegistrations: teamStats
-        }
+          teamRegistrations: teamStats,
+        },
       }));
     } catch (error) {
-      console.error('Error fetching stats:', error);
+      console.error("Error fetching stats:", error);
     }
   };
 
   // Change event status
-  const updateEventStatus = async (eventId: string, newStatus: 'Upcoming' | 'Active' | 'Archive') => {
+  const updateEventStatus = async (
+    eventId: string,
+    newStatus: "Upcoming" | "Active" | "Archive"
+  ) => {
     try {
       setIsLoading(true);
       const { error } = await supabase
-        .from('events')
+        .from("events")
         .update({ status: newStatus })
-        .eq('id', eventId);
+        .eq("id", eventId);
 
       if (error) {
-        console.error('Error updating event status:', error);
-        showAlert('Error', 'Failed to update event status');
+        console.error("Error updating event status:", error);
+        showAlert("Error", "Failed to update event status");
         return;
       }
 
       // Refresh events list
       await fetchEvents();
-      showAlert('Success', `Event status updated to ${newStatus}`);
+      showAlert("Success", `Event status updated to ${newStatus}`);
     } catch (error) {
-      console.error('Unexpected error:', error);
-      showAlert('Error', 'An unexpected error occurred');
+      console.error("Unexpected error:", error);
+      showAlert("Error", "An unexpected error occurred");
     } finally {
       setIsLoading(false);
     }
@@ -184,7 +202,7 @@ export default function AdminSetupScreen() {
 
   // Create new event
   const navigateToCreateEvent = () => {
-    router.push('/admin/create-event' as any);
+    router.push("/admin/create-event" as any);
   };
 
   // Edit existing event
@@ -212,7 +230,7 @@ export default function AdminSetupScreen() {
   const handleSelectEvent = (event: Event) => {
     setSelectedEvent(event);
     fetchTeamsForEvent(event.id);
-    setActiveSection('teams');
+    setActiveSection("teams");
   };
 
   if (loading) {
@@ -234,16 +252,19 @@ export default function AdminSetupScreen() {
         {/* Navigation tabs */}
         <View style={styles.tabs}>
           <TouchableOpacity
-            style={[styles.tab, activeSection === 'events' && styles.activeTab]}
-            onPress={() => setActiveSection('events')}
+            style={[styles.tab, activeSection === "events" && styles.activeTab]}
+            onPress={() => setActiveSection("events")}
           >
             <ThemedText>Events</ThemedText>
           </TouchableOpacity>
 
           {selectedEvent && (
             <TouchableOpacity
-              style={[styles.tab, activeSection === 'teams' && styles.activeTab]}
-              onPress={() => setActiveSection('teams')}
+              style={[
+                styles.tab,
+                activeSection === "teams" && styles.activeTab,
+              ]}
+              onPress={() => setActiveSection("teams")}
             >
               <ThemedText>Teams</ThemedText>
             </TouchableOpacity>
@@ -251,15 +272,17 @@ export default function AdminSetupScreen() {
         </View>
 
         {/* Events Section */}
-        {activeSection === 'events' && (
+        {activeSection === "events" && (
           <ThemedView style={styles.section}>
             <View style={styles.sectionHeader}>
-              <ThemedText type="subtitle">Event Management</ThemedText>
+              <ThemedText style={styles.title}>Event Management</ThemedText>
               <TouchableOpacity
                 style={styles.createButton}
                 onPress={navigateToCreateEvent}
               >
-                <ThemedText style={styles.createButtonText}>+ Create Event</ThemedText>
+                <ThemedText style={styles.createButtonText}>
+                  + Create Event
+                </ThemedText>
               </TouchableOpacity>
             </View>
 
@@ -271,54 +294,68 @@ export default function AdminSetupScreen() {
                 renderItem={({ item }) => (
                   <ThemedView style={styles.eventCard}>
                     <TouchableOpacity onPress={() => handleSelectEvent(item)}>
-                      <ThemedText style={styles.eventTitle}>{item.name}</ThemedText>
+                      <ThemedText style={styles.eventTitle}>
+                        {item.name}
+                      </ThemedText>
                       <View style={styles.eventDetails}>
                         <ThemedText>Status: {item.status}</ThemedText>
                         <ThemedText>
-                          {formatDate(item.start_date)} - {formatDate(item.end_date)}
+                          {formatDate(item.start_date)} -{" "}
+                          {formatDate(item.end_date)}
                         </ThemedText>
                       </View>
 
                       {eventStats[item.id] && (
                         <ThemedText style={styles.registrationStats}>
-                          Registrations: {eventStats[item.id].totalRegistrations}
+                          Registrations:{" "}
+                          {eventStats[item.id].totalRegistrations}
                         </ThemedText>
                       )}
 
-<View style={styles.actionButtons}>
-                        <TouchableOpacity 
-                          style={styles.actionButton} 
+                      <View style={styles.actionButtons}>
+                        <TouchableOpacity
+                          style={styles.actionButton}
                           onPress={() => navigateToEditEvent(item.id)}
                         >
-                          <ThemedText style={styles.actionButtonText}>Edit</ThemedText>
+                          <ThemedText style={styles.actionButtonText}>
+                            Edit
+                          </ThemedText>
                         </TouchableOpacity>
 
-                        <TouchableOpacity 
-                          style={styles.actionButton} 
+                        <TouchableOpacity
+                          style={styles.actionButton}
                           onPress={() => navigateToManageMilestones(item.id)}
                         >
-                          <ThemedText style={styles.actionButtonText}>Milestones</ThemedText>
+                          <ThemedText style={styles.actionButtonText}>
+                            Milestones
+                          </ThemedText>
                         </TouchableOpacity>
 
-                        <TouchableOpacity 
-                          style={styles.actionButton} 
-                          onPress={() => updateEventStatus(item.id, 'Upcoming')}
+                        <TouchableOpacity
+                          style={styles.actionButton}
+                          onPress={() => updateEventStatus(item.id, "Upcoming")}
                         >
-                          <ThemedText style={styles.actionButtonText}>Set Upcoming</ThemedText>
+                          <ThemedText style={styles.actionButtonText}>
+                            Set Upcoming
+                          </ThemedText>
                         </TouchableOpacity>
 
-                        <TouchableOpacity 
-                          style={styles.actionButton} 
-                          onPress={() => updateEventStatus(item.id, 'Active')}
+                        <TouchableOpacity
+                          style={styles.actionButton}
+                          onPress={() => updateEventStatus(item.id, "Active")}
                         >
-                          <ThemedText style={styles.actionButtonText}>Set Active</ThemedText>
+                          <ThemedText style={styles.actionButtonText}>
+                            Set Active
+                          </ThemedText>
                         </TouchableOpacity>
 
-                        <TouchableOpacity 
-                          style={styles.actionButton} 
-                          onPress={() => updateEventStatus(item.id, 'Archive')}
+                        <TouchableOpacity
+                          style={styles.actionButton}
+                          onPress={() => updateEventStatus(item.id, "Archive")}
                         >
-                          <ThemedText style={styles.actionButtonText}>Set Complete</ThemedText>
+                          <ThemedText style={styles.actionButtonText}>
+                            Set Complete
+                          </ThemedText>
                         </TouchableOpacity>
                       </View>
                     </TouchableOpacity>
@@ -327,21 +364,25 @@ export default function AdminSetupScreen() {
                 style={styles.list}
               />
             ) : (
-              <ThemedText style={styles.emptyText}>No events found. Create one to get started.</ThemedText>
+              <ThemedText style={styles.emptyText}>
+                No events found. Create one to get started.
+              </ThemedText>
             )}
           </ThemedView>
         )}
 
         {/* Teams Section */}
-        {activeSection === 'teams' && selectedEvent && (
+        {activeSection === "teams" && selectedEvent && (
           <ThemedView style={styles.section}>
             <View style={styles.sectionHeader}>
-              <ThemedText type="subtitle">Teams for {selectedEvent.name}</ThemedText>
+              <ThemedText>Teams for {selectedEvent.name}</ThemedText>
               <TouchableOpacity
                 style={styles.createButton}
                 onPress={() => navigateToCreateTeam(selectedEvent.id)}
               >
-                <ThemedText style={styles.createButtonText}>+ Add Team</ThemedText>
+                <ThemedText style={styles.createButtonText}>
+                  + Add Team
+                </ThemedText>
               </TouchableOpacity>
             </View>
 
@@ -352,20 +393,33 @@ export default function AdminSetupScreen() {
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }) => (
                   <ThemedView style={styles.teamCard}>
-                    <ThemedText style={styles.teamTitle}>{item.team_name}</ThemedText>
+                    <ThemedText style={styles.teamTitle}>
+                      {item.team_name}
+                    </ThemedText>
 
-                    {eventStats[selectedEvent.id]?.teamRegistrations[item.id] !== undefined && (
+                    {eventStats[selectedEvent.id]?.teamRegistrations[
+                      item.id
+                    ] !== undefined && (
                       <ThemedText style={styles.registrationStats}>
-                        Members: {eventStats[selectedEvent.id].teamRegistrations[item.id]}
+                        Members:{" "}
+                        {
+                          eventStats[selectedEvent.id].teamRegistrations[
+                            item.id
+                          ]
+                        }
                       </ThemedText>
                     )}
 
                     <View style={styles.actionButtons}>
                       <TouchableOpacity
                         style={styles.actionButton}
-                        onPress={() => router.push(`/admin/edit-team?id=${item.id}` as any)}
+                        onPress={() =>
+                          router.push(`/admin/edit-team?id=${item.id}` as any)
+                        }
                       >
-                        <ThemedText style={styles.actionButtonText}>Edit</ThemedText>
+                        <ThemedText style={styles.actionButtonText}>
+                          Edit
+                        </ThemedText>
                       </TouchableOpacity>
                     </View>
                   </ThemedView>
@@ -373,7 +427,9 @@ export default function AdminSetupScreen() {
                 style={styles.list}
               />
             ) : (
-              <ThemedText style={styles.emptyText}>No teams found for this event.</ThemedText>
+              <ThemedText style={styles.emptyText}>
+                No teams found for this event.
+              </ThemedText>
             )}
           </ThemedView>
         )}
@@ -391,13 +447,15 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 24,
   },
   title: {
     flex: 1,
+    fontSize: 24,
+    fontWeight: "bold",
   },
   section: {
     marginBottom: 24,
@@ -405,15 +463,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
   },
   tabs: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginBottom: 20,
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
     gap: 8,
   },
   tab: {
@@ -421,49 +479,49 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: "#ccc",
     minWidth: 100,
-    alignItems: 'center',
+    alignItems: "center",
   },
   activeTab: {
-    backgroundColor: '#0a7ea4',
+    backgroundColor: "#0a7ea4",
   },
   createButton: {
-    backgroundColor: '#0a7ea4',
+    backgroundColor: "#0a7ea4",
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 4,
   },
   createButtonText: {
-    color: 'white',
+    color: "white",
   },
   list: {
-    width: '100%',
+    width: "100%",
   },
   eventCard: {
     marginBottom: 12,
     padding: 12,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
   },
   eventTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 4,
   },
   eventDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 8,
   },
   actionButtons: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     marginTop: 8,
   },
   actionButton: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: "#f0f0f0",
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: 4,
@@ -472,26 +530,27 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     fontSize: 12,
+    color: "#000",
   },
   teamCard: {
     marginBottom: 12,
     padding: 12,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
   },
   teamTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 4,
   },
   registrationStats: {
-    fontStyle: 'italic',
+    fontStyle: "italic",
     marginTop: 4,
   },
   emptyText: {
-    fontStyle: 'italic',
-    textAlign: 'center',
+    fontStyle: "italic",
+    textAlign: "center",
     marginTop: 12,
   },
-}); 
+});
