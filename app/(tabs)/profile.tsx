@@ -23,6 +23,8 @@ import { IconSymbol } from "@/components/ui/IconSymbol";
 import { Image } from "react-native";
 import { ResponsiveHeader } from '@/components/ui/responsiveHeader';
 import { showAlert } from '../utils/showAlert';
+import { AdminMenu } from "@/components/AdminMenu";
+
 
 type UserActivity = {
   id: string;
@@ -244,21 +246,25 @@ export default function ProfileScreen() {
     );
   }
 
+  const handleSignOut = () => {
+    void signOut();
+  };
+
   return (
     <View style={styles.container}>
-      <ResponsiveHeader
-        source={require('@/assets/images/gym-equipment.png')}
-				style={{height: HEADER_HEIGHT}}
-      >
+      <ResponsiveHeader source={require("@/assets/images/gym-equipment.png")}>
         <LinearGradient
           colors={[Colors.light.blue, "rgba(0, 0, 0, 0.7)"]}
           style={styles.headerOverlay}
         >
           <View style={styles.header}>
-            <ThemedText variant="h1" style={styles.headerTitle}>
-              Profile
-            </ThemedText>
-						<View style={styles.profileSection}>
+            <ThemedText style={styles.headerTitle}>MAXX Motion</ThemedText>
+            <TouchableOpacity onPress={handleSignOut}>
+              <ThemedText style={styles.headerButton}>Sign Out</ThemedText>
+            </TouchableOpacity>
+            <AdminMenu />
+          </View>
+          <View style={styles.profileSection}>
 							<View style={styles.avatarContainer}>
 								{profile?.avatar_url ? (
 									<Image
@@ -277,13 +283,6 @@ export default function ProfileScreen() {
 								{profile?.full_name || "User"}
 							</ThemedText>
             <ThemedText style={styles.userEmail}>{user?.email}</ThemedText>
-          </View>
-            <TouchableOpacity
-              onPress={signOut}
-              style={styles.logoutButton}
-            >
-              <ThemedText style={styles.logoutText}>Sign Out</ThemedText>
-            </TouchableOpacity>
           </View>
         </LinearGradient>
       </ResponsiveHeader>
@@ -401,15 +400,24 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
     padding: 16,
+    paddingBottom:5,
     paddingTop: Platform.OS === "ios" ? 60 : 16,
-		paddingLeft: 16,
-		paddingRight: 16,
+		paddingHorizontal:16,
     zIndex: 1,
   },
   headerTitle: {
     color: '#fff',
     fontSize: 20,
     fontWeight: '600',
+  },
+  headerButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: Colors.light.redOrange,
+    borderRadius: 8,
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
   },
   userIcon: {
     width: 32,
@@ -434,17 +442,6 @@ const styles = StyleSheet.create({
 		color: '#fff',
     textAlign: 'center',
     marginBottom: 8,
-  },
-  logoutButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    backgroundColor: Colors.light.redOrange,
-    borderRadius: 8,
-  },
-  logoutText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
   },
   profileSection: {
     alignItems: "center",
@@ -489,6 +486,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    marginTop: 16,
+    marginHorizontal:16,
+    borderRadius:8,
   },
   tab: {
     flex: 1,

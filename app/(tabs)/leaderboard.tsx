@@ -23,6 +23,7 @@ import { ThemedView } from "@/components/ThemedView";
 import ActivityItem from "@/components/ActivityItem";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { ResponsiveHeader } from '@/components/ui/responsiveHeader';
+import { Header } from "@/components/ui/header";
 
 interface TeamRankingItemProps {
   rank: number;
@@ -160,7 +161,7 @@ const TeamMemberItem = ({
 
 export default function LeaderboardScreen() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [showAllTeams, setShowAllTeams] = useState(false);
   const [showAllMembers, setShowAllMembers] = useState(false);
   const [activeTab, setActiveTab] = useState<"team" | "user">("team");
@@ -822,29 +823,13 @@ export default function LeaderboardScreen() {
     );
   }
 
+  const handleSignOut = () => {
+    void signOut();
+  };
+
   return (
     <View style={styles.container}>
-      <ResponsiveHeader
-        source={require('@/assets/images/gym-equipment.png')}
-      >
-				<LinearGradient
-					colors={[Colors.light.blue, "rgba(0, 0, 0, 0.7)"]}
-					style={styles.headerOverlay}
-        >
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>MAXX Motion</Text>
-            <View style={styles.userIcon}>
-              <Text style={styles.userIconText}>U</Text>
-            </View>
-          </View>
-          <View style={styles.headerContent}>
-            <Text style={styles.pageTitle}>Leaderboard</Text>
-            <Text style={styles.tagline}>
-              Track your motion. Reach your potential.
-            </Text>
-          </View>
-        </LinearGradient>
-      </ResponsiveHeader>
+      <Header signOut={handleSignOut} title="Leaderboard" tagline="Track your motion. Reach your potential." />
 
       <View style={styles.tabContainer}>
         <TouchableOpacity
@@ -1380,6 +1365,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    marginTop: 16,
+    marginHorizontal:16,
+    borderRadius:8,
   },
 
   tab: {
@@ -1406,7 +1394,7 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    backgroundColor: "#FFF5F5",
+    backgroundColor: "#FFF",
     borderRadius: 12,
     flexDirection: "row",
     justifyContent: "space-between",
@@ -1419,15 +1407,15 @@ const styles = StyleSheet.create({
   challengeTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#C41E3A",
+    color: Colors.light.redOrange,
   },
   challengeDates: {
     fontSize: 14,
-    color: "#C41E3A",
+    color: "#000",
     opacity: 0.8,
   },
   activeTag: {
-    backgroundColor: "#C41E3A",
+    backgroundColor: Colors.light.redOrange,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
@@ -1448,7 +1436,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: "#F5F5F5",
+    backgroundColor: "#FFF",
   },
   activeFilter: {
     backgroundColor: "#E3F2FD",
@@ -1474,6 +1462,8 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    marginHorizontal:16,
+    borderRadius:8,
   },
   viewMoreButton: {
     padding: 16,
@@ -1839,7 +1829,7 @@ const styles = StyleSheet.create({
   },
   weekSelectorText: {
     fontSize: 14,
-    color: "#2196F3",
+    color: "#000",
     fontWeight: "500",
     marginHorizontal: 16,
   },
