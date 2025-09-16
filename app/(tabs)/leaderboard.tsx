@@ -24,6 +24,7 @@ import ActivityItem from "@/components/ActivityItem";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { ResponsiveHeader } from '@/components/ui/responsiveHeader';
 import { Header } from "@/components/ui/header";
+import { parseDateFromStorage, formatDateWithOptions } from '../utils/dateUtils';
 
 interface TeamRankingItemProps {
   rank: number;
@@ -746,14 +747,13 @@ export default function LeaderboardScreen() {
 
   // Format date for display
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    return formatDateWithOptions(dateString, { month: "short", day: "numeric" });
   };
 
   // Calculate days remaining in event
   const calculateDaysRemaining = (endDate: string) => {
     const today = new Date();
-    const end = new Date(endDate);
+    const end = parseDateFromStorage(endDate);
     const diffTime = end.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays > 0 ? diffDays : 0;

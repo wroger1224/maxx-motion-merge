@@ -24,6 +24,7 @@ import { Image } from "react-native";
 import { ResponsiveHeader } from '@/components/ui/responsiveHeader';
 import { showAlert } from '../utils/showAlert';
 import { AdminMenu } from "@/components/AdminMenu";
+import { formatDateForDisplay } from '../utils/dateUtils';
 
 
 type UserActivity = {
@@ -193,7 +194,7 @@ export default function ProfileScreen() {
           {activity.activity_type}
         </ThemedText>
         <ThemedText style={styles.cardDate}>
-          {new Date(activity.activity_date).toLocaleDateString()}
+          {formatDateForDisplay(activity.activity_date)}
         </ThemedText>
       </View>
       <View style={styles.cardContent}>

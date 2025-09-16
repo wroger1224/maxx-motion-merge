@@ -30,6 +30,12 @@ import { router } from "expo-router";
 import { showAlert, showAlertWithButtons } from "../utils/showAlert";
 import TrackerService from "@/lib/services/tracker";
 import { Header } from "@/components/ui/header";
+import {
+  formatDateForStorage,
+  formatDateForDisplay,
+  parseDateFromStorage,
+  getLocalDateString
+} from "../utils/dateUtils";
 
 // Types for our Supabase data
 type ActivityType = {
@@ -152,7 +158,7 @@ function ActivityReview({
   };
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString();
+    return formatDateForDisplay(dateStr);
   };
 
   if (loading) {
@@ -555,7 +561,7 @@ export default function Activity() {
           activity_type: manualEntry.activity_type,
           activity_type_linked: manualEntry.activity_type_linked,
           activity_minutes: parseInt(manualEntry.activity_minutes),
-          activity_date: manualEntry.activity_date.toISOString().split("T")[0],
+          activity_date: formatDateForStorage(manualEntry.activity_date),
           activity_source: "manual",
         },
       ]);
@@ -601,7 +607,7 @@ export default function Activity() {
       activity_type_linked: activity.activity_type_linked,
       activity_type_emoji: activity.activity_type_emoji || "",
       activity_minutes: activity.activity_minutes.toString(),
-      activity_date: new Date(activity.activity_date),
+      activity_date: parseDateFromStorage(activity.activity_date),
       activity_source: activity.activity_source,
     });
 
@@ -624,7 +630,7 @@ export default function Activity() {
           activity_type: manualEntry.activity_type,
           activity_type_linked: manualEntry.activity_type_linked,
           activity_minutes: parseInt(manualEntry.activity_minutes),
-          activity_date: manualEntry.activity_date.toISOString().split("T")[0],
+          activity_date: formatDateForStorage(manualEntry.activity_date),
         })
         .eq("id", currentEditActivity.id)
         .eq("user_id", user.id); // Additional safety check
@@ -707,7 +713,7 @@ export default function Activity() {
         <TextInput
           style={styles.input}
           placeholder="YYYY-MM-DD"
-          value={manualEntry.activity_date.toISOString().split("T")[0]}
+          value={getLocalDateString(manualEntry.activity_date)}
           onChange={(e) => {
             const dateStr = e.nativeEvent.text;
             const date = new Date(dateStr);

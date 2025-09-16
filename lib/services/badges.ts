@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { getDayOfWeek, isWeekend, getHourFromTimestamp } from '@/app/utils/dateUtils';
 
 interface Activity {
     activity_minutes: number;
@@ -135,23 +136,20 @@ export const calculateBadgeProgress = async (userId: string): Promise<void> => {
 
             case 'Time':
                 if (badge.name.includes('Early Bird')) {
-                    const earlyWorkouts = activities.filter((a: Activity) => {
-                        const hour = new Date(a.activity_date).getHours();
-                        return hour < 7;
-                    }).length;
-                    progress = Math.min(badge.total, earlyWorkouts);
+                    // Note: activity_date doesn't include time, so this won't work properly
+                    // Would need activity_timestamp field to work correctly
+                    // For now, this will always return 0
+                    progress = 0;
                 } else if (badge.name.includes('Weekend Warrior')) {
                     const weekendWorkouts = activities.filter((a: Activity) => {
-                        const day = new Date(a.activity_date).getDay();
-                        return day === 0 || day === 6;
+                        return isWeekend(a.activity_date);
                     }).length;
                     progress = Math.min(badge.total, weekendWorkouts);
                 } else if (badge.name.includes('Night Owl')) {
-                    const nightWorkouts = activities.filter((a: Activity) => {
-                        const hour = new Date(a.activity_date).getHours();
-                        return hour >= 22;
-                    }).length;
-                    progress = Math.min(badge.total, nightWorkouts);
+                    // Note: activity_date doesn't include time, so this won't work properly
+                    // Would need activity_timestamp field to work correctly
+                    // For now, this will always return 0
+                    progress = 0;
                 }
                 break;
         }

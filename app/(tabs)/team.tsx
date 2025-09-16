@@ -31,6 +31,7 @@ import MemberDetails from "@/app/screens/MemberDetails";
 import { ResponsiveHeader } from "@/components/ui/responsiveHeader";
 import { showAlert } from "../utils/showAlert";
 import { Header } from "@/components/ui/header";
+import { getLocalDateString } from '../utils/dateUtils';
 
 type TeamMember = {
   id: string; // UUID from team_members table
@@ -513,8 +514,8 @@ export default function TeamScreen() {
           .select("activity_minutes, activity_date, user_id")
           .eq("event_id", userTeam.event_id)
           .in("user_id", memberUserIds)
-          .gte("activity_date", currentWeekStart.toISOString().split("T")[0])
-          .lte("activity_date", today.toISOString().split("T")[0]);
+          .gte("activity_date", getLocalDateString(currentWeekStart))
+          .lte("activity_date", getLocalDateString(today));
         const currentWeekMinutes =
           currentWeekActivities?.reduce(
             (sum, a) => sum + a.activity_minutes,
@@ -526,8 +527,8 @@ export default function TeamScreen() {
           .select("activity_minutes, activity_date, user_id")
           .eq("event_id", userTeam.event_id)
           .in("user_id", memberUserIds)
-          .gte("activity_date", prevWeekStart.toISOString().split("T")[0])
-          .lte("activity_date", prevWeekEnd.toISOString().split("T")[0]);
+          .gte("activity_date", getLocalDateString(prevWeekStart))
+          .lte("activity_date", getLocalDateString(prevWeekEnd));
         const prevWeekMinutes =
           prevWeekActivities?.reduce((sum, a) => sum + a.activity_minutes, 0) ||
           0;

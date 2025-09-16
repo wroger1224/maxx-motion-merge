@@ -25,6 +25,12 @@ import { ThemedText } from "@/components/ThemedText";
 import { ResponsiveHeader } from "@/components/ui/responsiveHeader";
 import { useAuth } from "@/lib/auth";
 import { Header } from "@/components/ui/header";
+import {
+  parseDateFromStorage,
+  getDayOfWeek,
+  isWeekend,
+  getHourFromTimestamp
+} from '../utils/dateUtils';
 
 const WIDTH = Dimensions.get("window").width;
 const BADGE_SIZE = WIDTH > 768 ? (WIDTH - 48) / 3 : WIDTH - 48;
@@ -298,8 +304,8 @@ export default function AchievementsScreen() {
         const achievedDate = achieved
           ? activities?.sort(
               (a, b) =>
-                new Date(b.activity_date).getTime() -
-                new Date(a.activity_date).getTime()
+                parseDateFromStorage(b.activity_date).getTime() -
+                parseDateFromStorage(a.activity_date).getTime()
             )[0]?.activity_date
           : undefined;
 
@@ -438,20 +444,18 @@ export default function AchievementsScreen() {
       progress["9"] = Math.min(10, yogaCount); // Yogi's Badge
 
       // Time-based badges
-      const earlyWorkouts = activities.filter((a) => {
-        const hour = new Date(a.activity_date).getHours();
-        return hour < 7;
-      }).length;
+      // Note: activity_date doesn't include time, so time-based badges won't work properly
+      // These would need an activity_timestamp field to work correctly
+      // For now, this will always return 0
+      const earlyWorkouts = 0;
 
       const weekendWorkouts = activities.filter((a) => {
-        const day = new Date(a.activity_date).getDay();
-        return day === 0 || day === 6;
+        return isWeekend(a.activity_date);
       }).length;
 
-      const nightWorkouts = activities.filter((a) => {
-        const hour = new Date(a.activity_date).getHours();
-        return hour >= 22;
-      }).length;
+      // Note: activity_date doesn't include time, so time-based badges won't work properly
+      // For now, this will always return 0
+      const nightWorkouts = 0;
 
       progress["10"] = Math.min(5, earlyWorkouts); // Early Bird
       progress["11"] = Math.min(5, weekendWorkouts); // Weekend Warrior
@@ -530,7 +534,7 @@ export default function AchievementsScreen() {
       );
 
       // Get the most recent activity date
-      const mostRecentActivity = new Date(activities[0].activity_date);
+      const mostRecentActivity = parseDateFromStorage(activities[0].activity_date);
 
       // Debug logging for date comparison
       console.log("Date Comparison Details:", {
@@ -571,7 +575,7 @@ export default function AchievementsScreen() {
 
       // Check consecutive days
       for (let i = 1; i < activities.length; i++) {
-        const activityDate = new Date(activities[i].activity_date);
+        const activityDate = parseDateFromStorage(activities[i].activity_date);
         const dayStart = new Date(
           currentDate.getFullYear(),
           currentDate.getMonth(),

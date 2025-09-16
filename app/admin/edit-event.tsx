@@ -6,6 +6,12 @@ import { useUser } from '../../contexts/UserContext';
 import { router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { showAlert, showAlertWithButtons } from '../utils/showAlert';
+import {
+  formatDateForInput as formatDateInput,
+  formatDateForStorage,
+  formatDateForDisplay,
+  parseDateFromStorage
+} from '../utils/dateUtils';
 
 type Milestone = {
   id: string;
@@ -87,8 +93,8 @@ export default function EditEventScreen() {
       
       if (data) {
         setEventName(data.name);
-        setStartDate(new Date(data.start_date));
-        setEndDate(new Date(data.end_date));
+        setStartDate(parseDateFromStorage(data.start_date));
+        setEndDate(parseDateFromStorage(data.end_date));
         setEventYear(data.event_year?.toString() || new Date().getFullYear().toString());
         setStatus(data.status);
       }
@@ -194,9 +200,8 @@ export default function EditEventScreen() {
   };
 
   const formatDateForInput = (date: Date) => {
-    // Adjust for timezone to prevent off-by-one errors
-    const localDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000));
-    return localDate.toISOString().split('T')[0]; // Returns YYYY-MM-DD format
+    // Use centralized date utility to avoid timezone issues
+    return formatDateInput(date);
   };
 
   const handleAddMilestone = () => {
@@ -299,8 +304,8 @@ export default function EditEventScreen() {
         .from('events')
         .update({
           name: eventName,
-          start_date: startDate.toISOString(),
-          end_date: endDate.toISOString(),
+          start_date: formatDateForStorage(startDate),
+          end_date: formatDateForStorage(endDate),
           status: status,
           event_year: parseInt(eventYear)
         })

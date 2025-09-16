@@ -17,6 +17,7 @@ import { Colors } from "@/constants/Colors";
 import { Layout, Spacing, CommonStyles } from "@/constants/Styles";
 
 import { AdminMenu } from "@/components/AdminMenu";
+import { formatDateForDisplay } from '../utils/dateUtils';
 
 import { ResponsiveHeader } from "@/components/ui/responsiveHeader";
 import { supabase } from "@/lib/supabase";
@@ -342,7 +343,7 @@ export default function DashboardScreen() {
         (recentActs || []).map((a) => ({
           id: a.id,
           type: a.activity_type,
-          time: new Date(a.activity_date).toLocaleDateString(),
+          time: formatDateForDisplay(a.activity_date),
           duration: a.activity_minutes,
           source: a.activity_source,
           color: "#4CAF50", // You can enhance this by mapping activity types to colors
