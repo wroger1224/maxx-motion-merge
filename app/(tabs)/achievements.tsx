@@ -684,41 +684,25 @@ export default function AchievementsScreen() {
   };
 
   const renderBadge = ({ item, index }: { item: Badge; index: number }) => {
-    const scaleAnim = new Animated.Value(1);
     const progress = badgeProgress[item.id] || 0;
     const isUnlocked = progress >= item.total;
     const categoryColor = getCategoryColor(item.category);
 
-    const onPressIn = () => {
-      Animated.spring(scaleAnim, {
-        toValue: 0.95,
-        friction: 5,
-        useNativeDriver: true,
-      }).start();
-    };
-
-    const onPressOut = () => {
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        friction: 5,
-        useNativeDriver: true,
-      }).start();
+    const onPress = () => {
       setSelectedBadge({ ...item, isUnlocked, progress });
       setModalVisible(true);
     };
 
     return (
       <TouchableOpacity
-        onPressIn={onPressIn}
-        onPressOut={onPressOut}
-        activeOpacity={1}
+        onPress={onPress}
+        activeOpacity={0.8}
         style={styles.badgeContainer}
       >
-        <Animated.View
+        <View
           style={[
             styles.badge,
             isUnlocked ? styles.badgeUnlocked : styles.badgeLocked,
-            { transform: [{ scale: scaleAnim }] },
           ]}
         >
           {isUnlocked && (
@@ -759,7 +743,7 @@ export default function AchievementsScreen() {
               { backgroundColor: categoryColor },
             ]}
           />
-        </Animated.View>
+        </View>
       </TouchableOpacity>
     );
   };
