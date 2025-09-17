@@ -29,6 +29,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [initialized, setInitialized] = useState(false);
   const [loading, setLoading] = useState(true);
+  const trackerSettingsService = new TrackerSettingsService();
+
+  // Automatic sync on login
+  const performLoginSync = async (userId: string) => {
+    try {
+      console.log("🔄 Starting automatic sync on login for user:", userId);
+
+      // Get user's tracker settings
+      const settings = await trackerSettingsService.getTrackerSettings(userId);
+
+      if (!settings?.connected_tracker) {
+        console.log("🔄 No tracker connected, skipping sync");
+        return;
+      }
+
+      // Get current event for sync
+      const today = new Date().toISOString().split("T")[0];
+      const { data: currentEventData } = await supabase
+        .from("events")
+        .select("*")
+        .lte("start_date", today)
+        .gte("end_date", today)
+        .order("start_date", { ascending: false })
+        .limit(1);
+
+      if (!currentEventData || currentEventData.length === 0) {
+        console.log("🔄 No current event found, skipping sync");
+        return;
+      }
+
+      const currentEvent = currentEventData[0];
+
+      // Perform sync
+      const result = await trackerSettingsService.syncActivities(userId, currentEvent.id);
+
+      if (result.success) {
+        console.log(`🔄 Login sync completed: ${result.activitiesSynced} activities synced`);
+      } else {
+        console.log("🔄 Login sync failed:", result.error);
+      }
+    } catch (error) {
+      console.error("🔄 Error during login sync:", error);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -54,6 +98,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (data.session?.user) {
           console.log("🔒 User authenticated:", data.session.user.email);
+          // Trigger automatic sync on app load if user is already logged in
+          performLoginSync(data.session.user.id).catch(error => {
+            console.error("🔄 Background sync error on app load:", error);
+          });
         }
       } catch (error) {
         console.error('🔒 Error initializing auth:', error);
@@ -82,6 +130,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           if (event === 'SIGNED_IN') {
             console.log("🔒 User signed in:", newSession?.user?.email);
+            // Trigger automatic sync on login
+            if (newSession?.user?.id) {
+              // Run sync in background (don't await to avoid blocking UI)
+              performLoginSync(newSession.user.id).catch(error => {
+                console.error("🔄 Background sync error:", error);
+              });
+            }
           } else if (event === 'SIGNED_OUT') {
             console.log("🔒 User signed out");
           }
