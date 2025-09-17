@@ -19,6 +19,11 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import { showAlert } from "../utils/showAlert";
 import { Colors } from "@/constants/Colors";
+import {
+  getLocalDateString,
+  parseDateFromStorage,
+  formatDateForDisplay
+} from '../utils/dateUtils';
 
 // Type definitions
 type Event = {
@@ -263,8 +268,8 @@ export default function AdminReportsScreen() {
         .from("activities")
         .select("user_id, activity_minutes, activity_date")
         .eq("event_id", selectedEvent.id)
-        .gte("activity_date", startOfWeek.toISOString().split("T")[0])
-        .lte("activity_date", endOfWeek.toISOString().split("T")[0]);
+        .gte("activity_date", getLocalDateString(startOfWeek))
+        .lte("activity_date", getLocalDateString(endOfWeek));
 
       if (activitiesError) {
         console.error("Error fetching activities:", activitiesError);
@@ -458,7 +463,7 @@ export default function AdminReportsScreen() {
         );
 
         // Track latest date
-        const activityDate = new Date(activity.activity_date || new Date());
+        const activityDate = parseDateFromStorage(activity.activity_date || getLocalDateString(new Date()));
         const currentLatest = userLatestDate.get(activity.user_id);
 
         if (!currentLatest || activityDate > currentLatest) {

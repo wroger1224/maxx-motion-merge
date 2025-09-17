@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { supabase } from './supabase';
 import { Session, User } from '@supabase/supabase-js';
+import { router } from 'expo-router';
 
 type AuthContextProps = {
   user: User | null;
@@ -151,14 +152,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     console.log("🔒 Attempting to sign out");
     setLoading(true);
-    
+
     try {
       const { error } = await supabase.auth.signOut();
-      
+
       if (error) {
         console.error("🔒 Sign out error:", error.message);
       } else {
         console.log("🔒 Sign out successful");
+        // Navigate to login page after successful signout
+        router.replace('/login');
       }
     } catch (error) {
       console.error("🔒 Unexpected sign out error:", error);

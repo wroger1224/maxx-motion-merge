@@ -7,6 +7,11 @@ import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { showAlert } from '../utils/showAlert';
+import {
+  formatDateForInput as formatDateInput,
+  formatDateForStorage,
+  formatDateForDisplay
+} from '../utils/dateUtils';
 
 type Milestone = {
   id: string;
@@ -108,9 +113,8 @@ export default function CreateEventScreen() {
   };
 
   const formatDateForInput = (date: Date) => {
-    // Adjust for timezone to prevent off-by-one errors
-    const localDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000));
-    return localDate.toISOString().split('T')[0]; // Returns YYYY-MM-DD format
+    // Use centralized date utility to avoid timezone issues
+    return formatDateInput(date);
   };
 
   const handleAddMilestone = () => {
@@ -258,8 +262,8 @@ export default function CreateEventScreen() {
         .from('events')
         .insert({
           name: eventName,
-          start_date: startDate.toISOString(),
-          end_date: endDate.toISOString(),
+          start_date: formatDateForStorage(startDate),
+          end_date: formatDateForStorage(endDate),
           status: 'Upcoming',
           event_year: parseInt(eventYear)
         })

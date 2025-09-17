@@ -1,6 +1,7 @@
 import { Platform, NativeModules } from 'react-native';
 import * as Device from 'expo-device';
 import { supabase } from '../supabase';
+import { getLocalDateString } from '@/app/utils/dateUtils';
 
 // Import react-native-health - try both default and named exports
 let AppleHealthKit: any;
@@ -240,7 +241,7 @@ class TrackerService {
             activity_type: activityMapping.name,
             activity_type_linked: activityMapping.id,
             activity_minutes: Math.round(workout.duration / 60),
-            activity_date: new Date(workout.start).toISOString().split('T')[0],
+            activity_date: getLocalDateString(new Date(workout.start)),
             activity_source: 'apple_health',
             external_activity_id: externalId,
             calories: workout.calories || 0,
