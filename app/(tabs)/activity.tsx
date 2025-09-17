@@ -93,9 +93,14 @@ function ActivityReview({
   }>({});
 
   useEffect(() => {
-    fetchUserActivities();
     fetchActivityTypes();
-  }, [refreshTrigger]);
+  }, []);
+
+  useEffect(() => {
+    if (Object.keys(activityTypes).length > 0) {
+      fetchUserActivities();
+    }
+  }, [refreshTrigger, activityTypes]);
 
   const fetchActivityTypes = async () => {
     try {
@@ -861,27 +866,10 @@ export default function Activity() {
             >
               <Text style={styles.actionButtonText}>Connect Tracker</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => {
-                // Reset the manual entry form when opening it from scratch
-                setManualEntry({
-                  activity_type: "",
-                  activity_type_linked: "",
-                  activity_type_emoji: "",
-                  activity_minutes: "",
-                  activity_date: new Date(),
-                  activity_source: "manual",
-                });
-                setManualEntryModalVisible(true);
-              }}
-            >
-              <Text style={styles.actionButtonText}>Manual Entry</Text>
-            </TouchableOpacity>
           </View>
 
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Add By Activity Type</Text>
+            <Text style={styles.sectionTitle}>Add Activity</Text>
           </View>
 
           <ScrollView style={styles.content}>
@@ -894,21 +882,37 @@ export default function Activity() {
                 {error}
               </Text>
             ) : (
-              activityTypes.map((type) => (
+              <>
+                {activityTypes.map((type) => (
+                  <TouchableOpacity
+                    key={type.id}
+                    style={styles.categoryItem}
+                    onPress={() =>
+                      navigateToWorkout(type.id, type.type_name, type.type_emoji)
+                    }
+                  >
+                    <View style={styles.categoryIconContainer}>
+                      <Text style={styles.categoryIcon}>{type.type_emoji}</Text>
+                    </View>
+                    <Text style={styles.categoryName}>{type.type_name}</Text>
+                    <Text style={styles.chevron}>›</Text>
+                  </TouchableOpacity>
+                ))}
+
+                {/* Other Activity Option */}
                 <TouchableOpacity
-                  key={type.id}
                   style={styles.categoryItem}
                   onPress={() =>
-                    navigateToWorkout(type.id, type.type_name, type.type_emoji)
+                    navigateToWorkout("other", "Other", "🏃‍♂️")
                   }
                 >
                   <View style={styles.categoryIconContainer}>
-                    <Text style={styles.categoryIcon}>{type.type_emoji}</Text>
+                    <Text style={styles.categoryIcon}>🏃‍♂️</Text>
                   </View>
-                  <Text style={styles.categoryName}>{type.type_name}</Text>
+                  <Text style={styles.categoryName}>Other</Text>
                   <Text style={styles.chevron}>›</Text>
                 </TouchableOpacity>
-              ))
+              </>
             )}
           </ScrollView>
         </>
@@ -989,12 +993,6 @@ export default function Activity() {
                 <Text style={styles.selectedActivityName}>
                   {manualEntry.activity_type}
                 </Text>
-                <TouchableOpacity
-                  style={styles.changeButton}
-                  onPress={() => setActivityTypeModalVisible(true)}
-                >
-                  <Text style={styles.changeButtonText}>Change</Text>
-                </TouchableOpacity>
               </View>
             ) : (
               <Pressable
@@ -1068,6 +1066,20 @@ export default function Activity() {
                   <Text style={styles.trackerName}>{type.type_name}</Text>
                 </Pressable>
               ))}
+
+              {/* Other Activity Option */}
+              <Pressable
+                style={({ pressed }) => [
+                  styles.trackerOption,
+                  pressed && styles.trackerOptionPressed,
+                ]}
+                onPress={() =>
+                  handleActivityTypeSelection("other", "Other", "🏃‍♂️")
+                }
+              >
+                <Text style={styles.trackerIcon}>🏃‍♂️</Text>
+                <Text style={styles.trackerName}>Other</Text>
+              </Pressable>
             </ScrollView>
             <Button
               label="Cancel"
@@ -1099,12 +1111,6 @@ export default function Activity() {
                 <Text style={styles.selectedActivityName}>
                   {manualEntry.activity_type}
                 </Text>
-                <TouchableOpacity
-                  style={styles.changeButton}
-                  onPress={() => setActivityTypeModalVisible(true)}
-                >
-                  <Text style={styles.changeButtonText}>Change</Text>
-                </TouchableOpacity>
               </View>
             ) : (
               <Pressable
