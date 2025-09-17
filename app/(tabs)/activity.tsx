@@ -477,32 +477,22 @@ export default function Activity() {
     showAlertWithButtons(
       "Remove Tracker",
       "Are you sure you want to remove the connected tracker? You can reconnect it anytime.",
-      [
-        {
-          text: "Cancel",
-          style: "cancel"
-        },
-        {
-          text: "Remove",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const success = await trackerSettingsService.disconnectTracker(user.id);
+      async () => {
+        try {
+          const success = await trackerSettingsService.disconnectTracker(user.id);
 
-              if (success) {
-                showSuccessToast("Tracker disconnected successfully");
-                // Reload tracker settings to update UI
-                await loadTrackerSettings();
-              } else {
-                showAlert("Error", "Failed to disconnect tracker. Please try again.");
-              }
-            } catch (error) {
-              console.error("Error removing tracker:", error);
-              showAlert("Error", "Failed to disconnect tracker. Please try again.");
-            }
+          if (success) {
+            showSuccessToast("Tracker disconnected successfully");
+            // Reload tracker settings to update UI
+            await loadTrackerSettings();
+          } else {
+            showAlert("Error", "Failed to disconnect tracker. Please try again.");
           }
+        } catch (error) {
+          console.error("Error removing tracker:", error);
+          showAlert("Error", "Failed to disconnect tracker. Please try again.");
         }
-      ]
+      }
     );
   };
 
