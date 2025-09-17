@@ -746,71 +746,6 @@ export default function Activity() {
     }
   };
 
-  // Helper to render the event banner
-  const renderEventBanner = () => {
-    if (currentEvent) {
-      if (!hasActivities) {
-        // If there's a current event but user has no activities, show "Start Your Journey"
-        return (
-          <View style={styles.challengeCard}>
-            <View style={styles.challengeInfo}>
-              <Text style={styles.challengeTitle}>Start Your Journey!</Text>
-              <Text style={styles.challengeDates}>
-                Add some data to start scoring points for {currentEvent.name}
-              </Text>
-            </View>
-            <View style={styles.activeTag}>
-              <Text style={styles.activeTagText}>NEW</Text>
-            </View>
-          </View>
-        );
-      }
-
-      // User has activities for current event, show regular event banner
-      return (
-        <View style={styles.challengeCard}>
-          <View style={styles.challengeInfo}>
-            <Text style={styles.challengeTitle}>{currentEvent.name}</Text>
-            <Text style={styles.challengeDates}>
-              Active until{" "}
-              {new Date(currentEvent.end_date).toLocaleDateString()}
-            </Text>
-          </View>
-          <View style={styles.activeTag}>
-            <Text style={styles.activeTagText}>ACTIVE</Text>
-          </View>
-        </View>
-      );
-    } else if (upcomingEvent) {
-      return (
-        <View style={styles.challengeCard}>
-          <View style={styles.challengeInfo}>
-            <Text style={styles.challengeTitle}>{upcomingEvent.name}</Text>
-            <Text style={styles.challengeDates}>
-              Starts {new Date(upcomingEvent.start_date).toLocaleDateString()}
-            </Text>
-          </View>
-          <View style={styles.activeTag}>
-            <Text style={styles.activeTagText}>UPCOMING</Text>
-          </View>
-        </View>
-      );
-    } else {
-      return (
-        <View style={styles.challengeCard}>
-          <View style={styles.challengeInfo}>
-            <Text style={styles.challengeTitle}>Start Your Journey!</Text>
-            <Text style={styles.challengeDates}>
-              Add some data to start scoring points
-            </Text>
-          </View>
-          <View style={styles.activeTag}>
-            <Text style={styles.activeTagText}>NEW</Text>
-          </View>
-        </View>
-      );
-    }
-  };
 
   // New states for main page tabs
   const [activeTab, setActiveTab] = useState("add");
@@ -854,8 +789,6 @@ export default function Activity() {
         </TouchableOpacity>
       </View>
 
-      {/* Event banner - show in both tabs */}
-      {renderEventBanner()}
 
       {/* Add Activity Tab Content */}
       {activeTab === "add" && (
@@ -1109,26 +1042,76 @@ export default function Activity() {
           <View style={styles.modalContent}>
             <ThemedText style={styles.modalTitle}>Edit Activity</ThemedText>
 
-            {/* Activity Type Display/Selector */}
-            {manualEntry.activity_type ? (
-              <View style={styles.selectedActivityType}>
-                <Text style={styles.selectedActivityEmoji}>
-                  {manualEntry.activity_type_emoji}
-                </Text>
-                <Text style={styles.selectedActivityName}>
-                  {manualEntry.activity_type}
-                </Text>
-              </View>
-            ) : (
-              <Pressable
-                style={styles.input}
-                onPress={() => setActivityTypeModalVisible(true)}
+            {/* Activity Type Selector */}
+            <View style={styles.activityTypeSelector}>
+              <ThemedText style={styles.selectorLabel}>Activity Type:</ThemedText>
+              <ScrollView
+                style={styles.activityTypeScrollView}
+                horizontal={true}
+                showsHorizontalScrollIndicator={false}
               >
-                <Text style={{ fontSize: 16, color: "#999" }}>
-                  Select Activity Type
-                </Text>
-              </Pressable>
-            )}
+                {/* Current Activity Type First */}
+                {manualEntry.activity_type_linked && (
+                  <TouchableOpacity
+                    style={[
+                      styles.activityTypeOption,
+                      styles.activityTypeOptionSelected
+                    ]}
+                    onPress={() => {
+                      // Already selected, no action needed
+                    }}
+                  >
+                    <Text style={styles.activityTypeEmoji}>{manualEntry.activity_type_emoji}</Text>
+                    <Text style={styles.activityTypeNameSelected}>
+                      {manualEntry.activity_type}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* Other Activity Types */}
+                {activityTypes
+                  .filter(type => type.id !== manualEntry.activity_type_linked)
+                  .map((type) => (
+                    <TouchableOpacity
+                      key={type.id}
+                      style={styles.activityTypeOption}
+                      onPress={() => {
+                        setManualEntry({
+                          ...manualEntry,
+                          activity_type: type.type_name,
+                          activity_type_linked: type.id,
+                          activity_type_emoji: type.type_emoji,
+                        });
+                      }}
+                    >
+                      <Text style={styles.activityTypeEmoji}>{type.type_emoji}</Text>
+                      <Text style={styles.activityTypeName}>
+                        {type.type_name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+
+                {/* Other Activity Option (if not already selected) */}
+                {manualEntry.activity_type_linked !== "other" && (
+                  <TouchableOpacity
+                    style={styles.activityTypeOption}
+                    onPress={() => {
+                      setManualEntry({
+                        ...manualEntry,
+                        activity_type: "Other",
+                        activity_type_linked: "other",
+                        activity_type_emoji: "🏃‍♂️",
+                      });
+                    }}
+                  >
+                    <Text style={styles.activityTypeEmoji}>🏃‍♂️</Text>
+                    <Text style={styles.activityTypeName}>
+                      Other
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </ScrollView>
+            </View>
 
             <TextInput
               style={styles.input}
@@ -1547,5 +1530,42 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
     textAlign: "center",
+  },
+  activityTypeSelector: {
+    marginBottom: 16,
+  },
+  selectorLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 8,
+  },
+  activityTypeScrollView: {
+    maxHeight: 100,
+  },
+  activityTypeOption: {
+    alignItems: "center",
+    padding: 12,
+    marginRight: 12,
+    borderRadius: 8,
+    backgroundColor: "#F5F5F5",
+    minWidth: 80,
+  },
+  activityTypeOptionSelected: {
+    backgroundColor: Colors.light.blue,
+  },
+  activityTypeEmoji: {
+    fontSize: 24,
+    marginBottom: 4,
+  },
+  activityTypeName: {
+    fontSize: 12,
+    color: "#333",
+    textAlign: "center",
+    fontWeight: "500",
+  },
+  activityTypeNameSelected: {
+    color: "#fff",
+    fontWeight: "600",
   },
 });
