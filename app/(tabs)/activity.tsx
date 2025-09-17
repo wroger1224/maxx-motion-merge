@@ -11,6 +11,7 @@ import {
   Platform,
   Alert,
   Animated,
+  KeyboardAvoidingView,
 } from "react-native";
 import { useNavigation, useIsFocused } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -821,7 +822,7 @@ export default function Activity() {
 
   return (
     <View style={styles.container}>
-     <Header signOut={handleSignOut} title="Activity Tracking" tagline="Track your motion. Reach your potential."/>
+      <Header signOut={handleSignOut} title="Activity Tracking" tagline="Track your motion. Reach your potential." />
 
       {/* Main activity page tabs */}
       <View style={styles.tabContainer}>
@@ -976,7 +977,10 @@ export default function Activity() {
         visible={manualEntryModalVisible}
         onRequestClose={() => setManualEntryModalVisible(false)}
       >
-        <View style={styles.modalContainer}>
+        <KeyboardAvoidingView
+          style={styles.modalContainer}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
           <View style={styles.modalContent}>
             <ThemedText style={styles.modalTitle}>
               {manualEntry.activity_type
@@ -1031,7 +1035,7 @@ export default function Activity() {
               />
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Activity Type Selection Modal */}
@@ -1098,7 +1102,10 @@ export default function Activity() {
         visible={editActivityModalVisible}
         onRequestClose={() => setEditActivityModalVisible(false)}
       >
-        <View style={styles.modalContainer}>
+        <KeyboardAvoidingView
+          style={styles.modalContainer}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
           <View style={styles.modalContent}>
             <ThemedText style={styles.modalTitle}>Edit Activity</ThemedText>
 
@@ -1155,7 +1162,7 @@ export default function Activity() {
               />
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -1226,8 +1233,8 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
     marginHorizontal: 16,
-    borderRadius:8,
-    marginTop:16,
+    borderRadius: 8,
+    marginTop: 16,
   },
 
   tab: {
@@ -1251,7 +1258,7 @@ const styles = StyleSheet.create({
   },
 
   challengeCard: {
-    margin:16,
+    margin: 16,
     paddingVertical: 12,
     paddingHorizontal: 16,
     backgroundColor: "#FFF5F5",
@@ -1292,8 +1299,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     marginHorizontal: 16,
-    marginBottom:16,
-    borderRadius:8,
+    marginBottom: 16,
+    borderRadius: 8,
   },
   actionButton: {
     flex: 1,
@@ -1317,7 +1324,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     marginHorizontal: 16,
-    borderRadius:8,
+    borderRadius: 8,
   },
   sectionTitle: {
     fontSize: 18,
@@ -1387,9 +1394,10 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    justifyContent: "center",
+    justifyContent: "flex-start",
     alignItems: "center",
     backgroundColor: "rgba(0, 0, 0, 0.5)",
+    paddingTop: 100,
   },
   modalContent: {
     width: "90%",
