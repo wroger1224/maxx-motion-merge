@@ -58,19 +58,36 @@ interface PlatformInfo {
 }
 
 // Activity type mappings from HealthKit to your database
+// The 'name' field must match exactly what's in the database activity_types table
 const HEALTHKIT_TO_ACTIVITY_TYPE: Record<string, { name: string; id: string }> = {
   'Running': { name: 'Running', id: 'running' },
   'Walking': { name: 'Walking', id: 'walking' },
   'Cycling': { name: 'Cycling', id: 'cycling' },
   'Swimming': { name: 'Swimming', id: 'swimming' },
   'Yoga': { name: 'Yoga', id: 'yoga' },
-  'Strength': { name: 'Strength Training', id: 'strength' },
-  'CrossTraining': { name: 'Cross Training', id: 'cross_training' },
-  'Dance': { name: 'Dance', id: 'dance' },
-  'Elliptical': { name: 'Elliptical', id: 'elliptical' },
+  'Strength': { name: 'Strength', id: 'strength' },  // Changed from 'Strength Training'
+  'StrengthTraining': { name: 'Strength', id: 'strength' },  // Alternative name
+  'CrossTraining': { name: 'Strength', id: 'strength' },  // Map to Strength
+  'FunctionalStrengthTraining': { name: 'Strength', id: 'strength' },  // Map to Strength
+  'TraditionalStrengthTraining': { name: 'Strength', id: 'strength' },  // Map to Strength
+  'Dance': { name: 'Dancing', id: 'dancing' },  // Changed from 'Dance' to 'Dancing'
+  'Dancing': { name: 'Dancing', id: 'dancing' },
+  'Elliptical': { name: 'Cycling', id: 'cycling' },  // Map elliptical to cycling
   'Rowing': { name: 'Rowing', id: 'rowing' },
-  'StairClimbing': { name: 'Stair Climbing', id: 'stair_climbing' },
-  'Default': { name: 'Other Activity', id: 'other' }
+  'StairClimbing': { name: 'Climbing', id: 'climbing' },  // Map to Climbing
+  'Climbing': { name: 'Climbing', id: 'climbing' },
+  'Hiking': { name: 'Hiking', id: 'hiking' },
+  'Tennis': { name: 'Tennis', id: 'tennis' },
+  'Boxing': { name: 'Boxing', id: 'boxing' },
+  'MartialArts': { name: 'Boxing', id: 'boxing' },  // Map martial arts to boxing
+  'Kickboxing': { name: 'Boxing', id: 'boxing' },  // Map kickboxing to boxing
+  'Pilates': { name: 'Pilates', id: 'pilates' },
+  'JumpRope': { name: 'Jump Rope', id: 'jump_rope' },
+  'Skating': { name: 'Skating', id: 'skating' },
+  'IceSkating': { name: 'Skating', id: 'skating' },
+  'Stretching': { name: 'Stretching', id: 'stretching' },
+  'Flexibility': { name: 'Stretching', id: 'stretching' },
+  'Default': { name: 'Walking', id: 'walking' }  // Default to walking instead of 'Other'
 };
 
 class TrackerService {
@@ -232,6 +249,8 @@ class TrackerService {
           const activityMapping = HEALTHKIT_TO_ACTIVITY_TYPE[workoutType] || 
                                 HEALTHKIT_TO_ACTIVITY_TYPE['Default'];
 
+          console.log(`Mapping HealthKit activity: "${workoutType}" -> "${activityMapping.name}"`);
+
           // Generate a unique ID for this workout
           // Using workout UUID if available, otherwise create one from workout properties
           const externalId = workout.uuid || 
@@ -255,7 +274,7 @@ class TrackerService {
   }
 
   private async fetchStepActivities(startDate: Date, endDate: Date): Promise<ActivityData[]> {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       if (!AppleHealthKit || !AppleHealthKit.getDailyStepCountSamples) {
         console.error('AppleHealthKit.getDailyStepCountSamples not available');
         resolve([]); // Don't reject, just return empty array
@@ -306,10 +325,10 @@ class TrackerService {
   }
 
   // Sync fetched data to Supabase
-  async syncToSupabase(activities: ActivityData[], userId: string, eventId: string): Promise<void> {
+  async syncToSupabase(activities: ActivityData[], userId: string, eventId: string): Promise<{ newCount: number; skippedCount: number }> {
     if (activities.length === 0) {
       console.log('No activities to sync');
-      return;
+      return { newCount: 0, skippedCount: 0 };
     }
 
     try {
@@ -326,6 +345,8 @@ class TrackerService {
       const typeMapping: Record<string, string> = {};
       activityTypes?.forEach(type => {
         typeMapping[type.type_name.toLowerCase()] = type.id;
+        // Also add the exact name as a key (not just lowercase)
+        typeMapping[type.type_name] = type.id;
       });
 
       // Fetch existing activities for this user and event to check for duplicates
@@ -369,10 +390,16 @@ class TrackerService {
           continue;
         }
 
-        // Find the correct activity type ID
-        const activityTypeId = typeMapping[activity.activity_type.toLowerCase()] || 
-                              typeMapping['other'] || 
-                              activityTypes?.[0]?.id; // Fallback to first type
+        // Find the correct activity type ID from database
+        // First try exact match, then lowercase, then use Walking as default
+        const activityTypeId = typeMapping[activity.activity_type] || 
+                              typeMapping[activity.activity_type.toLowerCase()] || 
+                              typeMapping['Walking'] || 
+                              typeMapping['walking'] ||
+                              activityTypes?.find(t => t.type_name === 'Walking')?.id ||
+                              activityTypes?.[0]?.id; // Last resort: first type
+
+        console.log(`Mapping to database: "${activity.activity_type}" -> UUID: ${activityTypeId}`)
 
         newActivities.push({
           user_id: userId,
@@ -397,8 +424,10 @@ class TrackerService {
         }
 
         console.log(`Successfully synced ${newActivities.length} new activities to Supabase (${skippedCount} duplicates skipped)`);
+        return { newCount: newActivities.length, skippedCount };
       } else {
         console.log(`No new activities to sync (${skippedCount} duplicates skipped)`);
+        return { newCount: 0, skippedCount };
       }
     } catch (error) {
       console.error('Error syncing to Supabase:', error);
@@ -421,8 +450,6 @@ class TrackerService {
         break;
       
       case 'google':
-      case 'fitbit':
-      case 'strava':
         console.log(`${trackerId} integration not implemented yet`);
         throw new Error(`${trackerId} integration coming soon!`);
       

@@ -469,6 +469,8 @@ export default function EditTeamScreen() {
                     </TouchableOpacity>
                   )}
                   style={styles.searchResultsList}
+                  scrollEnabled={false}
+                  nestedScrollEnabled={true}
                 />
               )}
               

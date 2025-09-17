@@ -1462,6 +1462,8 @@ export default function AdminReportsScreen() {
                       renderItem={renderTeamMemberItem}
                       keyExtractor={(item) => item.id}
                       style={styles.membersList}
+                      scrollEnabled={false}
+                      nestedScrollEnabled={true}
                     />
                   ) : (
                     <ThemedText style={styles.emptyText}>
@@ -1478,6 +1480,8 @@ export default function AdminReportsScreen() {
                       renderItem={renderTeamReportItem}
                       keyExtractor={(item) => item.id}
                       style={styles.reportsList}
+                      scrollEnabled={false}
+                      nestedScrollEnabled={true}
                     />
                     {weeklyReports.length > 0 && (
                       <SimpleBarChart
@@ -1506,9 +1510,21 @@ export default function AdminReportsScreen() {
                   style={styles.usersList}
                 />
               ) : (
-                <ThemedText style={styles.emptyText}>
-                  No user activity found for this week.
-                </ThemedText>
+                // All users view
+                allUsersActivity.length > 0 ? (
+                  <FlatList
+                    data={allUsersActivity}
+                    renderItem={renderAllUserItem}
+                    keyExtractor={(item) => item.id}
+                    style={styles.usersList}
+                    scrollEnabled={false}
+                    nestedScrollEnabled={true}
+                  />
+                ) : (
+                  <ThemedText style={styles.emptyText}>
+                    No user activity found for this week.
+                  </ThemedText>
+                )
               )}
             </ThemedView>
 
@@ -1593,6 +1609,8 @@ export default function AdminReportsScreen() {
                         renderItem={renderCumulativeMemberItem}
                         keyExtractor={(item) => item.id}
                         style={styles.membersList}
+                        scrollEnabled={false}
+                        nestedScrollEnabled={true}
                       />
                     ) : (
                       <ThemedText style={styles.emptyText}>
@@ -1608,6 +1626,8 @@ export default function AdminReportsScreen() {
                       renderItem={renderCumulativeTeamItem}
                       keyExtractor={(item) => item.id}
                       style={styles.reportsList}
+                      scrollEnabled={false}
+                      nestedScrollEnabled={true}
                     />
                   ) : (
                     <ThemedText style={styles.emptyText}>
@@ -1623,9 +1643,21 @@ export default function AdminReportsScreen() {
                     style={styles.usersList}
                   />
                 ) : (
-                  <ThemedText style={styles.emptyText}>
-                    No user activity found for this event.
-                  </ThemedText>
+                  // All users ranking view
+                  cumulativeUserData.length > 0 ? (
+                    <FlatList
+                      data={cumulativeUserData}
+                      renderItem={renderCumulativeMemberItem}
+                      keyExtractor={(item) => item.id}
+                      style={styles.usersList}
+                      scrollEnabled={false}
+                      nestedScrollEnabled={true}
+                    />
+                  ) : (
+                    <ThemedText style={styles.emptyText}>
+                      No user activity found for this event.
+                    </ThemedText>
+                  )
                 )}
               </>
             )}
@@ -1704,6 +1736,8 @@ export default function AdminReportsScreen() {
                     renderItem={renderMilestoneItem}
                     keyExtractor={(item) => item.id}
                     style={styles.milestonesList}
+                    scrollEnabled={false}
+                    nestedScrollEnabled={true}
                   />
                 </>
               ) : (
@@ -1721,6 +1755,8 @@ export default function AdminReportsScreen() {
                   renderItem={renderMilestoneItem}
                   keyExtractor={(item) => item.id}
                   style={styles.milestonesList}
+                  scrollEnabled={false}
+                  nestedScrollEnabled={true}
                 />
               ) : (
                 <ThemedText style={styles.emptyText}>
