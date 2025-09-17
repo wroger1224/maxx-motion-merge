@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import { supabase } from './supabase';
 import { Session, User } from '@supabase/supabase-js';
 import { router } from 'expo-router';
+import { TrackerSettingsService } from './services/trackerSettings';
 
 type AuthContextProps = {
   user: User | null;
@@ -20,7 +21,7 @@ const AuthContext = createContext<AuthContextProps>({
   loading: true,
   signIn: async () => ({ error: null }),
   signUp: async () => ({ error: null }),
-  signOut: async () => {},
+  signOut: async () => { },
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -32,25 +33,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let isMounted = true;
     console.log("🔒 Auth provider initialized");
-    
+
     // Get current session and user
     const initializeAuth = async () => {
       try {
         console.log("🔒 Fetching current session...");
         const { data, error } = await supabase.auth.getSession();
-        
+
         if (error) {
           console.error("🔒 Error getting session:", error);
           throw error;
         }
-        
+
         if (!isMounted) return;
-        
+
         console.log("🔒 Session retrieved:", data.session ? "Session active" : "No active session");
-        
+
         setSession(data.session);
         setUser(data.session?.user ?? null);
-        
+
         if (data.session?.user) {
           console.log("🔒 User authenticated:", data.session.user.email);
         }
@@ -72,13 +73,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         console.log(`🔒 Auth state changed: ${event}`);
-        
+
         if (!isMounted) return;
-        
+
         try {
           setSession(newSession);
           setUser(newSession?.user ?? null);
-          
+
           if (event === 'SIGNED_IN') {
             console.log("🔒 User signed in:", newSession?.user?.email);
           } else if (event === 'SIGNED_OUT') {
@@ -102,19 +103,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (email: string, password: string) => {
     console.log("🔒 Attempting to sign in:", email);
     setLoading(true);
-    
+
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
-      
+
       if (error) {
         console.error("🔒 Sign in error:", error.message);
       } else {
         console.log("🔒 Sign in successful");
       }
-      
+
       return { error };
     } catch (error) {
       console.error("🔒 Unexpected sign in error:", error);
@@ -127,19 +128,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = async (email: string, password: string) => {
     console.log("🔒 Attempting to sign up:", email);
     setLoading(true);
-    
+
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
       });
-      
+
       if (error) {
         console.error("🔒 Sign up error:", error.message);
       } else {
         console.log("🔒 Sign up successful");
       }
-      
+
       return { error };
     } catch (error) {
       console.error("🔒 Unexpected sign up error:", error);
@@ -173,9 +174,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  console.log("🔒 Auth state:", { 
-    initialized, 
-    loading, 
+  console.log("🔒 Auth state:", {
+    initialized,
+    loading,
     isAuthenticated: !!user,
   });
 
@@ -196,5 +197,5 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-export const useAuth = () => useContext(AuthContext); 
+export const useAuth = () => useContext(AuthContext);
 

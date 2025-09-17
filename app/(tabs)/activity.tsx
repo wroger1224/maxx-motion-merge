@@ -30,6 +30,7 @@ import { ResponsiveHeader } from "@/components/ui/responsiveHeader";
 import { router } from "expo-router";
 import { showAlert, showAlertWithButtons } from "../utils/showAlert";
 import TrackerService from "@/lib/services/tracker";
+import { TrackerSettingsService, TrackerSettings, SyncResult } from "@/lib/services/trackerSettings";
 import { Header } from "@/components/ui/header";
 import {
   formatDateForStorage,
@@ -261,6 +262,12 @@ export default function Activity() {
   const [currentEditActivity, setCurrentEditActivity] =
     useState<UserActivity | null>(null);
 
+  // Tracker settings
+  const [trackerSettings, setTrackerSettings] = useState<TrackerSettings | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<string>("");
+  const trackerSettingsService = new TrackerSettingsService();
+
   useEffect(() => {
     fetchActivityTypes();
     fetchEvents();
@@ -271,6 +278,20 @@ export default function Activity() {
       checkUserActivities();
     }
   }, [user, currentEvent]);
+
+  // Load tracker settings when user changes
+  useEffect(() => {
+    if (user) {
+      loadTrackerSettings();
+    }
+  }, [user]);
+
+  // Check for auto-sync when tracker settings and events are loaded
+  useEffect(() => {
+    if (trackerSettings && currentEvent) {
+      checkAutoSync();
+    }
+  }, [trackerSettings, currentEvent]);
 
   // Toast animation
   useEffect(() => {
@@ -368,6 +389,121 @@ export default function Activity() {
     } catch (err) {
       console.error("Error checking user activities:", err);
     }
+  };
+
+  // Load tracker settings
+  const loadTrackerSettings = async () => {
+    if (!user) return;
+
+    try {
+      const settings = await trackerSettingsService.getTrackerSettings(user.id);
+      setTrackerSettings(settings);
+
+      if (settings) {
+        const statusMessage = trackerSettingsService.getSyncStatusMessage(settings);
+        setSyncStatus(statusMessage);
+      }
+    } catch (error) {
+      console.error("Error loading tracker settings:", error);
+    }
+  };
+
+  // Automatic sync check
+  const checkAutoSync = async () => {
+    if (!user || !currentEvent || !trackerSettings) return;
+
+    try {
+      const shouldSync = trackerSettingsService.shouldAutoSync(trackerSettings);
+
+      if (shouldSync) {
+        console.log("Auto-sync triggered");
+        await performSync();
+      }
+    } catch (error) {
+      console.error("Error checking auto-sync:", error);
+    }
+  };
+
+  // Perform sync
+  const performSync = async (): Promise<SyncResult> => {
+    if (!user || !currentEvent) {
+      return {
+        success: false,
+        activitiesSynced: 0,
+        error: "User or event not available",
+        syncDate: new Date().toISOString()
+      };
+    }
+
+    setIsSyncing(true);
+
+    try {
+      const result = await trackerSettingsService.syncActivities(user.id, currentEvent.id);
+
+      if (result.success) {
+        showSuccessToast(`Synced ${result.activitiesSynced} activities from tracker!`);
+        // Refresh activities list
+        setRefreshTrigger(prev => prev + 1);
+        // Update tracker settings
+        await loadTrackerSettings();
+      } else {
+        showAlert("Sync Failed", result.error || "Unknown error occurred during sync");
+      }
+
+      return result;
+    } catch (error) {
+      console.error("Error performing sync:", error);
+      const errorResult = {
+        success: false,
+        activitiesSynced: 0,
+        error: error instanceof Error ? error.message : "Unknown error",
+        syncDate: new Date().toISOString()
+      };
+      showAlert("Sync Failed", errorResult.error);
+      return errorResult;
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // Remove tracker connection
+  const handleRemoveTracker = async () => {
+    if (!user) {
+      showAlert("Error", "You must be logged in to remove tracker");
+      return;
+    }
+
+    // Show confirmation dialog
+    showAlertWithButtons(
+      "Remove Tracker",
+      "Are you sure you want to remove the connected tracker? You can reconnect it anytime.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const success = await trackerSettingsService.disconnectTracker(user.id);
+
+              if (success) {
+                showSuccessToast("Tracker disconnected successfully");
+                // Reload tracker settings to update UI
+                await loadTrackerSettings();
+              } else {
+                showAlert("Error", "Failed to disconnect tracker. Please try again.");
+              }
+            } catch (error) {
+              console.error("Error removing tracker:", error);
+              showAlert("Error", "Failed to disconnect tracker. Please try again.");
+            }
+          }
+        }
+      ]
+    );
   };
 
   const navigateToWorkout = (
@@ -487,6 +623,13 @@ export default function Activity() {
           return;
         }
 
+        // Save tracker connection
+        const connectionSaved = await trackerSettingsService.connectTracker(user.id, trackerId);
+
+        if (!connectionSaved) {
+          console.warn("Failed to save tracker connection settings");
+        }
+
         // Sync to Supabase
         await tracker.syncToSupabase(activities, user.id, eventId);
 
@@ -501,6 +644,9 @@ export default function Activity() {
 
         // Trigger refresh of activities list
         setRefreshTrigger((prev) => prev + 1);
+
+        // Reload tracker settings to update UI
+        await loadTrackerSettings();
       } else {
         showAlert(
           "Permission Denied",
@@ -793,6 +939,7 @@ export default function Activity() {
       {/* Add Activity Tab Content */}
       {activeTab === "add" && (
         <>
+          <View style={styles.spacer} />
           <View style={styles.actionsContainer}>
             <TouchableOpacity
               style={styles.actionButton}
@@ -801,6 +948,37 @@ export default function Activity() {
               <Text style={styles.actionButtonText}>Connect Tracker</Text>
             </TouchableOpacity>
           </View>
+
+          {/* Tracker Status */}
+          {trackerSettings?.connected_tracker && (
+            <View style={styles.trackerStatusContainer}>
+              <View style={styles.trackerStatusHeader}>
+                <Text style={styles.trackerStatusText}>
+                  Connected to: {trackerSettings.connected_tracker === 'apple' ? 'Apple Health' : trackerSettings.connected_tracker}
+                </Text>
+                <View style={styles.trackerStatusActions}>
+                  <TouchableOpacity
+                    style={[styles.syncButton, isSyncing && styles.syncButtonDisabled]}
+                    onPress={performSync}
+                    disabled={isSyncing}
+                  >
+                    <Text style={styles.syncButtonText}>
+                      {isSyncing ? "Syncing..." : "Sync Now"}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.removeButton}
+                    onPress={handleRemoveTracker}
+                  >
+                    <Text style={styles.removeButtonText}>Remove</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              <Text style={styles.syncStatusText}>
+                {syncStatus}
+              </Text>
+            </View>
+          )}
 
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Add Activity</Text>
@@ -854,11 +1032,14 @@ export default function Activity() {
 
       {/* Review Activities Tab Content */}
       {activeTab === "review" && (
-        <ActivityReview
-          refreshTrigger={refreshTrigger}
-          onRefreshComplete={() => setIsRefreshing(false)}
-          onEditActivity={handleEditActivity}
-        />
+        <>
+          <View style={styles.spacer} />
+          <ActivityReview
+            refreshTrigger={refreshTrigger}
+            onRefreshComplete={() => setIsRefreshing(false)}
+            onEditActivity={handleEditActivity}
+          />
+        </>
       )}
 
       {/* Success Toast */}
@@ -1567,5 +1748,66 @@ const styles = StyleSheet.create({
   activityTypeNameSelected: {
     color: "#fff",
     fontWeight: "600",
+  },
+  spacer: {
+    height: 16,
+  },
+  syncButton: {
+    backgroundColor: Colors.light.blue,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    minWidth: 80,
+  },
+  syncButtonDisabled: {
+    backgroundColor: Colors.light.gray,
+    opacity: 0.6,
+  },
+  syncButtonText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  trackerStatusContainer: {
+    backgroundColor: "#F8F9FA",
+    padding: 12,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: Colors.light.blue,
+  },
+  trackerStatusHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  trackerStatusText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#333",
+    flex: 1,
+  },
+  trackerStatusActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  removeButton: {
+    backgroundColor: "#FF6B6B",
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  removeButtonText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  syncStatusText: {
+    fontSize: 12,
+    color: "#666",
   },
 });
