@@ -335,23 +335,10 @@ export default function AchievementsScreen() {
     try {
       if (!userProfile?.id) return;
 
-      // Get the current active event
-      const { data: activeEvent, error: eventError } = await supabase
-        .from("events")
-        .select("id")
-        .eq("status", "Active")
-        .single();
-
-      if (eventError) {
-        console.error("Error fetching active event:", eventError);
-        return;
-      }
-
-      // Fetch badges from the database
+      // Fetch all badges from the database (badges are global, not event-specific)
       const { data: badgesData, error: badgesError } = await supabase
         .from("badges")
-        .select("*")
-        .eq("event_id", activeEvent.id);
+        .select("*");
 
       if (badgesError) {
         console.error("Error fetching badges:", badgesError);
