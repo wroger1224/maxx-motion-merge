@@ -11,6 +11,7 @@ import {
   Platform,
   Alert,
   Animated,
+  Linking,
 } from "react-native";
 import { useNavigation, useIsFocused } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -392,10 +393,12 @@ export default function Activity() {
     activity_source: "manual",
   });
 
-  const trackerOptions = [
-    { id: "apple", name: "Apple Health", icon: "🍎" },
-    { id: "google", name: "Google Fit", icon: "🏃" },
-  ];
+  // Show platform-specific tracker options
+  const trackerOptions = Platform.OS === 'ios'
+    ? [{ id: "apple", name: "Apple Health", icon: "🍎" }]
+    : Platform.OS === 'android'
+    ? [{ id: "google", name: "Google Fit", icon: "🏃" }]
+    : [];
 
   const handleTrackerSelection = async (trackerId: string) => {
     try {
@@ -406,15 +409,35 @@ export default function Activity() {
       const platformStatus = tracker.getPlatformStatus();
       console.log("Platform status:", platformStatus);
 
-      if (!tracker.isAvailable()) {
+      // Special handling for Android Health Connect
+      if (Platform.OS === 'android' && trackerId === 'google') {
+        console.log('[Activity] Android detected, checking Health Connect...');
+
+        if (!tracker.isAvailable()) {
+          console.log('[Activity] Health Connect not available');
+          showAlertWithButtons(
+            'Health Connect Required',
+            'Google Fit data is accessed through Health Connect on Android. Would you like to install it from the Play Store?',
+            async () => {
+              // Open Play Store to Health Connect app
+              const healthConnectUrl = 'https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata';
+              if (await Linking.canOpenURL(healthConnectUrl)) {
+                await Linking.openURL(healthConnectUrl);
+              } else {
+                showAlert('Error', 'Could not open Play Store. Please search for "Health Connect" manually.');
+              }
+            }
+          );
+          setTrackerModalVisible(false);
+          return;
+        }
+
+        // Show information about Health Connect
+        showSuccessToast('Opening Health Connect permissions...');
+      } else if (!tracker.isAvailable()) {
         console.log("Health tracking not implemented yet for this platform");
 
-        if (Platform.OS === "android") {
-          showAlert(
-            "Coming Soon",
-            "Android health tracking is coming soon. Please use manual entry for now."
-          );
-        } else if (Platform.OS === "ios") {
+        if (Platform.OS === "ios") {
           showAlert(
             "Simulator Detected",
             "Health tracking is only available on real iOS devices. Please use manual entry on simulator."
@@ -437,21 +460,43 @@ export default function Activity() {
       await tracker.connectTracker(trackerId);
 
       // Request permissions if needed
+      console.log('[Activity] Requesting permissions...');
       const hasPermissions = await tracker.requestPermissions();
 
       if (hasPermissions) {
-        // Hard-coded date range: September 1-14, 2025
-        const startDate = new Date('2025-09-01');
-        const endDate = new Date('2025-09-14');
+        console.log('[Activity] Permissions granted, fetching data...');
+
+        // Calculate date range (last 30 days for better chance of finding data)
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - 30);
         
         // Fetch activity data
         const activities = await tracker.fetchActivityData(startDate, endDate);
 
         if (activities.length === 0) {
-          showAlert(
-            "No Data Found",
-            "No recent activity data found in Apple Health. Try manual entry or check Apple Health for data."
-          );
+          const trackerName = Platform.OS === 'ios' ? 'Apple Health' : 'Health Connect';
+
+          if (Platform.OS === 'android') {
+            showAlertWithButtons(
+              'No Data Found',
+              `No recent activity data found in ${trackerName}. This could mean:\n\n1. No fitness apps have synced data to Health Connect\n2. Google Fit hasn't shared data with Health Connect\n\nWould you like to:\n- Check Health Connect settings\n- Use manual entry instead`,
+              async () => {
+                // Open Health Connect app
+                const healthConnectAppUrl = 'healthconnect://onboarding';
+                try {
+                  await Linking.openURL(healthConnectAppUrl);
+                } catch {
+                  showAlert('Info', 'Please open Health Connect from your app drawer and check if Google Fit or other fitness apps have synced data.');
+                }
+              }
+            );
+          } else {
+            showAlert(
+              'No Data Found',
+              `No recent activity data found in ${trackerName}. Try manual entry or check ${trackerName} for data.`
+            );
+          }
           setTrackerModalVisible(false);
           return;
         }
@@ -482,8 +527,9 @@ export default function Activity() {
         const syncResult = await tracker.syncToSupabase(activities, user.id, eventId);
         
         // Show appropriate message based on sync results
+        const sourceName = Platform.OS === 'ios' ? 'Apple Health' : 'Health Connect';
         if (syncResult.newCount > 0) {
-          showSuccessToast(`Successfully imported ${syncResult.newCount} new activities from Apple Health!`);
+          showSuccessToast(`Successfully imported ${syncResult.newCount} new activities from ${sourceName}!`);
         } else {
           showAlert('No New Activities', `No new activities found (${syncResult.skippedCount} duplicates skipped)`);
         }
@@ -496,10 +542,28 @@ export default function Activity() {
         // Trigger refresh of activities list
         setRefreshTrigger((prev) => prev + 1);
       } else {
-        showAlert(
-          "Permission Denied",
-          "Health data access was denied. Please enable permissions in Settings to sync your activities."
-        );
+        console.log('[Activity] Permissions denied or incomplete');
+
+        if (Platform.OS === 'android') {
+          showAlertWithButtons(
+            'Permissions Required',
+            'Health Connect needs permission to read your fitness data. The app will only read your activity data and won\'t make any changes.\n\nWould you like to open Health Connect settings to grant permissions?',
+            async () => {
+              // Try to open Health Connect settings
+              const healthConnectSettingsUrl = 'healthconnect://onboarding';
+              try {
+                await Linking.openURL(healthConnectSettingsUrl);
+              } catch {
+                showAlert('Info', 'Please open Health Connect from your app drawer and grant permissions to this app.');
+              }
+            }
+          );
+        } else {
+          showAlert(
+            "Permission Denied",
+            "Health data access was denied. Please enable permissions in Settings to sync your activities."
+          );
+        }
       }
     } catch (error: any) {
       console.error("Tracker connection error:", error);
@@ -508,6 +572,17 @@ export default function Activity() {
         showAlert("Coming Soon", error.message);
       } else if (error.message?.includes("only available")) {
         showAlert("Not Available", error.message);
+      } else if (error.message?.includes('Health Connect')) {
+        showAlertWithButtons(
+          'Health Connect Issue',
+          error.message + '\n\nWould you like to check Health Connect in the Play Store?',
+          async () => {
+            const healthConnectUrl = 'https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata';
+            if (await Linking.canOpenURL(healthConnectUrl)) {
+              await Linking.openURL(healthConnectUrl);
+            }
+          }
+        );
       } else {
         showAlert(
           "Connection Failed",
