@@ -816,7 +816,7 @@ export default function Activity() {
 
   return (
     <View style={styles.container}>
-     <Header signOut={handleSignOut} title="Activity Tracking" tagline="Track your motion. Reach your potential."/>
+      <Header signOut={handleSignOut} title="Activity Tracking" tagline="Track your motion. Reach your potential." />
 
       {/* Main activity page tabs */}
       <View style={styles.tabContainer}>
@@ -1220,8 +1220,8 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
     marginHorizontal: 16,
-    borderRadius:8,
-    marginTop:16,
+    borderRadius: 8,
+    marginTop: 16,
   },
 
   tab: {
@@ -1245,7 +1245,7 @@ const styles = StyleSheet.create({
   },
 
   challengeCard: {
-    margin:16,
+    margin: 16,
     paddingVertical: 12,
     paddingHorizontal: 16,
     backgroundColor: "#FFF5F5",
@@ -1286,8 +1286,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     marginHorizontal: 16,
-    marginBottom:16,
-    borderRadius:8,
+    marginBottom: 16,
+    borderRadius: 8,
   },
   actionButton: {
     flex: 1,
@@ -1311,7 +1311,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     marginHorizontal: 16,
-    borderRadius:8,
+    borderRadius: 8,
   },
   sectionTitle: {
     fontSize: 18,

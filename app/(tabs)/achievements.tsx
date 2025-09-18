@@ -303,10 +303,10 @@ export default function AchievementsScreen() {
         const achieved = total >= milestone.milestone_minutes;
         const achievedDate = achieved
           ? activities?.sort(
-              (a, b) =>
-                parseDateFromStorage(b.activity_date).getTime() -
-                parseDateFromStorage(a.activity_date).getTime()
-            )[0]?.activity_date
+            (a, b) =>
+              parseDateFromStorage(b.activity_date).getTime() -
+              parseDateFromStorage(a.activity_date).getTime()
+          )[0]?.activity_date
           : undefined;
 
         const usersRewarded = milestone.users_rewarded || [];
@@ -335,23 +335,10 @@ export default function AchievementsScreen() {
     try {
       if (!userProfile?.id) return;
 
-      // Get the current active event
-      const { data: activeEvent, error: eventError } = await supabase
-        .from("events")
-        .select("id")
-        .eq("status", "Active")
-        .single();
-
-      if (eventError) {
-        console.error("Error fetching active event:", eventError);
-        return;
-      }
-
-      // Fetch badges from the database
+      // Fetch all badges from the database (badges are global, not event-specific)
       const { data: badgesData, error: badgesError } = await supabase
         .from("badges")
-        .select("*")
-        .eq("event_id", activeEvent.id);
+        .select("*");
 
       if (badgesError) {
         console.error("Error fetching badges:", badgesError);
@@ -892,40 +879,42 @@ export default function AchievementsScreen() {
     void signOut();
   };
 
+  // Create a header component for the FlatList
+  const renderListHeader = () => (
+    <>
+      {/* Streak Section */}
+      <View style={styles.streakSection}>
+        <ThemedText variant="h2" style={styles.streakTitle}>
+          Current Streak
+        </ThemedText>
+        <View style={styles.streakContainer}>{renderStreak()}</View>
+      </View>
+
+      {/* Milestones Section */}
+      {renderMilestoneProgress()}
+
+      {/* Badges Section Header */}
+      <View style={styles.achievementsSection}>
+        <Text style={styles.achievementsTitle}>My Achievements</Text>
+      </View>
+    </>
+  );
+
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
       <Header signOut={handleSignOut} title="Achievements" tagline="Unlock badges and track your progress." />
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Streak Section */}
-        <View style={styles.streakSection}>
-          <ThemedText variant="h2" style={styles.streakTitle}>
-            Current Streak
-          </ThemedText>
-          <View style={styles.streakContainer}>{renderStreak()}</View>
-        </View>
-
-        {/* Milestones Section */}
-        {renderMilestoneProgress()}
-
-        {/* Badges Section */}
-        <View style={styles.achievementsSection}>
-          <FlatList
-            ListHeaderComponent={
-              <>
-                <Text style={styles.achievementsTitle}>My Achievements</Text>
-              </>
-            }
-            data={badges}
-            renderItem={renderBadge}
-            keyExtractor={(item) => item.id}
-            numColumns={NUM_COLUMNS}
-            scrollEnabled={true}
-            contentContainerStyle={styles.badgesGrid}
-          />
-        </View>
-      </ScrollView>
+      <FlatList
+        style={styles.content}
+        data={badges}
+        renderItem={renderBadge}
+        keyExtractor={(item) => item.id}
+        numColumns={NUM_COLUMNS}
+        ListHeaderComponent={renderListHeader}
+        contentContainerStyle={styles.badgesGrid}
+        showsVerticalScrollIndicator={false}
+      />
 
       {/* Badge Modal */}
       {selectedBadge && renderBadgeModal(selectedBadge)}
@@ -1041,8 +1030,8 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: "#fff",
     marginTop: 16,
-    marginHorizontal:16,
-    borderRadius:8,
+    marginHorizontal: 16,
+    borderRadius: 8,
   },
   streakFlamesContainer: {
     flexDirection: "row",
@@ -1060,7 +1049,7 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   badgeContainer: {
-    flex:1,
+    flex: 1,
     padding: BADGE_PADDING,
     backgroundColor: "transparent",
   },
@@ -1102,8 +1091,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     padding: GRID_PADDING,
     backgroundColor: "#fff",
-    marginHorizontal:16,
-    borderRadius:8,
+    marginHorizontal: 16,
+    borderRadius: 8,
   },
   modalOverlay: {
     flex: 1,

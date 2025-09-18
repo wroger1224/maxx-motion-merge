@@ -8,7 +8,7 @@ import {
   Text,
   ActivityIndicator,
   Modal,
-	Dimensions
+  Dimensions
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -357,7 +357,7 @@ export default function LeaderboardScreen() {
     try {
       const { data, error } = await supabase
         .from("team_members")
-        .select("team_id")
+        .select("team_id, teams!inner(event_id)")
         .eq("user_id", user.id)
         .eq("teams.event_id", activeEvent.id)
         .limit(1);
@@ -487,8 +487,7 @@ export default function LeaderboardScreen() {
             ) || 0;
 
           console.log(
-            `Team ${team.team_name}: ${totalMinutes} minutes (${filter}, week ${
-              weekIndex + 1
+            `Team ${team.team_name}: ${totalMinutes} minutes (${filter}, week ${weekIndex + 1
             })`
           );
 
@@ -1087,7 +1086,7 @@ export default function LeaderboardScreen() {
                         styles.podiumItem,
                         styles.secondPlace,
                         topUsers[1].isCurrentUser &&
-                          styles.currentUserPodiumItem,
+                        styles.currentUserPodiumItem,
                       ]}
                     >
                       <View style={[styles.userAvatar, styles.silverUser]}>
@@ -1123,7 +1122,7 @@ export default function LeaderboardScreen() {
                         styles.podiumItem,
                         styles.firstPlace,
                         topUsers[0].isCurrentUser &&
-                          styles.currentUserPodiumItem,
+                        styles.currentUserPodiumItem,
                       ]}
                     >
                       <View style={[styles.userAvatar, styles.goldUser]}>
@@ -1159,7 +1158,7 @@ export default function LeaderboardScreen() {
                         styles.podiumItem,
                         styles.thirdPlace,
                         topUsers[2].isCurrentUser &&
-                          styles.currentUserPodiumItem,
+                        styles.currentUserPodiumItem,
                       ]}
                     >
                       <View style={[styles.userAvatar, styles.bronzeUser]}>
@@ -1314,8 +1313,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingLeft: 16,
-		paddingTop: 16,
-		paddingRight: 16,
+    paddingTop: 16,
+    paddingRight: 16,
     zIndex: 1,
   },
   headerTitle: {
@@ -1366,8 +1365,8 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
     marginTop: 16,
-    marginHorizontal:16,
-    borderRadius:8,
+    marginHorizontal: 16,
+    borderRadius: 8,
   },
 
   tab: {
@@ -1427,8 +1426,8 @@ const styles = StyleSheet.create({
   },
   filterRow: {
     flexDirection: 'row',
-		justifyContent: 'center',
-		flexWrap: 'wrap',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
     padding: 16,
     gap: 8,
   },
@@ -1462,8 +1461,8 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    marginHorizontal:16,
-    borderRadius:8,
+    marginHorizontal: 16,
+    borderRadius: 8,
   },
   viewMoreButton: {
     padding: 16,

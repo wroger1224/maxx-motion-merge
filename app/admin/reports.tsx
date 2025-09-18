@@ -534,8 +534,7 @@ export default function AdminReportsScreen() {
             const rewardInfo = rewardedUsersMap.get(achievementId);
 
             console.log(
-              `${user.full_name} qualifies for ${milestone.milestone_name} (${
-                milestone.milestone_minutes
+              `${user.full_name} qualifies for ${milestone.milestone_name} (${milestone.milestone_minutes
               }m), rewarded: ${!!rewardInfo}`
             );
 
@@ -886,8 +885,8 @@ export default function AdminReportsScreen() {
             item.milestone_minutes === 50
               ? styles.bronze
               : item.milestone_minutes === 250
-              ? styles.silver
-              : styles.gold,
+                ? styles.silver
+                : styles.gold,
           ]}
         >
           {item.milestone_minutes} Minutes
@@ -1341,7 +1340,7 @@ export default function AdminReportsScreen() {
                       style={[
                         styles.reportTypeTabText,
                         reportType === "weekly" &&
-                          styles.activeReportTypeTabText,
+                        styles.activeReportTypeTabText,
                       ]}
                     >
                       Weekly
@@ -1358,7 +1357,7 @@ export default function AdminReportsScreen() {
                       style={[
                         styles.reportTypeTabText,
                         reportType === "cumulative" &&
-                          styles.activeReportTypeTabText,
+                        styles.activeReportTypeTabText,
                       ]}
                     >
                       Cumulative
@@ -1414,7 +1413,7 @@ export default function AdminReportsScreen() {
                     style={[
                       styles.reportTabText,
                       weeklyReportView === "teams" &&
-                        styles.activeReportTabText,
+                      styles.activeReportTabText,
                     ]}
                   >
                     Teams
@@ -1431,7 +1430,7 @@ export default function AdminReportsScreen() {
                     style={[
                       styles.reportTabText,
                       weeklyReportView === "users" &&
-                        styles.activeReportTabText,
+                      styles.activeReportTabText,
                     ]}
                   >
                     All Users
@@ -1462,6 +1461,8 @@ export default function AdminReportsScreen() {
                       renderItem={renderTeamMemberItem}
                       keyExtractor={(item) => item.id}
                       style={styles.membersList}
+                      scrollEnabled={false}
+                      nestedScrollEnabled={true}
                     />
                   ) : (
                     <ThemedText style={styles.emptyText}>
@@ -1478,6 +1479,8 @@ export default function AdminReportsScreen() {
                       renderItem={renderTeamReportItem}
                       keyExtractor={(item) => item.id}
                       style={styles.reportsList}
+                      scrollEnabled={false}
+                      nestedScrollEnabled={true}
                     />
                     {weeklyReports.length > 0 && (
                       <SimpleBarChart
@@ -1498,18 +1501,20 @@ export default function AdminReportsScreen() {
                   </ThemedText>
                 )
               ) : // All users view
-              allUsersActivity.length > 0 ? (
-                <FlatList
-                  data={allUsersActivity}
-                  renderItem={renderAllUserItem}
-                  keyExtractor={(item) => item.id}
-                  style={styles.usersList}
-                />
-              ) : (
-                <ThemedText style={styles.emptyText}>
-                  No user activity found for this week.
-                </ThemedText>
-              )}
+                allUsersActivity.length > 0 ? (
+                  <FlatList
+                    data={allUsersActivity}
+                    renderItem={renderAllUserItem}
+                    keyExtractor={(item) => item.id}
+                    style={styles.usersList}
+                    scrollEnabled={false}
+                    nestedScrollEnabled={true}
+                  />
+                ) : (
+                  <ThemedText style={styles.emptyText}>
+                    No user activity found for this week.
+                  </ThemedText>
+                )}
             </ThemedView>
 
             {reportType === "cumulative" && (
@@ -1529,7 +1534,7 @@ export default function AdminReportsScreen() {
                       style={[
                         styles.reportTabText,
                         cumulativeView === "teams" &&
-                          styles.activeReportTabText,
+                        styles.activeReportTabText,
                       ]}
                     >
                       Teams Ranking
@@ -1549,7 +1554,7 @@ export default function AdminReportsScreen() {
                       style={[
                         styles.reportTabText,
                         cumulativeView === "users" &&
-                          styles.activeReportTabText,
+                        styles.activeReportTabText,
                       ]}
                     >
                       All Users Ranking
@@ -1593,6 +1598,8 @@ export default function AdminReportsScreen() {
                         renderItem={renderCumulativeMemberItem}
                         keyExtractor={(item) => item.id}
                         style={styles.membersList}
+                        scrollEnabled={false}
+                        nestedScrollEnabled={true}
                       />
                     ) : (
                       <ThemedText style={styles.emptyText}>
@@ -1608,6 +1615,8 @@ export default function AdminReportsScreen() {
                       renderItem={renderCumulativeTeamItem}
                       keyExtractor={(item) => item.id}
                       style={styles.reportsList}
+                      scrollEnabled={false}
+                      nestedScrollEnabled={true}
                     />
                   ) : (
                     <ThemedText style={styles.emptyText}>
@@ -1615,18 +1624,20 @@ export default function AdminReportsScreen() {
                     </ThemedText>
                   )
                 ) : // All users ranking view
-                cumulativeUserData.length > 0 ? (
-                  <FlatList
-                    data={cumulativeUserData}
-                    renderItem={renderCumulativeMemberItem}
-                    keyExtractor={(item) => item.id}
-                    style={styles.usersList}
-                  />
-                ) : (
-                  <ThemedText style={styles.emptyText}>
-                    No user activity found for this event.
-                  </ThemedText>
-                )}
+                  cumulativeUserData.length > 0 ? (
+                    <FlatList
+                      data={cumulativeUserData}
+                      renderItem={renderCumulativeMemberItem}
+                      keyExtractor={(item) => item.id}
+                      style={styles.usersList}
+                      scrollEnabled={false}
+                      nestedScrollEnabled={true}
+                    />
+                  ) : (
+                    <ThemedText style={styles.emptyText}>
+                      No user activity found for this event.
+                    </ThemedText>
+                  )}
               </>
             )}
           </>
@@ -1654,7 +1665,7 @@ export default function AdminReportsScreen() {
                     style={[
                       styles.milestoneTab,
                       selectedMilestone === milestone.id &&
-                        styles.selectedMilestoneTab,
+                      styles.selectedMilestoneTab,
                     ]}
                     onPress={() => {
                       console.log(
@@ -1669,8 +1680,8 @@ export default function AdminReportsScreen() {
                         milestone.milestone_minutes === 50
                           ? styles.bronze
                           : milestone.milestone_minutes === 250
-                          ? styles.silver
-                          : styles.gold,
+                            ? styles.silver
+                            : styles.gold,
                       ]}
                     />
                     <ThemedText style={styles.milestoneTabText}>
@@ -1704,6 +1715,8 @@ export default function AdminReportsScreen() {
                     renderItem={renderMilestoneItem}
                     keyExtractor={(item) => item.id}
                     style={styles.milestonesList}
+                    scrollEnabled={false}
+                    nestedScrollEnabled={true}
                   />
                 </>
               ) : (
@@ -1721,6 +1734,8 @@ export default function AdminReportsScreen() {
                   renderItem={renderMilestoneItem}
                   keyExtractor={(item) => item.id}
                   style={styles.milestonesList}
+                  scrollEnabled={false}
+                  nestedScrollEnabled={true}
                 />
               ) : (
                 <ThemedText style={styles.emptyText}>
