@@ -2,6 +2,7 @@ import { Platform, NativeModules } from 'react-native';
 import * as Device from 'expo-device';
 import { supabase } from '../supabase';
 import { getLocalDateString } from '@/app/utils/dateUtils';
+import { healthService } from '../healthService';
 
 // Import react-native-health - try both default and named exports
 let AppleHealthKit: any;
@@ -57,20 +58,53 @@ interface PlatformInfo {
   osVersion: string | null;
 }
 
-// Activity type mappings from HealthKit to your database
-const HEALTHKIT_TO_ACTIVITY_TYPE: Record<string, { name: string; id: string }> = {
+// Activity type mappings from health apps to your database
+// The 'name' field must match exactly what's in the database activity_types table
+const ACTIVITY_TYPE_MAPPING: Record<string, { name: string; id: string }> = {
   'Running': { name: 'Running', id: 'running' },
   'Walking': { name: 'Walking', id: 'walking' },
   'Cycling': { name: 'Cycling', id: 'cycling' },
   'Swimming': { name: 'Swimming', id: 'swimming' },
   'Yoga': { name: 'Yoga', id: 'yoga' },
-  'Strength': { name: 'Strength Training', id: 'strength' },
-  'CrossTraining': { name: 'Cross Training', id: 'cross_training' },
-  'Dance': { name: 'Dance', id: 'dance' },
-  'Elliptical': { name: 'Elliptical', id: 'elliptical' },
+  'Strength': { name: 'Strength', id: 'strength' },  // Changed from 'Strength Training'
+  'StrengthTraining': { name: 'Strength', id: 'strength' },  // Alternative name
+  'CrossTraining': { name: 'Strength', id: 'strength' },  // Map to Strength
+  'FunctionalStrengthTraining': { name: 'Strength', id: 'strength' },  // Map to Strength
+  'TraditionalStrengthTraining': { name: 'Strength', id: 'strength' },  // Map to Strength
+  'Dance': { name: 'Dancing', id: 'dancing' },  // Changed from 'Dance' to 'Dancing'
+  'Dancing': { name: 'Dancing', id: 'dancing' },
+  'Elliptical': { name: 'Cycling', id: 'cycling' },  // Map elliptical to cycling
   'Rowing': { name: 'Rowing', id: 'rowing' },
-  'StairClimbing': { name: 'Stair Climbing', id: 'stair_climbing' },
-  'Default': { name: 'Other Activity', id: 'other' }
+  'StairClimbing': { name: 'Climbing', id: 'climbing' },  // Map to Climbing
+  'Climbing': { name: 'Climbing', id: 'climbing' },
+  'Hiking': { name: 'Hiking', id: 'hiking' },
+  'Tennis': { name: 'Tennis', id: 'tennis' },
+  'Boxing': { name: 'Boxing', id: 'boxing' },
+  'MartialArts': { name: 'Boxing', id: 'boxing' },  // Map martial arts to boxing
+  'Kickboxing': { name: 'Boxing', id: 'boxing' },  // Map kickboxing to boxing
+  'Pilates': { name: 'Pilates', id: 'pilates' },
+  'JumpRope': { name: 'Jump Rope', id: 'jump_rope' },
+  'Skating': { name: 'Skating', id: 'skating' },
+  'IceSkating': { name: 'Skating', id: 'skating' },
+  'Stretching': { name: 'Stretching', id: 'stretching' },
+  'Flexibility': { name: 'Stretching', id: 'stretching' },
+  // Android-specific mappings
+  'Biking': { name: 'Cycling', id: 'cycling' },
+  'Swimming (Pool)': { name: 'Swimming', id: 'swimming' },
+  'Swimming (Open Water)': { name: 'Swimming', id: 'swimming' },
+  'Weight Training': { name: 'Strength', id: 'strength' },
+  'Rowing Machine': { name: 'Rowing', id: 'rowing' },
+  'Stair Climbing': { name: 'Climbing', id: 'climbing' },
+  'Stair Climbing Machine': { name: 'Climbing', id: 'climbing' },
+  'Martial Arts': { name: 'Boxing', id: 'boxing' },
+  'Ice Skating': { name: 'Skating', id: 'skating' },
+  'Roller Skating': { name: 'Skating', id: 'skating' },
+  'Basketball': { name: 'Basketball', id: 'basketball' },
+  'Soccer': { name: 'Soccer', id: 'soccer' },
+  'Volleyball': { name: 'Volleyball', id: 'volleyball' },
+  'Other': { name: 'Walking', id: 'walking' },
+  'Other Activity': { name: 'Walking', id: 'walking' },
+  'Default': { name: 'Walking', id: 'walking' }  // Default to walking instead of 'Other'
 };
 
 class TrackerService {
@@ -93,8 +127,25 @@ class TrackerService {
   // Initialize the health tracking system
   async initialize(): Promise<void> {
     console.log('Initializing TrackerService...', this.platformInfo);
-    
-    if (this.platformInfo.platform === 'ios' && !this.platformInfo.isSimulator) {
+
+    if (this.platformInfo.platform === 'android') {
+      // Android device - use Health Connect
+      try {
+        console.log('[TrackerService] Initializing Health Connect for Android...');
+        const initialized = await healthService.initialize();
+        this.isInitialized = initialized;
+
+        if (!initialized) {
+          throw new Error('Failed to initialize Health Connect');
+        }
+
+        console.log('[TrackerService] Health Connect initialized successfully');
+      } catch (error: any) {
+        console.error('[TrackerService] Error initializing Health Connect:', error);
+        this.isInitialized = false;
+        throw error;
+      }
+    } else if (this.platformInfo.platform === 'ios' && !this.platformInfo.isSimulator) {
       // iOS device - initialize HealthKit
       return new Promise((resolve, reject) => {
         // Check if native module is available
@@ -152,8 +203,12 @@ class TrackerService {
 
   // Check if health tracking is available on current platform/device
   isAvailable(): boolean {
-    // Only available on real iOS devices for now
-    return this.platformInfo.platform === 'ios' && !this.platformInfo.isSimulator;
+    if (this.platformInfo.platform === 'ios') {
+      return !this.platformInfo.isSimulator;
+    } else if (this.platformInfo.platform === 'android') {
+      return healthService.isAvailable;
+    }
+    return false;
   }
 
   // Request necessary permissions from user
@@ -163,47 +218,129 @@ class TrackerService {
       return false;
     }
 
-    // Permissions are requested during initialization for iOS
-    // Return true if initialized successfully
-    if (!this.isInitialized) {
+    if (this.platformInfo.platform === 'android') {
+      // Android - use Health Connect
       try {
-        await this.initialize();
-        return this.isInitialized;
+        const hasPermissions = await healthService.requestPermissions();
+        console.log(`[TrackerService] Android permissions result: ${hasPermissions}`);
+        return hasPermissions;
       } catch (error) {
-        console.error('Failed to request permissions:', error);
+        console.error('[TrackerService] Failed to request Android permissions:', error);
         return false;
       }
+    } else if (this.platformInfo.platform === 'ios') {
+      // iOS - permissions are requested during initialization
+      if (!this.isInitialized) {
+        try {
+          await this.initialize();
+          return this.isInitialized;
+        } catch (error) {
+          console.error('Failed to request permissions:', error);
+          return false;
+        }
+      }
+      return this.isInitialized;
     }
 
-    return this.isInitialized;
+    return false;
   }
 
   // Fetch activity data from health tracker
   async fetchActivityData(startDate: Date, endDate: Date): Promise<ActivityData[]> {
-    if (!this.isAvailable() || !this.isInitialized) {
-      console.log('Cannot fetch data - tracker not available or not initialized');
+    if (!this.isAvailable()) {
+      console.log('Cannot fetch data - tracker not available');
       return [];
     }
 
-    const activities: ActivityData[] = [];
-
-    try {
-      // Fetch workouts
-      const workouts = await this.fetchWorkouts(startDate, endDate);
-      activities.push(...workouts);
-
-      // Fetch step-based activities if no workouts found
-      if (activities.length === 0) {
-        const stepActivities = await this.fetchStepActivities(startDate, endDate);
-        activities.push(...stepActivities);
+    if (this.platformInfo.platform === 'android') {
+      // Android - use Health Connect
+      if (!healthService.isAvailable) {
+        console.log('Health Connect not available');
+        return [];
       }
 
-      console.log(`Fetched ${activities.length} activities from HealthKit`);
-      return activities;
-    } catch (error) {
-      console.error('Error fetching activity data:', error);
-      return [];
+      const activities: ActivityData[] = [];
+
+      try {
+        // Fetch workouts from health service
+        const workouts = await healthService.getWorkouts(startDate, endDate);
+
+        if (workouts && workouts.length > 0) {
+          // Convert workout data to ActivityData format
+          const workoutActivities = workouts.map(workout => {
+            const activityMapping = ACTIVITY_TYPE_MAPPING[workout.type] ||
+                                  ACTIVITY_TYPE_MAPPING['Default'];
+
+            // Generate a unique ID for this workout
+            const externalId = `workout_${workout.startDate.getTime()}_${workout.type}_${workout.duration}`;
+
+            return {
+              activity_type: activityMapping.name,
+              activity_type_linked: activityMapping.id,
+              activity_minutes: workout.duration,
+              activity_date: getLocalDateString(workout.startDate),
+              activity_source: 'google_fit',
+              external_activity_id: externalId,
+              calories: workout.calories,
+              distance: workout.distance
+            };
+          });
+
+          activities.push(...workoutActivities);
+        }
+
+        // If no workouts found, try to create an activity from step data
+        if (activities.length === 0) {
+          const steps = await healthService.getStepCount(startDate, endDate);
+
+          if (steps && steps > 1000) { // Only log if more than 1000 steps
+            // Estimate walking time based on steps (100 steps per minute average)
+            const estimatedMinutes = Math.round(steps / 100);
+            const dateStr = getLocalDateString(startDate);
+            const externalId = `steps_${dateStr}_${steps}`;
+
+            activities.push({
+              activity_type: 'Walking',
+              activity_type_linked: 'walking',
+              activity_minutes: estimatedMinutes,
+              activity_date: dateStr,
+              activity_source: 'google_fit',
+              external_activity_id: externalId,
+              steps: steps
+            });
+          }
+        }
+
+        console.log(`Fetched ${activities.length} activities from Health Connect`);
+        return activities;
+      } catch (error) {
+        console.error('Error fetching activity data from Health Connect:', error);
+        return [];
+      }
+    } else if (this.platformInfo.platform === 'ios' && this.isInitialized) {
+      // iOS - use HealthKit
+      const activities: ActivityData[] = [];
+
+      try {
+        // Fetch workouts
+        const workouts = await this.fetchWorkouts(startDate, endDate);
+        activities.push(...workouts);
+
+        // Fetch step-based activities if no workouts found
+        if (activities.length === 0) {
+          const stepActivities = await this.fetchStepActivities(startDate, endDate);
+          activities.push(...stepActivities);
+        }
+
+        console.log(`Fetched ${activities.length} activities from HealthKit`);
+        return activities;
+      } catch (error) {
+        console.error('Error fetching activity data:', error);
+        return [];
+      }
     }
+
+    return [];
   }
 
   private fetchWorkouts(startDate: Date, endDate: Date): Promise<ActivityData[]> {
@@ -229,8 +366,10 @@ class TrackerService {
 
         const activities: ActivityData[] = results.map(workout => {
           const workoutType = workout.activityName || 'Other';
-          const activityMapping = HEALTHKIT_TO_ACTIVITY_TYPE[workoutType] || 
-                                HEALTHKIT_TO_ACTIVITY_TYPE['Default'];
+          const activityMapping = ACTIVITY_TYPE_MAPPING[workoutType] ||
+                                ACTIVITY_TYPE_MAPPING['Default'];
+
+          console.log(`Mapping HealthKit activity: "${workoutType}" -> "${activityMapping.name}"`);
 
           // Generate a unique ID for this workout
           // Using workout UUID if available, otherwise create one from workout properties
@@ -242,7 +381,7 @@ class TrackerService {
             activity_type_linked: activityMapping.id,
             activity_minutes: Math.round(workout.duration / 60),
             activity_date: getLocalDateString(new Date(workout.start)),
-            activity_source: 'apple_health',
+            activity_source: this.platformInfo.platform === 'ios' ? 'apple_health' : 'google_fit',
             external_activity_id: externalId,
             calories: workout.calories || 0,
             distance: workout.distance || 0
@@ -255,7 +394,7 @@ class TrackerService {
   }
 
   private async fetchStepActivities(startDate: Date, endDate: Date): Promise<ActivityData[]> {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       if (!AppleHealthKit || !AppleHealthKit.getDailyStepCountSamples) {
         console.error('AppleHealthKit.getDailyStepCountSamples not available');
         resolve([]); // Don't reject, just return empty array
@@ -293,7 +432,7 @@ class TrackerService {
               activity_type_linked: 'walking',
               activity_minutes: estimatedMinutes,
               activity_date: dateStr,
-              activity_source: 'apple_health',
+              activity_source: this.platformInfo.platform === 'ios' ? 'apple_health' : 'google_fit',
               external_activity_id: externalId,
               steps: steps
             });
@@ -306,10 +445,10 @@ class TrackerService {
   }
 
   // Sync fetched data to Supabase
-  async syncToSupabase(activities: ActivityData[], userId: string, eventId: string): Promise<void> {
+  async syncToSupabase(activities: ActivityData[], userId: string, eventId: string): Promise<{ newCount: number; skippedCount: number }> {
     if (activities.length === 0) {
       console.log('No activities to sync');
-      return;
+      return { newCount: 0, skippedCount: 0 };
     }
 
     try {
@@ -326,6 +465,8 @@ class TrackerService {
       const typeMapping: Record<string, string> = {};
       activityTypes?.forEach(type => {
         typeMapping[type.type_name.toLowerCase()] = type.id;
+        // Also add the exact name as a key (not just lowercase)
+        typeMapping[type.type_name] = type.id;
       });
 
       // Fetch existing activities for this user and event to check for duplicates
@@ -334,7 +475,7 @@ class TrackerService {
         .select('activity_date, activity_type, activity_source, external_activity_id')
         .eq('user_id', userId)
         .eq('event_id', eventId)
-        .eq('activity_source', 'apple_health');
+        .in('activity_source', ['apple_health', 'google_fit']);
 
       if (fetchError) {
         throw fetchError;
@@ -369,10 +510,16 @@ class TrackerService {
           continue;
         }
 
-        // Find the correct activity type ID
-        const activityTypeId = typeMapping[activity.activity_type.toLowerCase()] || 
-                              typeMapping['other'] || 
-                              activityTypes?.[0]?.id; // Fallback to first type
+        // Find the correct activity type ID from database
+        // First try exact match, then lowercase, then use Walking as default
+        const activityTypeId = typeMapping[activity.activity_type] || 
+                              typeMapping[activity.activity_type.toLowerCase()] || 
+                              typeMapping['Walking'] || 
+                              typeMapping['walking'] ||
+                              activityTypes?.find(t => t.type_name === 'Walking')?.id ||
+                              activityTypes?.[0]?.id; // Last resort: first type
+
+        console.log(`Mapping to database: "${activity.activity_type}" -> UUID: ${activityTypeId}`)
 
         newActivities.push({
           user_id: userId,
@@ -397,8 +544,10 @@ class TrackerService {
         }
 
         console.log(`Successfully synced ${newActivities.length} new activities to Supabase (${skippedCount} duplicates skipped)`);
+        return { newCount: newActivities.length, skippedCount };
       } else {
         console.log(`No new activities to sync (${skippedCount} duplicates skipped)`);
+        return { newCount: 0, skippedCount };
       }
     } catch (error) {
       console.error('Error syncing to Supabase:', error);
@@ -408,8 +557,9 @@ class TrackerService {
 
   // Connect to specific tracker
   async connectTracker(trackerId: string): Promise<void> {
-    console.log(`Attempting to connect to tracker: ${trackerId}`);
-    
+    console.log(`[TrackerService] Attempting to connect to tracker: ${trackerId}`);
+    console.log(`[TrackerService] Platform: ${this.platformInfo.platform}`);
+
     switch (trackerId) {
       case 'apple':
         if (this.platformInfo.platform === 'ios' && !this.platformInfo.isSimulator) {
@@ -419,15 +569,65 @@ class TrackerService {
           throw new Error('Apple Health is only available on iOS devices');
         }
         break;
-      
+
       case 'google':
-      case 'fitbit':
-      case 'strava':
-        console.log(`${trackerId} integration not implemented yet`);
-        throw new Error(`${trackerId} integration coming soon!`);
-      
+        if (this.platformInfo.platform === 'android') {
+          console.log('[TrackerService] Connecting to Google Fit (via Health Connect)...');
+
+          // Check Health Connect status first
+          const healthConnectStatus = await this.checkHealthConnectStatus();
+          console.log(`[TrackerService] Health Connect status: ${healthConnectStatus}`);
+
+          if (healthConnectStatus === 'not_installed') {
+            throw new Error('Health Connect is not installed. Please install it from the Play Store to access Google Fit data.');
+          } else if (healthConnectStatus === 'needs_update') {
+            throw new Error('Health Connect needs to be updated. Please update it from the Play Store.');
+          }
+
+          try {
+            await this.initialize();
+            console.log('[TrackerService] Successfully connected to Google Fit');
+          } catch (error: any) {
+            console.error('[TrackerService] Failed to connect to Google Fit:', error);
+            if (error?.message?.includes('SDK_UNAVAILABLE')) {
+              throw new Error('Health Connect is not available. Please install or update it from the Play Store.');
+            } else {
+              throw new Error(`Failed to connect to Health Connect: ${error?.message || 'Unknown error'}`);
+            }
+          }
+        } else {
+          console.log(`Google Fit not available on platform: ${this.platformInfo.platform}`);
+          throw new Error('Google Fit is only available on Android devices');
+        }
+        break;
+
       default:
         throw new Error(`Unknown tracker: ${trackerId}`);
+    }
+  }
+
+  // Check Health Connect installation status (Android only)
+  private async checkHealthConnectStatus(): Promise<'available' | 'not_installed' | 'needs_update' | 'unknown'> {
+    if (this.platformInfo.platform !== 'android') {
+      return 'unknown';
+    }
+
+    try {
+      // Try to get the SDK status from healthService
+      const status = await healthService.getHealthConnectStatus();
+
+      if (status === 1) {
+        return 'not_installed';
+      } else if (status === 2) {
+        return 'needs_update';
+      } else if (status === 3) {
+        return 'available';
+      }
+
+      return 'unknown';
+    } catch (error) {
+      console.error('[TrackerService] Error checking Health Connect status:', error);
+      return 'unknown';
     }
   }
 
@@ -439,7 +639,10 @@ class TrackerService {
       }
       return 'iOS Device - Apple Health available';
     } else if (this.platformInfo.platform === 'android') {
-      return 'Android - Health tracking not implemented yet';
+      if (healthService.isAvailable) {
+        return 'Android - Google Fit (Health Connect) available';
+      }
+      return 'Android - Health Connect not available (app may need to be installed)';
     } else if (this.platformInfo.platform === 'web') {
       return 'Web - Health tracking not available';
     }

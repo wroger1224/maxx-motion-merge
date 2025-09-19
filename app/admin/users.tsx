@@ -99,11 +99,11 @@ export default function UserManagementScreen() {
         ? "http://localhost:8081/login"
         : `${window.location.origin}/login`;
 
-      // Send magic link to login page
-      const { error } = await supabase.auth.signInWithOtp({
-        email: inviteEmail,
-        options: {
-          emailRedirectTo: redirectUrl,
+      // Send invitation email
+      const { error } = await supabase.functions.invoke("send-invitation-email", {
+        body: {
+          email: inviteEmail,
+          signInUrl: redirectUrl,
         },
       });
 
