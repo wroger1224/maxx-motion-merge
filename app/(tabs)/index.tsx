@@ -69,6 +69,9 @@ export default function DashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [badges, setBadges] = useState<Badge[]>([]);
   const [userBadges, setUserBadges] = useState<UserBadge[]>([]);
+  const [currentEvent, setCurrentEvent] = useState<any>(null);
+  const [upcomingEvent, setUpcomingEvent] = useState<any>(null);
+  const [hasActivities, setHasActivities] = useState(false);
   const isFocused = useIsFocused();
 
   const badgeList = [
@@ -218,6 +221,12 @@ export default function DashboardScreen() {
     }
   }, [user, userProfile, isFocused]);
 
+  useEffect(() => {
+    if (user && currentEvent) {
+      checkUserActivities();
+    }
+  }, [user, currentEvent]);
+
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
@@ -237,7 +246,19 @@ export default function DashboardScreen() {
       if (eventError) throw eventError;
       const currentEvent =
         eventData && eventData.length > 0 ? eventData[0] : null;
+      setCurrentEvent(currentEvent);
+
       if (!currentEvent) {
+        // If no current event, fetch upcoming event
+        const { data: upcomingData, error: upcomingError } = await supabase
+          .from("events")
+          .select("*")
+          .gt("start_date", today)
+          .order("start_date", { ascending: true })
+          .limit(1);
+
+        if (upcomingError) throw upcomingError;
+        setUpcomingEvent(upcomingData && upcomingData.length > 0 ? upcomingData[0] : null);
         setLoading(false);
         return;
       }
@@ -373,6 +394,89 @@ export default function DashboardScreen() {
     await calculateBadgeProgress(userProfile.id);
   };
 
+  const checkUserActivities = async () => {
+    if (!user || !currentEvent) return;
+
+    try {
+      const { data, error } = await supabase
+        .from("activities")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("event_id", currentEvent.id)
+        .limit(1);
+
+      if (error) throw error;
+      setHasActivities(data && data.length > 0);
+    } catch (err) {
+      console.error("Error checking user activities:", err);
+    }
+  };
+
+  const renderEventBanner = () => {
+    if (currentEvent) {
+      if (!hasActivities) {
+        // If there's a current event but user has no activities, show "Start Your Journey"
+        return (
+          <View style={styles.challengeCard}>
+            <View style={styles.challengeInfo}>
+              <Text style={styles.challengeTitle}>Start Your Journey!</Text>
+              <Text style={styles.challengeDates}>
+                Add some data to start scoring points for {currentEvent.name}
+              </Text>
+            </View>
+            <View style={styles.activeTag}>
+              <Text style={styles.activeTagText}>NEW</Text>
+            </View>
+          </View>
+        );
+      }
+
+      // User has activities for current event, show regular event banner
+      return (
+        <View style={styles.challengeCard}>
+          <View style={styles.challengeInfo}>
+            <Text style={styles.challengeTitle}>{currentEvent.name}</Text>
+            <Text style={styles.challengeDates}>
+              Active until{" "}
+              {new Date(currentEvent.end_date).toLocaleDateString()}
+            </Text>
+          </View>
+          <View style={styles.activeTag}>
+            <Text style={styles.activeTagText}>ACTIVE</Text>
+          </View>
+        </View>
+      );
+    } else if (upcomingEvent) {
+      return (
+        <View style={styles.challengeCard}>
+          <View style={styles.challengeInfo}>
+            <Text style={styles.challengeTitle}>{upcomingEvent.name}</Text>
+            <Text style={styles.challengeDates}>
+              Starts {new Date(upcomingEvent.start_date).toLocaleDateString()}
+            </Text>
+          </View>
+          <View style={styles.activeTag}>
+            <Text style={styles.activeTagText}>UPCOMING</Text>
+          </View>
+        </View>
+      );
+    } else {
+      return (
+        <View style={styles.challengeCard}>
+          <View style={styles.challengeInfo}>
+            <Text style={styles.challengeTitle}>Start Your Journey!</Text>
+            <Text style={styles.challengeDates}>
+              Add some data to start scoring points
+            </Text>
+          </View>
+          <View style={styles.activeTag}>
+            <Text style={styles.activeTagText}>NEW</Text>
+          </View>
+        </View>
+      );
+    }
+  };
+
   const renderRecentBadges = () => {
     const unlockedBadges = userBadges
       .filter((ub) => ub.is_unlocked)
@@ -482,14 +586,13 @@ export default function DashboardScreen() {
                 style={[
                   styles.progressFill,
                   {
-                    width: `${
-                      userProgress.progressMax > userProgress.progressMin
-                        ? ((userProgress.current - userProgress.progressMin) /
-                            (userProgress.progressMax -
-                              userProgress.progressMin)) *
-                          100
-                        : 100
-                    }%`,
+                    width: `${userProgress.progressMax > userProgress.progressMin
+                      ? ((userProgress.current - userProgress.progressMin) /
+                        (userProgress.progressMax -
+                          userProgress.progressMin)) *
+                      100
+                      : 100
+                      }%`,
                   },
                 ]}
               />
@@ -511,8 +614,11 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Event Banner */}
+        {renderEventBanner()}
+
         {/* Team Leaderboard Section */}
-        <View style={styles.section}>
+        <View style={[styles.section, styles.sectionReducedTop]}>
           <ThemedText variant="h2" style={styles.sectionTitle}>
             Team Leaderboard
           </ThemedText>
@@ -668,6 +774,9 @@ const styles = StyleSheet.create({
   sectionLast: {
     marginBottom: Spacing.md,
   },
+  sectionReducedTop: {
+    marginTop: 4,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "600",
@@ -816,5 +925,40 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
     textAlign: "center",
     marginTop: 8,
+  },
+  challengeCard: {
+    margin: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: "#FFF5F5",
+    borderRadius: 12,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  challengeInfo: {
+    flex: 1,
+  },
+  challengeTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: Colors.light.redOrange,
+    marginBottom: 4,
+  },
+  challengeDates: {
+    fontSize: 14,
+    color: "#666",
+  },
+  activeTag: {
+    backgroundColor: Colors.light.orange,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginLeft: 8,
+  },
+  activeTagText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
   },
 });

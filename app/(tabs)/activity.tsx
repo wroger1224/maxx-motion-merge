@@ -11,6 +11,7 @@ import {
   Platform,
   Alert,
   Animated,
+  KeyboardAvoidingView,
 } from "react-native";
 import { useNavigation, useIsFocused } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -29,6 +30,7 @@ import { ResponsiveHeader } from "@/components/ui/responsiveHeader";
 import { router } from "expo-router";
 import { showAlert, showAlertWithButtons } from "../utils/showAlert";
 import TrackerService from "@/lib/services/tracker";
+import { TrackerSettingsService, TrackerSettings, SyncResult } from "@/lib/services/trackerSettings";
 import { Header } from "@/components/ui/header";
 import {
   formatDateForStorage,
@@ -93,9 +95,14 @@ function ActivityReview({
   }>({});
 
   useEffect(() => {
-    fetchUserActivities();
     fetchActivityTypes();
-  }, [refreshTrigger]);
+  }, []);
+
+  useEffect(() => {
+    if (Object.keys(activityTypes).length > 0) {
+      fetchUserActivities();
+    }
+  }, [refreshTrigger, activityTypes]);
 
   const fetchActivityTypes = async () => {
     try {
@@ -255,6 +262,12 @@ export default function Activity() {
   const [currentEditActivity, setCurrentEditActivity] =
     useState<UserActivity | null>(null);
 
+  // Tracker settings
+  const [trackerSettings, setTrackerSettings] = useState<TrackerSettings | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<string>("");
+  const trackerSettingsService = new TrackerSettingsService();
+
   useEffect(() => {
     fetchActivityTypes();
     fetchEvents();
@@ -265,6 +278,20 @@ export default function Activity() {
       checkUserActivities();
     }
   }, [user, currentEvent]);
+
+  // Load tracker settings when user changes
+  useEffect(() => {
+    if (user) {
+      loadTrackerSettings();
+    }
+  }, [user]);
+
+  // Check for auto-sync when tracker settings and events are loaded
+  useEffect(() => {
+    if (trackerSettings && currentEvent) {
+      checkAutoSync();
+    }
+  }, [trackerSettings, currentEvent]);
 
   // Toast animation
   useEffect(() => {
@@ -362,6 +389,111 @@ export default function Activity() {
     } catch (err) {
       console.error("Error checking user activities:", err);
     }
+  };
+
+  // Load tracker settings
+  const loadTrackerSettings = async () => {
+    if (!user) return;
+
+    try {
+      const settings = await trackerSettingsService.getTrackerSettings(user.id);
+      setTrackerSettings(settings);
+
+      if (settings) {
+        const statusMessage = trackerSettingsService.getSyncStatusMessage(settings);
+        setSyncStatus(statusMessage);
+      }
+    } catch (error) {
+      console.error("Error loading tracker settings:", error);
+    }
+  };
+
+  // Automatic sync check
+  const checkAutoSync = async () => {
+    if (!user || !currentEvent || !trackerSettings) return;
+
+    try {
+      const shouldSync = trackerSettingsService.shouldAutoSync(trackerSettings);
+
+      if (shouldSync) {
+        console.log("Auto-sync triggered");
+        await performSync();
+      }
+    } catch (error) {
+      console.error("Error checking auto-sync:", error);
+    }
+  };
+
+  // Perform sync
+  const performSync = async (): Promise<SyncResult> => {
+    if (!user || !currentEvent) {
+      return {
+        success: false,
+        activitiesSynced: 0,
+        error: "User or event not available",
+        syncDate: new Date().toISOString()
+      };
+    }
+
+    setIsSyncing(true);
+
+    try {
+      const result = await trackerSettingsService.syncActivities(user.id, currentEvent.id);
+
+      if (result.success) {
+        showSuccessToast(`Synced ${result.activitiesSynced} activities from tracker!`);
+        // Refresh activities list
+        setRefreshTrigger(prev => prev + 1);
+        // Update tracker settings
+        await loadTrackerSettings();
+      } else {
+        showAlert("Sync Failed", result.error || "Unknown error occurred during sync");
+      }
+
+      return result;
+    } catch (error) {
+      console.error("Error performing sync:", error);
+      const errorResult = {
+        success: false,
+        activitiesSynced: 0,
+        error: error instanceof Error ? error.message : "Unknown error",
+        syncDate: new Date().toISOString()
+      };
+      showAlert("Sync Failed", errorResult.error);
+      return errorResult;
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // Remove tracker connection
+  const handleRemoveTracker = async () => {
+    if (!user) {
+      showAlert("Error", "You must be logged in to remove tracker");
+      return;
+    }
+
+    // Show confirmation dialog
+    showAlertWithButtons(
+      "Remove Tracker",
+      "Are you sure you want to remove the connected tracker? You can reconnect it anytime.",
+      async () => {
+        try {
+          const success = await trackerSettingsService.disconnectTracker(user.id);
+
+          if (success) {
+            showSuccessToast("Tracker disconnected successfully");
+            // Reload tracker settings to update UI
+            await loadTrackerSettings();
+          } else {
+            showAlert("Error", "Failed to disconnect tracker. Please try again.");
+          }
+        } catch (error) {
+          console.error("Error removing tracker:", error);
+          showAlert("Error", "Failed to disconnect tracker. Please try again.");
+        }
+      }
+    );
   };
 
   const navigateToWorkout = (
@@ -481,6 +613,13 @@ export default function Activity() {
           return;
         }
 
+        // Save tracker connection
+        const connectionSaved = await trackerSettingsService.connectTracker(user.id, trackerId);
+
+        if (!connectionSaved) {
+          console.warn("Failed to save tracker connection settings");
+        }
+
         // Sync to Supabase
         await tracker.syncToSupabase(activities, user.id, eventId);
 
@@ -495,6 +634,9 @@ export default function Activity() {
 
         // Trigger refresh of activities list
         setRefreshTrigger((prev) => prev + 1);
+
+        // Reload tracker settings to update UI
+        await loadTrackerSettings();
       } else {
         showAlert(
           "Permission Denied",
@@ -740,71 +882,6 @@ export default function Activity() {
     }
   };
 
-  // Helper to render the event banner
-  const renderEventBanner = () => {
-    if (currentEvent) {
-      if (!hasActivities) {
-        // If there's a current event but user has no activities, show "Start Your Journey"
-        return (
-          <View style={styles.challengeCard}>
-            <View style={styles.challengeInfo}>
-              <Text style={styles.challengeTitle}>Start Your Journey!</Text>
-              <Text style={styles.challengeDates}>
-                Add some data to start scoring points for {currentEvent.name}
-              </Text>
-            </View>
-            <View style={styles.activeTag}>
-              <Text style={styles.activeTagText}>NEW</Text>
-            </View>
-          </View>
-        );
-      }
-
-      // User has activities for current event, show regular event banner
-      return (
-        <View style={styles.challengeCard}>
-          <View style={styles.challengeInfo}>
-            <Text style={styles.challengeTitle}>{currentEvent.name}</Text>
-            <Text style={styles.challengeDates}>
-              Active until{" "}
-              {new Date(currentEvent.end_date).toLocaleDateString()}
-            </Text>
-          </View>
-          <View style={styles.activeTag}>
-            <Text style={styles.activeTagText}>ACTIVE</Text>
-          </View>
-        </View>
-      );
-    } else if (upcomingEvent) {
-      return (
-        <View style={styles.challengeCard}>
-          <View style={styles.challengeInfo}>
-            <Text style={styles.challengeTitle}>{upcomingEvent.name}</Text>
-            <Text style={styles.challengeDates}>
-              Starts {new Date(upcomingEvent.start_date).toLocaleDateString()}
-            </Text>
-          </View>
-          <View style={styles.activeTag}>
-            <Text style={styles.activeTagText}>UPCOMING</Text>
-          </View>
-        </View>
-      );
-    } else {
-      return (
-        <View style={styles.challengeCard}>
-          <View style={styles.challengeInfo}>
-            <Text style={styles.challengeTitle}>Start Your Journey!</Text>
-            <Text style={styles.challengeDates}>
-              Add some data to start scoring points
-            </Text>
-          </View>
-          <View style={styles.activeTag}>
-            <Text style={styles.activeTagText}>NEW</Text>
-          </View>
-        </View>
-      );
-    }
-  };
 
   // New states for main page tabs
   const [activeTab, setActiveTab] = useState("add");
@@ -848,12 +925,11 @@ export default function Activity() {
         </TouchableOpacity>
       </View>
 
-      {/* Event banner - show in both tabs */}
-      {renderEventBanner()}
 
       {/* Add Activity Tab Content */}
       {activeTab === "add" && (
         <>
+          <View style={styles.spacer} />
           <View style={styles.actionsContainer}>
             <TouchableOpacity
               style={styles.actionButton}
@@ -861,27 +937,41 @@ export default function Activity() {
             >
               <Text style={styles.actionButtonText}>Connect Tracker</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => {
-                // Reset the manual entry form when opening it from scratch
-                setManualEntry({
-                  activity_type: "",
-                  activity_type_linked: "",
-                  activity_type_emoji: "",
-                  activity_minutes: "",
-                  activity_date: new Date(),
-                  activity_source: "manual",
-                });
-                setManualEntryModalVisible(true);
-              }}
-            >
-              <Text style={styles.actionButtonText}>Manual Entry</Text>
-            </TouchableOpacity>
           </View>
 
+          {/* Tracker Status */}
+          {trackerSettings?.connected_tracker && (
+            <View style={styles.trackerStatusContainer}>
+              <View style={styles.trackerStatusHeader}>
+                <Text style={styles.trackerStatusText}>
+                  Connected to: {trackerSettings.connected_tracker === 'apple' ? 'Apple Health' : trackerSettings.connected_tracker}
+                </Text>
+                <View style={styles.trackerStatusActions}>
+                  <TouchableOpacity
+                    style={[styles.syncButton, isSyncing && styles.syncButtonDisabled]}
+                    onPress={performSync}
+                    disabled={isSyncing}
+                  >
+                    <Text style={styles.syncButtonText}>
+                      {isSyncing ? "Syncing..." : "Sync Now"}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.removeButton}
+                    onPress={handleRemoveTracker}
+                  >
+                    <Text style={styles.removeButtonText}>Remove</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              <Text style={styles.syncStatusText}>
+                {syncStatus}
+              </Text>
+            </View>
+          )}
+
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Add By Activity Type</Text>
+            <Text style={styles.sectionTitle}>Add Activity</Text>
           </View>
 
           <ScrollView style={styles.content}>
@@ -894,21 +984,37 @@ export default function Activity() {
                 {error}
               </Text>
             ) : (
-              activityTypes.map((type) => (
+              <>
+                {activityTypes.map((type) => (
+                  <TouchableOpacity
+                    key={type.id}
+                    style={styles.categoryItem}
+                    onPress={() =>
+                      navigateToWorkout(type.id, type.type_name, type.type_emoji)
+                    }
+                  >
+                    <View style={styles.categoryIconContainer}>
+                      <Text style={styles.categoryIcon}>{type.type_emoji}</Text>
+                    </View>
+                    <Text style={styles.categoryName}>{type.type_name}</Text>
+                    <Text style={styles.chevron}>›</Text>
+                  </TouchableOpacity>
+                ))}
+
+                {/* Other Activity Option */}
                 <TouchableOpacity
-                  key={type.id}
                   style={styles.categoryItem}
                   onPress={() =>
-                    navigateToWorkout(type.id, type.type_name, type.type_emoji)
+                    navigateToWorkout("other", "Other", "🏃‍♂️")
                   }
                 >
                   <View style={styles.categoryIconContainer}>
-                    <Text style={styles.categoryIcon}>{type.type_emoji}</Text>
+                    <Text style={styles.categoryIcon}>🏃‍♂️</Text>
                   </View>
-                  <Text style={styles.categoryName}>{type.type_name}</Text>
+                  <Text style={styles.categoryName}>Other</Text>
                   <Text style={styles.chevron}>›</Text>
                 </TouchableOpacity>
-              ))
+              </>
             )}
           </ScrollView>
         </>
@@ -916,11 +1022,14 @@ export default function Activity() {
 
       {/* Review Activities Tab Content */}
       {activeTab === "review" && (
-        <ActivityReview
-          refreshTrigger={refreshTrigger}
-          onRefreshComplete={() => setIsRefreshing(false)}
-          onEditActivity={handleEditActivity}
-        />
+        <>
+          <View style={styles.spacer} />
+          <ActivityReview
+            refreshTrigger={refreshTrigger}
+            onRefreshComplete={() => setIsRefreshing(false)}
+            onEditActivity={handleEditActivity}
+          />
+        </>
       )}
 
       {/* Success Toast */}
@@ -972,7 +1081,10 @@ export default function Activity() {
         visible={manualEntryModalVisible}
         onRequestClose={() => setManualEntryModalVisible(false)}
       >
-        <View style={styles.modalContainer}>
+        <KeyboardAvoidingView
+          style={styles.modalContainer}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
           <View style={styles.modalContent}>
             <ThemedText style={styles.modalTitle}>
               {manualEntry.activity_type
@@ -989,12 +1101,6 @@ export default function Activity() {
                 <Text style={styles.selectedActivityName}>
                   {manualEntry.activity_type}
                 </Text>
-                <TouchableOpacity
-                  style={styles.changeButton}
-                  onPress={() => setActivityTypeModalVisible(true)}
-                >
-                  <Text style={styles.changeButtonText}>Change</Text>
-                </TouchableOpacity>
               </View>
             ) : (
               <Pressable
@@ -1033,7 +1139,7 @@ export default function Activity() {
               />
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Activity Type Selection Modal */}
@@ -1068,6 +1174,20 @@ export default function Activity() {
                   <Text style={styles.trackerName}>{type.type_name}</Text>
                 </Pressable>
               ))}
+
+              {/* Other Activity Option */}
+              <Pressable
+                style={({ pressed }) => [
+                  styles.trackerOption,
+                  pressed && styles.trackerOptionPressed,
+                ]}
+                onPress={() =>
+                  handleActivityTypeSelection("other", "Other", "🏃‍♂️")
+                }
+              >
+                <Text style={styles.trackerIcon}>🏃‍♂️</Text>
+                <Text style={styles.trackerName}>Other</Text>
+              </Pressable>
             </ScrollView>
             <Button
               label="Cancel"
@@ -1086,36 +1206,83 @@ export default function Activity() {
         visible={editActivityModalVisible}
         onRequestClose={() => setEditActivityModalVisible(false)}
       >
-        <View style={styles.modalContainer}>
+        <KeyboardAvoidingView
+          style={styles.modalContainer}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
           <View style={styles.modalContent}>
             <ThemedText style={styles.modalTitle}>Edit Activity</ThemedText>
 
-            {/* Activity Type Display/Selector */}
-            {manualEntry.activity_type ? (
-              <View style={styles.selectedActivityType}>
-                <Text style={styles.selectedActivityEmoji}>
-                  {manualEntry.activity_type_emoji}
-                </Text>
-                <Text style={styles.selectedActivityName}>
-                  {manualEntry.activity_type}
-                </Text>
-                <TouchableOpacity
-                  style={styles.changeButton}
-                  onPress={() => setActivityTypeModalVisible(true)}
-                >
-                  <Text style={styles.changeButtonText}>Change</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <Pressable
-                style={styles.input}
-                onPress={() => setActivityTypeModalVisible(true)}
+            {/* Activity Type Selector */}
+            <View style={styles.activityTypeSelector}>
+              <ThemedText style={styles.selectorLabel}>Activity Type:</ThemedText>
+              <ScrollView
+                style={styles.activityTypeScrollView}
+                horizontal={true}
+                showsHorizontalScrollIndicator={false}
               >
-                <Text style={{ fontSize: 16, color: "#999" }}>
-                  Select Activity Type
-                </Text>
-              </Pressable>
-            )}
+                {/* Current Activity Type First */}
+                {manualEntry.activity_type_linked && (
+                  <TouchableOpacity
+                    style={[
+                      styles.activityTypeOption,
+                      styles.activityTypeOptionSelected
+                    ]}
+                    onPress={() => {
+                      // Already selected, no action needed
+                    }}
+                  >
+                    <Text style={styles.activityTypeEmoji}>{manualEntry.activity_type_emoji}</Text>
+                    <Text style={styles.activityTypeNameSelected}>
+                      {manualEntry.activity_type}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* Other Activity Types */}
+                {activityTypes
+                  .filter(type => type.id !== manualEntry.activity_type_linked)
+                  .map((type) => (
+                    <TouchableOpacity
+                      key={type.id}
+                      style={styles.activityTypeOption}
+                      onPress={() => {
+                        setManualEntry({
+                          ...manualEntry,
+                          activity_type: type.type_name,
+                          activity_type_linked: type.id,
+                          activity_type_emoji: type.type_emoji,
+                        });
+                      }}
+                    >
+                      <Text style={styles.activityTypeEmoji}>{type.type_emoji}</Text>
+                      <Text style={styles.activityTypeName}>
+                        {type.type_name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+
+                {/* Other Activity Option (if not already selected) */}
+                {manualEntry.activity_type_linked !== "other" && (
+                  <TouchableOpacity
+                    style={styles.activityTypeOption}
+                    onPress={() => {
+                      setManualEntry({
+                        ...manualEntry,
+                        activity_type: "Other",
+                        activity_type_linked: "other",
+                        activity_type_emoji: "🏃‍♂️",
+                      });
+                    }}
+                  >
+                    <Text style={styles.activityTypeEmoji}>🏃‍♂️</Text>
+                    <Text style={styles.activityTypeName}>
+                      Other
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </ScrollView>
+            </View>
 
             <TextInput
               style={styles.input}
@@ -1149,7 +1316,7 @@ export default function Activity() {
               />
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -1534,5 +1701,103 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
     textAlign: "center",
+  },
+  activityTypeSelector: {
+    marginBottom: 16,
+  },
+  selectorLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 8,
+  },
+  activityTypeScrollView: {
+    maxHeight: 100,
+  },
+  activityTypeOption: {
+    alignItems: "center",
+    padding: 12,
+    marginRight: 12,
+    borderRadius: 8,
+    backgroundColor: "#F5F5F5",
+    minWidth: 80,
+  },
+  activityTypeOptionSelected: {
+    backgroundColor: Colors.light.blue,
+  },
+  activityTypeEmoji: {
+    fontSize: 24,
+    marginBottom: 4,
+  },
+  activityTypeName: {
+    fontSize: 12,
+    color: "#333",
+    textAlign: "center",
+    fontWeight: "500",
+  },
+  activityTypeNameSelected: {
+    color: "#fff",
+    fontWeight: "600",
+  },
+  spacer: {
+    height: 16,
+  },
+  syncButton: {
+    backgroundColor: Colors.light.blue,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    minWidth: 80,
+  },
+  syncButtonDisabled: {
+    backgroundColor: Colors.light.gray,
+    opacity: 0.6,
+  },
+  syncButtonText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  trackerStatusContainer: {
+    backgroundColor: "#F8F9FA",
+    padding: 12,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: Colors.light.blue,
+  },
+  trackerStatusHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  trackerStatusText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#333",
+    flex: 1,
+  },
+  trackerStatusActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  removeButton: {
+    backgroundColor: "#FF6B6B",
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  removeButtonText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  syncStatusText: {
+    fontSize: 12,
+    color: "#666",
   },
 });

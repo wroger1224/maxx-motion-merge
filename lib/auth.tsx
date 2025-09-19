@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import { supabase } from './supabase';
 import { Session, User } from '@supabase/supabase-js';
 import { router } from 'expo-router';
+import { TrackerSettingsService } from './services/trackerSettings';
 
 type AuthContextProps = {
   user: User | null;
@@ -20,7 +21,7 @@ const AuthContext = createContext<AuthContextProps>({
   loading: true,
   signIn: async () => ({ error: null }),
   signUp: async () => ({ error: null }),
-  signOut: async () => {},
+  signOut: async () => { },
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -28,31 +29,79 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [initialized, setInitialized] = useState(false);
   const [loading, setLoading] = useState(true);
+  const trackerSettingsService = new TrackerSettingsService();
+
+  // Automatic sync on login
+  const performLoginSync = async (userId: string) => {
+    try {
+      console.log("🔄 Starting automatic sync on login for user:", userId);
+
+      // Get user's tracker settings
+      const settings = await trackerSettingsService.getTrackerSettings(userId);
+
+      if (!settings?.connected_tracker) {
+        console.log("🔄 No tracker connected, skipping sync");
+        return;
+      }
+
+      // Get current event for sync
+      const today = new Date().toISOString().split("T")[0];
+      const { data: currentEventData } = await supabase
+        .from("events")
+        .select("*")
+        .lte("start_date", today)
+        .gte("end_date", today)
+        .order("start_date", { ascending: false })
+        .limit(1);
+
+      if (!currentEventData || currentEventData.length === 0) {
+        console.log("🔄 No current event found, skipping sync");
+        return;
+      }
+
+      const currentEvent = currentEventData[0];
+
+      // Perform sync
+      const result = await trackerSettingsService.syncActivities(userId, currentEvent.id);
+
+      if (result.success) {
+        console.log(`🔄 Login sync completed: ${result.activitiesSynced} activities synced`);
+      } else {
+        console.log("🔄 Login sync failed:", result.error);
+      }
+    } catch (error) {
+      console.error("🔄 Error during login sync:", error);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
     console.log("🔒 Auth provider initialized");
-    
+
     // Get current session and user
     const initializeAuth = async () => {
       try {
         console.log("🔒 Fetching current session...");
         const { data, error } = await supabase.auth.getSession();
-        
+
         if (error) {
           console.error("🔒 Error getting session:", error);
           throw error;
         }
-        
+
         if (!isMounted) return;
-        
+
         console.log("🔒 Session retrieved:", data.session ? "Session active" : "No active session");
-        
+
         setSession(data.session);
         setUser(data.session?.user ?? null);
-        
+
         if (data.session?.user) {
           console.log("🔒 User authenticated:", data.session.user.email);
+          // Trigger automatic sync on app load if user is already logged in
+          performLoginSync(data.session.user.id).catch(error => {
+            console.error("🔄 Background sync error on app load:", error);
+          });
         }
       } catch (error) {
         console.error('🔒 Error initializing auth:', error);
@@ -72,15 +121,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         console.log(`🔒 Auth state changed: ${event}`);
-        
+
         if (!isMounted) return;
-        
+
         try {
           setSession(newSession);
           setUser(newSession?.user ?? null);
-          
+
           if (event === 'SIGNED_IN') {
             console.log("🔒 User signed in:", newSession?.user?.email);
+            // Trigger automatic sync on login
+            if (newSession?.user?.id) {
+              // Run sync in background (don't await to avoid blocking UI)
+              performLoginSync(newSession.user.id).catch(error => {
+                console.error("🔄 Background sync error:", error);
+              });
+            }
           } else if (event === 'SIGNED_OUT') {
             console.log("🔒 User signed out");
           }
@@ -102,19 +158,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (email: string, password: string) => {
     console.log("🔒 Attempting to sign in:", email);
     setLoading(true);
-    
+
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
-      
+
       if (error) {
         console.error("🔒 Sign in error:", error.message);
       } else {
         console.log("🔒 Sign in successful");
       }
-      
+
       return { error };
     } catch (error) {
       console.error("🔒 Unexpected sign in error:", error);
@@ -127,19 +183,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = async (email: string, password: string) => {
     console.log("🔒 Attempting to sign up:", email);
     setLoading(true);
-    
+
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
       });
-      
+
       if (error) {
         console.error("🔒 Sign up error:", error.message);
       } else {
         console.log("🔒 Sign up successful");
       }
-      
+
       return { error };
     } catch (error) {
       console.error("🔒 Unexpected sign up error:", error);
@@ -173,9 +229,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  console.log("🔒 Auth state:", { 
-    initialized, 
-    loading, 
+  console.log("🔒 Auth state:", {
+    initialized,
+    loading,
     isAuthenticated: !!user,
   });
 
@@ -196,5 +252,5 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-export const useAuth = () => useContext(AuthContext); 
+export const useAuth = () => useContext(AuthContext);
 
