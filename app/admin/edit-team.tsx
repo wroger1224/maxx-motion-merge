@@ -27,7 +27,7 @@ export default function EditTeamScreen() {
   const params = useLocalSearchParams();
   const teamId = params.id as string;
   const { userProfile, loading: userLoading } = useUser();
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [teamName, setTeamName] = useState('');
   const [eventName, setEventName] = useState('');
@@ -58,24 +58,24 @@ export default function EditTeamScreen() {
   const fetchTeamDetails = async () => {
     try {
       setIsLoading(true);
-      
+
       // Fetch team info
       const { data: teamData, error: teamError } = await supabase
         .from('teams')
         .select('*, events(name)')
         .eq('id', teamId)
         .single();
-      
+
       if (teamError) {
         console.error('Error fetching team:', teamError);
         showAlert('Error', 'Failed to load team details');
         return;
       }
-      
+
       if (teamData) {
         setTeamName(teamData.team_name);
         setEventName(teamData.events?.name || 'Unknown Event');
-        
+
         // Fetch captain details if there is one
         if (teamData.captain_id) {
           const { data: captainData, error: captainError } = await supabase
@@ -83,14 +83,14 @@ export default function EditTeamScreen() {
             .select('id, full_name, email, avatar_url')
             .eq('id', teamData.captain_id)
             .single();
-          
+
           if (captainError) {
             console.error('Error fetching captain:', captainError);
           } else if (captainData) {
             setCaptain(captainData);
           }
         }
-        
+
         // Fetch team members
         await fetchTeamMembers();
       }
@@ -109,17 +109,17 @@ export default function EditTeamScreen() {
         .from('team_members')
         .select('*')
         .eq('team_id', teamId);
-      
+
       if (memberError) {
         console.error('Error fetching team members:', memberError);
         return;
       }
-      
+
       if (!memberData || memberData.length === 0) {
         setMembers([]);
         return;
       }
-      
+
       // Then get the profile information for each member
       const enhancedMembers: TeamMember[] = [];
       for (const member of memberData) {
@@ -128,7 +128,7 @@ export default function EditTeamScreen() {
           .select('full_name, email, avatar_url')
           .eq('id', member.user_id)
           .single();
-        
+
         if (userError) {
           console.error(`Error fetching user ${member.user_id}:`, userError);
         } else if (userData) {
@@ -142,7 +142,7 @@ export default function EditTeamScreen() {
           });
         }
       }
-      
+
       setMembers(enhancedMembers);
     } catch (error) {
       console.error('Error fetching team members:', error);
@@ -162,13 +162,13 @@ export default function EditTeamScreen() {
         .select('id, full_name, email, avatar_url')
         .or(`full_name.ilike.%${userSearchQuery}%,email.ilike.%${userSearchQuery}%`)
         .limit(10);
-      
+
       if (error) {
         console.error('Error searching users:', error);
         showAlert('Error', 'Failed to search users');
         return;
       }
-      
+
       setUserSearchResults(data || []);
     } catch (error) {
       console.error('Unexpected error:', error);
@@ -190,13 +190,13 @@ export default function EditTeamScreen() {
         .from('teams')
         .update({ team_name: teamName })
         .eq('id', teamId);
-      
+
       if (error) {
         console.error('Error updating team name:', error);
         showAlert('Error', 'Failed to update team name');
         return;
       }
-      
+
       showAlert('Success', 'Team name updated successfully');
     } catch (error) {
       console.error('Unexpected error:', error);
@@ -213,25 +213,25 @@ export default function EditTeamScreen() {
         .from('teams')
         .update({ captain_id: user.id })
         .eq('id', teamId);
-      
+
       if (error) {
         console.error('Error setting captain:', error);
         showAlert('Error', 'Failed to set team captain');
         return;
       }
-      
+
       setCaptain(user);
       setShowUserSearch(false);
       setUserSearchQuery('');
       setUserSearchResults([]);
       setIsSearchingForCaptain(false);
-      
+
       // Check if user is already a member, if not add them
       const isMember = members.some(member => member.user_id === user.id);
       if (!isMember) {
         await addTeamMember(user);
       }
-      
+
       showAlert('Success', 'Team captain updated successfully');
     } catch (error) {
       console.error('Unexpected error:', error);
@@ -248,13 +248,13 @@ export default function EditTeamScreen() {
         .from('teams')
         .update({ captain_id: null })
         .eq('id', teamId);
-      
+
       if (error) {
         console.error('Error removing captain:', error);
         showAlert('Error', 'Failed to remove team captain');
         return;
       }
-      
+
       setCaptain(null);
       showAlert('Success', 'Team captain removed successfully');
     } catch (error) {
@@ -268,14 +268,14 @@ export default function EditTeamScreen() {
   const addTeamMember = async (user: User) => {
     try {
       setIsLoading(true);
-      
+
       // Check if user is already a member
       const existingMember = members.find(member => member.user_id === user.id);
       if (existingMember) {
         showAlert('Info', 'This user is already a team member');
         return;
       }
-      
+
       // Add the user to the team
       const { data, error } = await supabase
         .from('team_members')
@@ -284,20 +284,20 @@ export default function EditTeamScreen() {
           user_id: user.id
         })
         .select();
-      
+
       if (error) {
         console.error('Error adding team member:', error);
         showAlert('Error', 'Failed to add team member');
         return;
       }
-      
+
       // Refresh team members
       await fetchTeamMembers();
-      
+
       setShowUserSearch(false);
       setUserSearchQuery('');
       setUserSearchResults([]);
-      
+
       showAlert('Success', 'Team member added successfully');
     } catch (error) {
       console.error('Unexpected error:', error);
@@ -316,34 +316,34 @@ export default function EditTeamScreen() {
       );
       return;
     }
-    
+
     showAlertWithButtons(
       'Remove Member',
       'Are you sure you want to remove this member from the team?',
       async () => {
-            try {
-              setIsLoading(true);
-              const { error } = await supabase
-                .from('team_members')
-                .delete()
-                .eq('id', memberId);
-              
-              if (error) {
-                console.error('Error removing team member:', error);
-                showAlert('Error', 'Failed to remove team member');
-                return;
-              }
-              
-              // Refresh team members
-              await fetchTeamMembers();
-              
-              showAlert('Success', 'Team member removed successfully');
-            } catch (error) {
-              console.error('Unexpected error:', error);
-              showAlert('Error', 'An unexpected error occurred');
-            } finally {
-              setIsLoading(false);
-            }
+        try {
+          setIsLoading(true);
+          const { error } = await supabase
+            .from('team_members')
+            .delete()
+            .eq('id', memberId);
+
+          if (error) {
+            console.error('Error removing team member:', error);
+            showAlert('Error', 'Failed to remove team member');
+            return;
+          }
+
+          // Refresh team members
+          await fetchTeamMembers();
+
+          showAlert('Success', 'Team member removed successfully');
+        } catch (error) {
+          console.error('Unexpected error:', error);
+          showAlert('Error', 'An unexpected error occurred');
+        } finally {
+          setIsLoading(false);
+        }
       }
     );
   };
@@ -376,7 +376,7 @@ export default function EditTeamScreen() {
               onChangeText={setTeamName}
               placeholder="Enter team name"
             />
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.saveButton}
               onPress={handleUpdateTeamName}
             >
@@ -394,7 +394,7 @@ export default function EditTeamScreen() {
                 <ThemedText style={styles.userEmail}>{captain.email}</ThemedText>
               </View>
               <View style={styles.captainActions}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.actionButton}
                   onPress={() => {
                     setIsSearchingForCaptain(true);
@@ -403,7 +403,7 @@ export default function EditTeamScreen() {
                 >
                   <ThemedText style={styles.actionButtonText}>Change</ThemedText>
                 </TouchableOpacity>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.actionButton, styles.removeButton]}
                   onPress={handleRemoveCaptain}
                 >
@@ -412,7 +412,7 @@ export default function EditTeamScreen() {
               </View>
             </View>
           ) : (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.addButton}
               onPress={() => {
                 setIsSearchingForCaptain(true);
@@ -427,7 +427,7 @@ export default function EditTeamScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <ThemedText style={styles.sectionTitle}>Team Members</ThemedText>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.addButton}
               onPress={() => {
                 setIsSearchingForCaptain(false);
@@ -437,30 +437,30 @@ export default function EditTeamScreen() {
               <ThemedText style={styles.addButtonText}>+ Add Member</ThemedText>
             </TouchableOpacity>
           </View>
-          
+
           {showUserSearch && (
             <View style={styles.searchContainer}>
               <View style={styles.searchRow}>
                 <TextInput
-                  style={[styles.input, {flex: 1}]}
+                  style={[styles.input, { flex: 1 }]}
                   placeholder="Search by name or email"
                   value={userSearchQuery}
                   onChangeText={setUserSearchQuery}
                 />
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.searchButton}
                   onPress={searchUsers}
                 >
                   <ThemedText style={styles.searchButtonText}>Search</ThemedText>
                 </TouchableOpacity>
               </View>
-              
+
               {userSearchResults.length > 0 && (
                 <FlatList
                   data={userSearchResults}
                   keyExtractor={item => item.id}
                   renderItem={({ item }) => (
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.searchResultItem}
                       onPress={() => isSearchingForCaptain ? handleSetCaptain(item) : addTeamMember(item)}
                     >
@@ -473,8 +473,8 @@ export default function EditTeamScreen() {
                   nestedScrollEnabled={true}
                 />
               )}
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={styles.cancelSearchButton}
                 onPress={() => {
                   setShowUserSearch(false);
@@ -486,7 +486,7 @@ export default function EditTeamScreen() {
               </TouchableOpacity>
             </View>
           )}
-          
+
           {members.length > 0 ? (
             <View style={styles.membersList}>
               {members.map(member => (
@@ -500,7 +500,7 @@ export default function EditTeamScreen() {
                       </View>
                     )}
                   </View>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={[styles.actionButton, styles.removeButton]}
                     onPress={() => handleRemoveMember(member.id, member.user_id)}
                   >
@@ -515,7 +515,7 @@ export default function EditTeamScreen() {
         </View>
 
         <View style={styles.buttonContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
           >
@@ -645,7 +645,7 @@ const styles = StyleSheet.create({
   },
   searchButton: {
     backgroundColor: '#0a7ea4',
-		padding: 8,
+    padding: 8,
     borderRadius: 4,
     marginLeft: 8,
   },
