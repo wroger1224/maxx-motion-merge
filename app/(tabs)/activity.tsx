@@ -1047,6 +1047,7 @@ export default function Activity() {
 
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Add Activity</Text>
+						<Text style={styles.sectionSubtitle}>Select an activity type to add below.</Text>
           </View>
 
           <ScrollView style={styles.content}>
@@ -1559,6 +1560,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     color: "#333",
+		marginBottom: 8,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: "#666",
   },
   content: {
     flex: 1,
