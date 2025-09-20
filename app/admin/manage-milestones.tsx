@@ -312,6 +312,8 @@ export default function ManageMilestonesScreen() {
                   </View>
                 )}
                 style={styles.milestonesList}
+                scrollEnabled={false}
+                nestedScrollEnabled={true}
               />
             ) : (
               <FlatList
@@ -326,6 +328,8 @@ export default function ManageMilestonesScreen() {
                   </View>
                 )}
                 style={styles.milestonesList}
+                scrollEnabled={false}
+                nestedScrollEnabled={true}
               />
             )}
           </View>

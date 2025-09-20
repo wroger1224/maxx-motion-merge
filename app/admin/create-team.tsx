@@ -360,6 +360,8 @@ export default function CreateTeamScreen() {
                     </TouchableOpacity>
                   )}
                   style={styles.userList}
+                  scrollEnabled={false}
+                  nestedScrollEnabled={true}
                 />
               )}
               
