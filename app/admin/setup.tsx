@@ -5,7 +5,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { useUser } from '../../contexts/UserContext';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { showAlert } from '../utils/showAlert';
+import { showAlert, showAlertWithButtons } from '../utils/showAlert';
 
 // Define types for our data
 type Event = {
@@ -193,6 +193,31 @@ export default function AdminSetupScreen() {
     }
   };
 
+	const deleteEvent = async (eventId: string) => {
+		showAlertWithButtons(
+			'Delete Event',
+			'Are you sure you want to delete this event?',
+			async () => {
+				try {
+					setIsLoading(true);
+					const { error } = await supabase.from('events').delete().eq('id', eventId);
+					if (error) {
+						console.error("Error deleting event:", error);
+						showAlert("Error", "Failed to delete event");
+						return;
+					}
+					showAlert("Success", "Event deleted successfully");
+					await fetchEvents();	
+				} catch (error) {
+					console.error("Unexpected error:", error);
+					showAlert("Error", "An unexpected error occurred");
+				} finally {
+					setIsLoading(false);
+				}
+			}
+		)
+	}
+
   // Create new event
   const navigateToCreateEvent = () => {
     router.push("/admin/create-event" as any);
@@ -337,6 +362,13 @@ export default function AdminSetupScreen() {
           >
             <ThemedText style={styles.actionButtonText}>Set Complete</ThemedText>
           </TouchableOpacity>
+
+					<TouchableOpacity
+						style={styles.actionButton}
+						onPress={() => deleteEvent(item.id)}
+					>
+						<ThemedText style={styles.actionButtonText}>Delete Event</ThemedText>
+					</TouchableOpacity>
         </View>
       </TouchableOpacity>
     </ThemedView>
