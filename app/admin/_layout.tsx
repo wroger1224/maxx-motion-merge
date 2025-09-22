@@ -39,7 +39,7 @@ export default function AdminLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Drawer
-        screenOptions={{
+        screenOptions={({ route }) => ({
           headerRight: () => (
             <TouchableOpacity
               style={styles.exitButton}
@@ -51,30 +51,42 @@ export default function AdminLayout() {
           drawerStyle: {
             width: "50%",
           },
-        }}
+          drawerItemStyle: (() => {
+            // Hide specific screens from drawer
+            const hiddenScreens = ['create-event', 'edit-event', 'create-team', 'edit-team', 'manage-milestones'];
+            if (hiddenScreens.includes(route.name)) {
+              return { display: 'none' };
+            }
+            return {};
+          })(),
+        })}
       >
         <Drawer.Screen
           name="setup"
           options={{
             title: 'Setup',
+            drawerLabel: 'Setup',
           }}
         />
         <Drawer.Screen
           name="reports"
           options={{
             title: 'Reports',
+            drawerLabel: 'Reports',
           }}
         />
         <Drawer.Screen
           name="activity-types"
           options={{
             title: 'Activity Types',
+            drawerLabel: 'Activity Types',
           }}
         />
         <Drawer.Screen
           name="users"
           options={{
             title: 'User Management',
+            drawerLabel: 'User Management',
           }}
         />
       </Drawer>

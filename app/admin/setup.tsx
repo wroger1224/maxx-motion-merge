@@ -280,14 +280,21 @@ export default function AdminSetupScreen() {
           <ThemedText>Events</ThemedText>
         </TouchableOpacity>
 
-        {selectedEvent && (
-          <TouchableOpacity
-            style={[styles.tab, activeSection === 'teams' && styles.activeTab]}
-            onPress={() => setActiveSection('teams')}
-          >
-            <ThemedText>Teams</ThemedText>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity
+          style={[
+            styles.tab,
+            activeSection === 'teams' && styles.activeTab,
+            !selectedEvent && styles.disabledTab
+          ]}
+          onPress={() => {
+            if (selectedEvent) {
+              setActiveSection('teams');
+            }
+          }}
+          disabled={!selectedEvent}
+        >
+          <ThemedText style={!selectedEvent ? styles.disabledText : {}}>Teams</ThemedText>
+        </TouchableOpacity>
       </View>
 
       {/* Section Header */}
@@ -478,6 +485,13 @@ const styles = StyleSheet.create({
   },
   activeTab: {
     backgroundColor: "#0a7ea4",
+  },
+  disabledTab: {
+    backgroundColor: "#f5f5f5",
+    borderColor: "#ddd",
+  },
+  disabledText: {
+    color: "#999",
   },
   createButton: {
     backgroundColor: "#0a7ea4",
