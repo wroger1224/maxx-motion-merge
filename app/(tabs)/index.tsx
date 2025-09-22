@@ -440,21 +440,21 @@ export default function DashboardScreen() {
           id: "4",
           name: "Activity Beginner",
           icon: "play",
-          description: "150 total minutes",
+          description: "500 total minutes",
           emoji: "🎯",
         },
         {
           id: "5",
           name: "Activity Expert",
           icon: "medal",
-          description: "300 total minutes",
+          description: "1,000 total minutes",
           emoji: "🥇",
         },
         {
           id: "6",
           name: "Activity Master",
           icon: "crown",
-          description: "500 total minutes",
+          description: "2,000 total minutes",
           emoji: "👑",
         },
         // Activity Variety
@@ -517,7 +517,7 @@ export default function DashboardScreen() {
       const badgesWithProgress = defaultBadges.map((badge) => {
         const badgeProgress = progress[badge.id] || 0;
         const badgeTotal = badge.id <= "3" ? (badge.id === "1" ? 3 : badge.id === "2" ? 7 : 14) :
-          badge.id <= "6" ? (badge.id === "4" ? 150 : badge.id === "5" ? 300 : 500) :
+          badge.id <= "6" ? (badge.id === "4" ? 500 : badge.id === "5" ? 1000 : 2000) :
             (badge.id === "7" ? 5 : badge.id === "8" ? 10 : 15);
 
         return {

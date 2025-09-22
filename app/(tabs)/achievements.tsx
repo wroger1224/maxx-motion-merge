@@ -99,10 +99,10 @@ const defaultBadges: Badge[] = [
     id: "4",
     name: "Activity Beginner",
     icon: "play",
-    description: "150 total minutes",
+    description: "500 total minutes",
     isUnlocked: false,
     progress: 0,
-    total: 150,
+    total: 500,
     category: "Total Minutes",
     emoji: "🎯",
     imageUrl:
@@ -112,10 +112,10 @@ const defaultBadges: Badge[] = [
     id: "5",
     name: "Activity Expert",
     icon: "medal",
-    description: "300 total minutes",
+    description: "1,000 total minutes",
     isUnlocked: false,
     progress: 0,
-    total: 300,
+    total: 1000,
     category: "Total Minutes",
     emoji: "🥇",
     imageUrl:
@@ -125,10 +125,10 @@ const defaultBadges: Badge[] = [
     id: "6",
     name: "Activity Master",
     icon: "crown",
-    description: "500 total minutes",
+    description: "2,000 total minutes",
     isUnlocked: false,
     progress: 0,
-    total: 500,
+    total: 2000,
     category: "Total Minutes",
     emoji: "👑",
     imageUrl:
@@ -200,9 +200,9 @@ export default function AchievementsScreen() {
       "1": 2, // Daily Starter - 2/3 days with activity
       "2": 2, // Daily Achiever - 2/7 days with activity
       "3": 2, // Daily Champion - 2/14 days with activity
-      "4": 100, // Activity Beginner - 100/150 minutes
-      "5": 100, // Activity Expert - 100/300 minutes
-      "6": 100, // Activity Master - 100/500 minutes
+      "4": 100, // Activity Beginner - 100/500 minutes
+      "5": 100, // Activity Expert - 100/1000 minutes
+      "6": 100, // Activity Master - 100/2000 minutes
       "7": 3, // Activity Explorer - 3/5 types
       "8": 3, // Activity Adventurer - 3/10 types
       "9": 3, // Activity Pioneer - 3/15 types
@@ -402,9 +402,9 @@ export default function AchievementsScreen() {
           "1": 2, // Daily Starter - 2/3 days with activity
           "2": 2, // Daily Achiever - 2/7 days with activity
           "3": 2, // Daily Champion - 2/14 days with activity
-          "4": 100, // Activity Beginner - 100/150 minutes
-          "5": 100, // Activity Expert - 100/300 minutes
-          "6": 100, // Activity Master - 100/500 minutes
+          "4": 100, // Activity Beginner - 100/500 minutes
+          "5": 100, // Activity Expert - 100/1000 minutes
+          "6": 100, // Activity Master - 100/2000 minutes
           "7": 3, // Activity Explorer - 3/5 types
           "8": 3, // Activity Adventurer - 3/10 types
           "9": 3, // Activity Pioneer - 3/15 types
