@@ -194,26 +194,7 @@ export default function AchievementsScreen() {
   const [badgeProgress, setBadgeProgress] = useState<Record<string, number>>(
     {}
   );
-  const [badges, setBadges] = useState<Badge[]>(() => {
-    // Initialize with test progress so you can see the new system immediately
-    const testProgress = {
-      "1": 2, // Daily Starter - 2/3 days with activity
-      "2": 2, // Daily Achiever - 2/7 days with activity
-      "3": 2, // Daily Champion - 2/14 days with activity
-      "4": 100, // Activity Beginner - 100/500 minutes
-      "5": 100, // Activity Expert - 100/1000 minutes
-      "6": 100, // Activity Master - 100/2000 minutes
-      "7": 3, // Activity Explorer - 3/5 types
-      "8": 3, // Activity Adventurer - 3/10 types
-      "9": 3, // Activity Pioneer - 3/15 types
-    };
-
-    return defaultBadges.map((badge) => ({
-      ...badge,
-      progress: testProgress[badge.id] || 0,
-      isUnlocked: (testProgress[badge.id] || 0) >= badge.total,
-    }));
-  });
+  const [badges, setBadges] = useState<Badge[]>([]);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [totalMinutes, setTotalMinutes] = useState(0);
   const [currentStreak, setCurrentStreak] = useState(0);
@@ -492,11 +473,84 @@ export default function AchievementsScreen() {
         return;
       }
 
-      // For streak calculation, we want to look at ALL user activities across all events
-      // This gives a more accurate picture of the user's activity pattern
+      // Get the current active event the user is registered for
+      const eventPromise = supabase
+        .from("team_members")
+        .select(`
+          teams!inner(
+            event_id,
+            events!inner(id, start_date, end_date, status)
+          )
+        `)
+        .eq("user_id", userProfile.id)
+        .eq("teams.events.status", "Active")
+        .single();
+
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Request timeout')), 10000)
+      );
+
+      const { data: activeEventData, error: eventError } = await Promise.race([
+        eventPromise,
+        timeoutPromise
+      ]) as any;
+
+      let currentEvent = null;
+
+      if (eventError || !activeEventData) {
+        console.log("No active event found for user, trying upcoming events");
+        // Try to find an upcoming event the user is registered for
+        const { data: userEvents, error: userEventsError } = await supabase
+          .from("team_members")
+          .select(`
+            teams!inner(
+              event_id,
+              events!inner(id, start_date, end_date, status)
+            )
+          `)
+          .eq("user_id", userProfile.id);
+
+        if (userEventsError) {
+          console.error("Error fetching user events:", userEventsError);
+          setCurrentStreak(0);
+          return;
+        }
+
+        if (!userEvents || userEvents.length === 0) {
+          console.log("User is not registered for any events");
+          setCurrentStreak(0);
+          return;
+        }
+
+        // Find the first upcoming event the user is registered for
+        const userEvent = userEvents.find((item: any) =>
+          item.teams.events.status === "Upcoming"
+        );
+
+        if (!userEvent) {
+          console.log("No upcoming events found for user");
+          setCurrentStreak(0);
+          return;
+        }
+
+        currentEvent = userEvent.teams.events;
+        console.log("Using user's upcoming event for streak:", currentEvent.id);
+      } else {
+        currentEvent = activeEventData.teams.events;
+        console.log("Using user's active event for streak:", currentEvent.id);
+      }
+
+      if (!currentEvent) {
+        console.log("No relevant event found for streak calculation");
+        setCurrentStreak(0);
+        return;
+      }
+
+      // Fetch user's activities for the current event
       const { data: activities, error: activitiesError } = await supabase
         .from("activities")
         .select("activity_date")
+        .eq("event_id", currentEvent.id)
         .eq("user_id", userProfile.id)
         .order("activity_date", { ascending: false });
 
