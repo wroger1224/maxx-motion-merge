@@ -58,10 +58,10 @@ const defaultBadges: Badge[] = [
     id: "1",
     name: "Daily Starter",
     icon: "clock",
-    description: "30 minutes in one day",
+    description: "3 days with activity",
     isUnlocked: false,
     progress: 0,
-    total: 30,
+    total: 3,
     category: "Daily Minutes",
     emoji: "⏰",
     imageUrl:
@@ -71,10 +71,10 @@ const defaultBadges: Badge[] = [
     id: "2",
     name: "Daily Achiever",
     icon: "stopwatch",
-    description: "60 minutes in one day",
+    description: "7 days with activity",
     isUnlocked: false,
     progress: 0,
-    total: 60,
+    total: 7,
     category: "Daily Minutes",
     emoji: "⏱️",
     imageUrl:
@@ -84,10 +84,10 @@ const defaultBadges: Badge[] = [
     id: "3",
     name: "Daily Champion",
     icon: "trophy",
-    description: "120 minutes in one day",
+    description: "14 days with activity",
     isUnlocked: false,
     progress: 0,
-    total: 120,
+    total: 14,
     category: "Daily Minutes",
     emoji: "🏆",
     imageUrl:
@@ -99,10 +99,10 @@ const defaultBadges: Badge[] = [
     id: "4",
     name: "Activity Beginner",
     icon: "play",
-    description: "500 total minutes",
+    description: "150 total minutes",
     isUnlocked: false,
     progress: 0,
-    total: 500,
+    total: 150,
     category: "Total Minutes",
     emoji: "🎯",
     imageUrl:
@@ -112,10 +112,10 @@ const defaultBadges: Badge[] = [
     id: "5",
     name: "Activity Expert",
     icon: "medal",
-    description: "2,500 total minutes",
+    description: "300 total minutes",
     isUnlocked: false,
     progress: 0,
-    total: 2500,
+    total: 300,
     category: "Total Minutes",
     emoji: "🥇",
     imageUrl:
@@ -125,10 +125,10 @@ const defaultBadges: Badge[] = [
     id: "6",
     name: "Activity Master",
     icon: "crown",
-    description: "10,000 total minutes",
+    description: "500 total minutes",
     isUnlocked: false,
     progress: 0,
-    total: 10000,
+    total: 500,
     category: "Total Minutes",
     emoji: "👑",
     imageUrl:
@@ -176,46 +176,6 @@ const defaultBadges: Badge[] = [
       "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
   },
 
-  // Consistency
-  {
-    id: "10",
-    name: "Consistency Starter",
-    icon: "calendar-check",
-    description: "7 days in a row",
-    isUnlocked: false,
-    progress: 0,
-    total: 7,
-    category: "Consistency",
-    emoji: "📅",
-    imageUrl:
-      "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
-  },
-  {
-    id: "11",
-    name: "Consistency Master",
-    icon: "calendar-alt",
-    description: "30 days in a row",
-    isUnlocked: false,
-    progress: 0,
-    total: 30,
-    category: "Consistency",
-    emoji: "📆",
-    imageUrl:
-      "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
-  },
-  {
-    id: "12",
-    name: "Consistency Legend",
-    icon: "infinity",
-    description: "100 days in a row",
-    isUnlocked: false,
-    progress: 0,
-    total: 100,
-    category: "Consistency",
-    emoji: "♾️",
-    imageUrl:
-      "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60",
-  },
 ];
 
 type Milestone = {
@@ -237,18 +197,15 @@ export default function AchievementsScreen() {
   const [badges, setBadges] = useState<Badge[]>(() => {
     // Initialize with test progress so you can see the new system immediately
     const testProgress = {
-      "1": 25, // Daily Starter - 25/30 minutes (progress toward 30)
-      "2": 25, // Daily Achiever - 25/60 minutes (progress toward 60)
-      "3": 25, // Daily Champion - 25/120 minutes (progress toward 120)
-      "4": 300, // Activity Beginner - 300/500 minutes
-      "5": 300, // Activity Expert - 300/2500 minutes
-      "6": 300, // Activity Master - 300/10000 minutes
+      "1": 2, // Daily Starter - 2/3 days with activity
+      "2": 2, // Daily Achiever - 2/7 days with activity
+      "3": 2, // Daily Champion - 2/14 days with activity
+      "4": 100, // Activity Beginner - 100/150 minutes
+      "5": 100, // Activity Expert - 100/300 minutes
+      "6": 100, // Activity Master - 100/500 minutes
       "7": 3, // Activity Explorer - 3/5 types
       "8": 3, // Activity Adventurer - 3/10 types
       "9": 3, // Activity Pioneer - 3/15 types
-      "10": 5, // Consistency Starter - 5/7 days
-      "11": 5, // Consistency Master - 5/30 days
-      "12": 5, // Consistency Legend - 5/100 days
     };
 
     return defaultBadges.map((badge) => ({
@@ -424,66 +381,11 @@ export default function AchievementsScreen() {
 
       console.log("Fetching badge progress for user:", userProfile.id);
 
-      // Get the current active event with timeout
-      const eventPromise = supabase
-        .from("events")
-        .select("id")
-        .eq("status", "Active")
-        .single();
-
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Request timeout')), 10000)
-      );
-
-      const { data: activeEvent, error: eventError } = await Promise.race([
-        eventPromise,
-        timeoutPromise
-      ]) as any;
-
-      if (eventError) {
-        console.error("Error fetching active event:", eventError);
-        // Try upcoming event as fallback
-        const { data: upcomingEvent, error: upcomingError } = await supabase
-          .from("events")
-          .select("id")
-          .eq("status", "Upcoming")
-          .single();
-
-        if (upcomingError) {
-          console.error("Error fetching upcoming event:", upcomingError);
-          return;
-        }
-
-        if (!upcomingEvent) {
-          console.log("No active or upcoming event found");
-          return;
-        }
-
-        console.log("Using upcoming event for badge progress");
-        // Use upcoming event for calculations
-        const { data: activities, error: activitiesError } = await supabase
-          .from("activities")
-          .select("activity_minutes, activity_date, activity_type")
-          .eq("event_id", upcomingEvent.id)
-          .eq("user_id", userProfile.id);
-
-        if (activitiesError) {
-          console.error("Error fetching activities:", activitiesError);
-          return;
-        }
-
-        console.log("Found activities:", activities?.length || 0);
-        calculateBadgeProgress(activities || []);
-        return;
-      }
-
-      console.log("Using active event for badge progress:", activeEvent.id);
-
-      // Fetch user's activities
+      // For badge progress, we want to look at ALL user activities across all events
+      // This gives a more accurate picture of the user's overall achievement progress
       const { data: activities, error: activitiesError } = await supabase
         .from("activities")
         .select("activity_minutes, activity_date, activity_type")
-        .eq("event_id", activeEvent.id)
         .eq("user_id", userProfile.id);
 
       if (activitiesError) {
@@ -497,18 +399,15 @@ export default function AchievementsScreen() {
       if (!activities || activities.length === 0) {
         console.log("No activities found, showing test progress");
         const testProgress = {
-          "1": 25, // Daily Starter - 25/30 minutes (progress toward 30)
-          "2": 25, // Daily Achiever - 25/60 minutes (progress toward 60)
-          "3": 25, // Daily Champion - 25/120 minutes (progress toward 120)
-          "4": 300, // Activity Beginner - 300/500 minutes
-          "5": 300, // Activity Expert - 300/2500 minutes
-          "6": 300, // Activity Master - 300/10000 minutes
+          "1": 2, // Daily Starter - 2/3 days with activity
+          "2": 2, // Daily Achiever - 2/7 days with activity
+          "3": 2, // Daily Champion - 2/14 days with activity
+          "4": 100, // Activity Beginner - 100/150 minutes
+          "5": 100, // Activity Expert - 100/300 minutes
+          "6": 100, // Activity Master - 100/500 minutes
           "7": 3, // Activity Explorer - 3/5 types
           "8": 3, // Activity Adventurer - 3/10 types
           "9": 3, // Activity Pioneer - 3/15 types
-          "10": 5, // Consistency Starter - 5/7 days
-          "11": 5, // Consistency Master - 5/30 days
-          "12": 5, // Consistency Legend - 5/100 days
         };
 
         setBadgeProgress(testProgress);
@@ -522,31 +421,34 @@ export default function AchievementsScreen() {
         return;
       }
 
-      calculateBadgeProgress(activities || []);
+      // Use a default event duration for calculations (doesn't matter since we're using all activities)
+      const eventDuration = 30; // Default to 30 days for calculation purposes
+      calculateBadgeProgress(activities || [], eventDuration);
     } catch (error) {
       console.error("Error in fetchBadgeProgress:", error);
     }
   };
 
-  const calculateBadgeProgress = (activities: any[]) => {
+  const calculateBadgeProgress = (activities: any[], eventDuration: number) => {
     try {
       console.log("Calculating badge progress for", activities.length, "activities");
+      console.log("Event duration:", eventDuration, "days");
 
       // Calculate progress for each badge type
       const progress: Record<string, number> = {};
 
-      // Daily Minutes badges - Find the highest single-day total
-      const dailyTotals: Record<string, number> = {};
+      // Daily Minutes badges - Count days with activity (not minutes)
+      const daysWithActivity = new Set();
       activities.forEach((activity) => {
         const date = activity.activity_date;
-        dailyTotals[date] = (dailyTotals[date] || 0) + (activity.activity_minutes || 0);
+        daysWithActivity.add(date);
       });
-      const maxDailyMinutes = Math.max(...Object.values(dailyTotals), 0);
+      const totalDaysWithActivity = daysWithActivity.size;
 
-      // For daily minutes badges, show progress toward the goal (capped at the goal)
-      progress["1"] = Math.min(maxDailyMinutes, 30); // Daily Starter (30 min)
-      progress["2"] = Math.min(maxDailyMinutes, 60); // Daily Achiever (60 min)
-      progress["3"] = Math.min(maxDailyMinutes, 120); // Daily Champion (120 min)
+      // For daily minutes badges, show progress as days with activity
+      progress["1"] = totalDaysWithActivity; // Daily Starter (3 days)
+      progress["2"] = totalDaysWithActivity; // Daily Achiever (7 days)
+      progress["3"] = totalDaysWithActivity; // Daily Champion (14 days)
 
       // Total Minutes badges - Sum all activity minutes
       const totalMinutes = activities.reduce((sum, activity) => sum + (activity.activity_minutes || 0), 0);
@@ -565,10 +467,6 @@ export default function AchievementsScreen() {
       progress["8"] = uniqueCount; // Activity Adventurer (10 types)
       progress["9"] = uniqueCount; // Activity Pioneer (15 types)
 
-      // Consistency badges - Use the current streak
-      progress["10"] = currentStreak; // Consistency Starter (7 days)
-      progress["11"] = currentStreak; // Consistency Master (30 days)
-      progress["12"] = currentStreak; // Consistency Legend (100 days)
 
       console.log("Calculated progress:", progress);
 
@@ -594,28 +492,11 @@ export default function AchievementsScreen() {
         return;
       }
 
-      // Get the current active event
-      const { data: activeEvent, error: eventError } = await supabase
-        .from("events")
-        .select("id")
-        .eq("status", "Active")
-        .single();
-
-      if (eventError) {
-        console.error("Error fetching active event:", eventError.message);
-        return;
-      }
-
-      if (!activeEvent) {
-        console.error("No active event found");
-        return;
-      }
-
-      // Fetch user's activities
+      // For streak calculation, we want to look at ALL user activities across all events
+      // This gives a more accurate picture of the user's activity pattern
       const { data: activities, error: activitiesError } = await supabase
         .from("activities")
         .select("activity_date")
-        .eq("event_id", activeEvent.id)
         .eq("user_id", userProfile.id)
         .order("activity_date", { ascending: false });
 
@@ -768,8 +649,6 @@ export default function AchievementsScreen() {
         return Colors.light.orange; // Orange for total achievements
       case "Variety":
         return Colors.light.chartreuse; // Green for variety achievements
-      case "Consistency":
-        return Colors.light.blue; // Blue for consistency achievements
       default:
         return Colors.light.redOrange; // Red for default
     }
@@ -820,7 +699,7 @@ export default function AchievementsScreen() {
                   name="check-circle"
                   size={24}
                   color={Colors.light.mimosa}
-                />{" "}
+                />
                 {/* Updated to use Hackathon colors */}
               </View>
             </View>
@@ -874,12 +753,6 @@ export default function AchievementsScreen() {
               <ThemedText variant="h2" style={styles.modalTitle}>
                 {badge.name}
               </ThemedText>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={() => setModalVisible(false)}
-              >
-                <ThemedText style={styles.modalCloseText}>×</ThemedText>
-              </TouchableOpacity>
             </View>
 
             <Image
