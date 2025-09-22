@@ -77,36 +77,6 @@ export default function AdminLayout() {
             title: 'User Management',
           }}
         />
-        <Drawer.Screen
-          name="create-event"
-          options={{
-            title: 'Create Event',
-          }}
-        />
-        <Drawer.Screen
-          name="edit-event"
-          options={{
-            title: 'Edit Event',
-          }}
-        />
-        <Drawer.Screen
-          name="create-team"
-          options={{
-            title: 'Create Team',
-          }}
-        />
-        <Drawer.Screen
-          name="edit-team"
-          options={{
-            title: 'Edit Team',
-          }}
-        />
-        <Drawer.Screen
-          name="manage-milestones"
-          options={{
-            title: 'Manage Milestones',
-          }}
-        />
       </Drawer>
     </GestureHandlerRootView>
   );

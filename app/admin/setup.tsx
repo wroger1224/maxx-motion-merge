@@ -193,30 +193,30 @@ export default function AdminSetupScreen() {
     }
   };
 
-	const deleteEvent = async (eventId: string) => {
-		showAlertWithButtons(
-			'Delete Event',
-			'Are you sure you want to delete this event?',
-			async () => {
-				try {
-					setIsLoading(true);
-					const { error } = await supabase.from('events').delete().eq('id', eventId);
-					if (error) {
-						console.error("Error deleting event:", error);
-						showAlert("Error", "Failed to delete event");
-						return;
-					}
-					showAlert("Success", "Event deleted successfully");
-					await fetchEvents();	
-				} catch (error) {
-					console.error("Unexpected error:", error);
-					showAlert("Error", "An unexpected error occurred");
-				} finally {
-					setIsLoading(false);
-				}
-			}
-		)
-	}
+  const deleteEvent = async (eventId: string) => {
+    showAlertWithButtons(
+      'Delete Event',
+      'Are you sure you want to delete this event?',
+      async () => {
+        try {
+          setIsLoading(true);
+          const { error } = await supabase.from('events').delete().eq('id', eventId);
+          if (error) {
+            console.error("Error deleting event:", error);
+            showAlert("Error", "Failed to delete event");
+            return;
+          }
+          showAlert("Success", "Event deleted successfully");
+          await fetchEvents();
+        } catch (error) {
+          console.error("Unexpected error:", error);
+          showAlert("Error", "An unexpected error occurred");
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    )
+  }
 
   // Create new event
   const navigateToCreateEvent = () => {
@@ -298,7 +298,13 @@ export default function AdminSetupScreen() {
           </ThemedText>
           <TouchableOpacity
             style={styles.createButton}
-            onPress={isEventsSection ? navigateToCreateEvent : () => navigateToCreateTeam(selectedEvent!.id)}
+            onPress={isEventsSection ? navigateToCreateEvent : () => {
+              if (selectedEvent) {
+                navigateToCreateTeam(selectedEvent.id);
+              } else {
+                showAlert('Error', 'Please select an event first');
+              }
+            }}
           >
             <ThemedText style={styles.createButtonText}>
               {isEventsSection ? '+ Create Event' : '+ Add Team'}
@@ -328,47 +334,47 @@ export default function AdminSetupScreen() {
         )}
 
         <View style={styles.actionButtons}>
-          <TouchableOpacity 
-            style={styles.actionButton} 
+          <TouchableOpacity
+            style={styles.actionButton}
             onPress={() => navigateToEditEvent(item.id)}
           >
             <ThemedText style={styles.actionButtonText}>Edit</ThemedText>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.actionButton} 
+          <TouchableOpacity
+            style={styles.actionButton}
             onPress={() => navigateToManageMilestones(item.id)}
           >
             <ThemedText style={styles.actionButtonText}>Milestones</ThemedText>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.actionButton} 
+          <TouchableOpacity
+            style={styles.actionButton}
             onPress={() => updateEventStatus(item.id, 'Upcoming')}
           >
             <ThemedText style={styles.actionButtonText}>Set Upcoming</ThemedText>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.actionButton} 
+          <TouchableOpacity
+            style={styles.actionButton}
             onPress={() => updateEventStatus(item.id, 'Active')}
           >
             <ThemedText style={styles.actionButtonText}>Set Active</ThemedText>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.actionButton} 
+          <TouchableOpacity
+            style={styles.actionButton}
             onPress={() => updateEventStatus(item.id, 'Archive')}
           >
             <ThemedText style={styles.actionButtonText}>Set Complete</ThemedText>
           </TouchableOpacity>
 
-					<TouchableOpacity
-						style={styles.actionButton}
-						onPress={() => deleteEvent(item.id)}
-					>
-						<ThemedText style={styles.actionButtonText}>Delete Event</ThemedText>
-					</TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => deleteEvent(item.id)}
+          >
+            <ThemedText style={styles.actionButtonText}>Delete Event</ThemedText>
+          </TouchableOpacity>
         </View>
       </TouchableOpacity>
     </ThemedView>
@@ -388,7 +394,10 @@ export default function AdminSetupScreen() {
       <View style={styles.actionButtons}>
         <TouchableOpacity
           style={styles.actionButton}
-          onPress={() => router.push(`/admin/edit-team?id=${item.id}` as any)}
+          onPress={() => router.push({
+            pathname: '/admin/edit-team',
+            params: { id: item.id }
+          } as any)}
         >
           <ThemedText style={styles.actionButtonText}>Edit</ThemedText>
         </TouchableOpacity>
@@ -400,7 +409,7 @@ export default function AdminSetupScreen() {
   const renderEmptyComponent = () => (
     <ThemedView style={styles.emptyContainer}>
       <ThemedText style={styles.emptyText}>
-        {isEventsSection 
+        {isEventsSection
           ? 'No events found. Create one to get started.'
           : 'No teams found for this event.'}
       </ThemedText>
