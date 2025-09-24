@@ -2,12 +2,18 @@ import React from 'react';
 import { Stack } from 'expo-router';
 import { useUser } from '../../contexts/UserContext';
 import { router } from 'expo-router';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, StyleSheet, TouchableOpacity } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { AdminNav } from '@/components/AdminNav';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Drawer } from 'expo-router/drawer';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Colors } from '@/constants/Colors';
+import { IconSymbol } from '@/components/ui/IconSymbol';
 
 export default function AdminLayout() {
   const { userProfile, loading } = useUser();
+  const insets = useSafeAreaInsets();
 
   // Redirect non-admin users
   React.useEffect(() => {
@@ -31,15 +37,60 @@ export default function AdminLayout() {
   }
 
   return (
-    <>
-      <AdminNav />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="setup" />
-        <Stack.Screen name="reports" />
-        <Stack.Screen name="activity-types" />
-        <Stack.Screen name="users" />
-      </Stack>
-    </>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <Drawer
+        screenOptions={({ route }) => ({
+          headerRight: () => (
+            <TouchableOpacity
+              style={styles.exitButton}
+              onPress={() => router.replace('/')}
+            >
+              <ThemedText style={styles.exitText}>Exit</ThemedText>
+            </TouchableOpacity>
+          ),
+          drawerStyle: {
+            width: "50%",
+          },
+          drawerItemStyle: (() => {
+            // Hide specific screens from drawer
+            const hiddenScreens = ['create-event', 'edit-event', 'create-team', 'edit-team', 'manage-milestones'];
+            if (hiddenScreens.includes(route.name)) {
+              return { display: 'none' };
+            }
+            return {};
+          })(),
+        })}
+      >
+        <Drawer.Screen
+          name="setup"
+          options={{
+            title: 'Setup',
+            drawerLabel: 'Setup',
+          }}
+        />
+        <Drawer.Screen
+          name="reports"
+          options={{
+            title: 'Reports',
+            drawerLabel: 'Reports',
+          }}
+        />
+        <Drawer.Screen
+          name="activity-types"
+          options={{
+            title: 'Activity Types',
+            drawerLabel: 'Activity Types',
+          }}
+        />
+        <Drawer.Screen
+          name="users"
+          options={{
+            title: 'User Management',
+            drawerLabel: 'User Management',
+          }}
+        />
+      </Drawer>
+    </GestureHandlerRootView>
   );
 }
 
@@ -53,5 +104,17 @@ const styles = StyleSheet.create({
   text: {
     marginTop: 20,
     fontSize: 16,
+  },
+  exitButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginRight: 16,
+    backgroundColor: Colors.light.redOrange,
+    borderRadius: 8,
+  },
+  exitText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 }); 

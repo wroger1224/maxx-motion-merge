@@ -3,7 +3,7 @@ import { StyleSheet, View, ScrollView, TextInput, TouchableOpacity, Alert, Activ
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useUser } from '../../contexts/UserContext';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, Stack } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { showAlert, showAlertWithButtons } from '../utils/showAlert';
 
@@ -16,10 +16,19 @@ type Milestone = {
 
 const IS_WEB = Platform.OS === 'web';
 export default function ManageMilestonesScreen() {
+  return (
+    <>
+      <Stack.Screen options={{ title: 'Manage Milestones' }} />
+      <ManageMilestonesContent />
+    </>
+  );
+}
+
+function ManageMilestonesContent() {
   const params = useLocalSearchParams();
   const eventId = params.eventId as string;
   const { userProfile, loading: userLoading } = useUser();
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [eventName, setEventName] = useState('');
@@ -38,7 +47,7 @@ export default function ManageMilestonesScreen() {
       fetchEventDetails();
       fetchMilestones();
     } else {
-			showAlert('Error', 'No event ID provided');
+      showAlert('Error', 'No event ID provided');
       router.back();
     }
   }, [eventId]);
@@ -50,17 +59,17 @@ export default function ManageMilestonesScreen() {
         .select('name')
         .eq('id', eventId)
         .single();
-      
+
       if (error) {
         console.error('Error fetching event details:', error);
-				showAlert('Error', 'Failed to load event details');
+        showAlert('Error', 'Failed to load event details');
         return;
       }
-      
+
       setEventName(data.name);
     } catch (error) {
       console.error('Unexpected error:', error);
-			showAlert('Error', 'An unexpected error occured');
+      showAlert('Error', 'An unexpected error occured');
     }
   };
 
@@ -72,17 +81,17 @@ export default function ManageMilestonesScreen() {
         .select('*')
         .eq('event_id', eventId)
         .order('milestone_minutes', { ascending: true });
-      
+
       if (error) {
         console.error('Error fetching milestones:', error);
-				showAlert('Error', 'Failed to load milestones');
+        showAlert('Error', 'Failed to load milestones');
         return;
       }
-      
+
       setMilestones(data || []);
     } catch (error) {
       console.error('Unexpected error:', error);
-			showAlert('Error', 'An unexpected error occured');
+      showAlert('Error', 'An unexpected error occured');
     } finally {
       setIsLoading(false);
     }
@@ -93,75 +102,75 @@ export default function ManageMilestonesScreen() {
     const highestMinutes = milestones.length > 0
       ? Math.max(...milestones.map(m => m.milestone_minutes))
       : 0;
-    
+
     const newMilestone: Milestone = {
       id: 'new-' + Date.now(),
       event_id: eventId,
       milestone_minutes: highestMinutes + 500,
       milestone_name: `New Milestone`
     };
-    
+
     setMilestones([...milestones, newMilestone]);
     setEditMode(true);
   };
 
   const handleUpdateMilestone = (id: string, field: 'milestone_minutes' | 'milestone_name', value: string) => {
-    setMilestones(milestones.map(milestone => 
-      milestone.id === id 
-        ? { 
-            ...milestone, 
-            [field]: field === 'milestone_minutes' ? parseInt(value) || 0 : value 
-          } 
+    setMilestones(milestones.map(milestone =>
+      milestone.id === id
+        ? {
+          ...milestone,
+          [field]: field === 'milestone_minutes' ? parseInt(value) || 0 : value
+        }
         : milestone
     ));
   };
 
-	const deleteMilestone = async (id: string) => {
+  const deleteMilestone = async (id: string) => {
     try {
       setIsLoading(true);
       const { error } = await supabase
         .from('milestones')
         .delete()
         .eq('id', id);
-      
+
       if (error) {
         console.error('Error deleting milestone:', error);
-				showAlert('Error', 'Failed to delete milestone');
+        showAlert('Error', 'Failed to delete milestone');
         return;
       }
-      
+
       setMilestones(milestones.filter(m => m.id !== id));
-			showAlert('Success', 'Milestone deleted successfully');
+      showAlert('Success', 'Milestone deleted successfully');
 
     } catch (error) {
       console.error('Unexpected error:', error);
-			showAlert('Error', 'An unexpected error occured');
+      showAlert('Error', 'An unexpected error occured');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleRemoveMilestone = (id: string) => {
-		showAlertWithButtons('Confirm Delete', 
-			'Are you sure you want to delete this milestone?',
-			() => {
-				if (id.startsWith('new-')) {
-          setMilestones(milestones.filter(m => m.id !== id));	
-				} else {
-					deleteMilestone(id);
-				}
-			}
-		)
-	};
+    showAlertWithButtons('Confirm Delete',
+      'Are you sure you want to delete this milestone?',
+      () => {
+        if (id.startsWith('new-')) {
+          setMilestones(milestones.filter(m => m.id !== id));
+        } else {
+          deleteMilestone(id);
+        }
+      }
+    )
+  };
 
   const handleSaveChanges = async () => {
     try {
       setIsLoading(true);
-      
+
       // Group milestones into those to create and those to update
       const newMilestones = milestones.filter(m => m.id.startsWith('new-'));
       const existingMilestones = milestones.filter(m => !m.id.startsWith('new-'));
-      
+
       // Create new milestones
       if (newMilestones.length > 0) {
         const { error: createError } = await supabase
@@ -171,14 +180,14 @@ export default function ManageMilestonesScreen() {
             milestone_minutes: m.milestone_minutes,
             milestone_name: m.milestone_name
           })));
-        
+
         if (createError) {
           console.error('Error creating milestones:', createError);
-					showAlert('Error', 'Failed to save new milestones');
+          showAlert('Error', 'Failed to save new milestones');
           return;
         }
       }
-      
+
       // Update existing milestones
       for (const milestone of existingMilestones) {
         const { error: updateError } = await supabase
@@ -188,34 +197,34 @@ export default function ManageMilestonesScreen() {
             milestone_name: milestone.milestone_name
           })
           .eq('id', milestone.id);
-        
+
         if (updateError) {
           console.error(`Error updating milestone ${milestone.id}:`, updateError);
-					showAlert('Error', 'Failed to update some milestones');
+          showAlert('Error', 'Failed to update some milestones');
           return;
         }
       }
-      
+
       // Refresh the milestones list
       await fetchMilestones();
       setEditMode(false);
-			showAlert('Success', 'Milestones updated successfully');
+      showAlert('Success', 'Milestones updated successfully');
     } catch (error) {
       console.error('Unexpected error:', error);
-			showAlert('Error', 'An unexpected error occured');
+      showAlert('Error', 'An unexpected error occured');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleCancelEdit = () => {
-		showAlertWithButtons('Discard Changes', 
-			'Are you sure you want to discard your changes?', 
-			() => {
-				fetchMilestones();
-				setEditMode(false);
-			}
-		)
+    showAlertWithButtons('Discard Changes',
+      'Are you sure you want to discard your changes?',
+      () => {
+        fetchMilestones();
+        setEditMode(false);
+      }
+    )
   };
 
   if (userLoading) {
@@ -235,14 +244,14 @@ export default function ManageMilestonesScreen() {
     <ScrollView style={styles.scrollView}>
       <ThemedView style={styles.container}>
         <ThemedText type="title" style={styles.title}>Manage Milestones</ThemedText>
-        
+
         {eventName && (
           <ThemedText style={styles.subtitle}>For event: {eventName}</ThemedText>
         )}
 
         <View style={styles.actionsContainer}>
           {!editMode ? (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.editButton}
               onPress={() => setEditMode(true)}
             >
@@ -250,14 +259,14 @@ export default function ManageMilestonesScreen() {
             </TouchableOpacity>
           ) : (
             <View style={styles.editActions}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.addButton}
                 onPress={handleAddMilestone}
               >
                 <ThemedText style={styles.addButtonText}>+ Add Milestone</ThemedText>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={styles.saveButton}
                 onPress={handleSaveChanges}
                 disabled={isLoading}
@@ -268,8 +277,8 @@ export default function ManageMilestonesScreen() {
                   <ThemedText style={styles.saveButtonText}>Save Changes</ThemedText>
                 )}
               </TouchableOpacity>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={styles.cancelButton}
                 onPress={handleCancelEdit}
                 disabled={isLoading}
@@ -303,7 +312,7 @@ export default function ManageMilestonesScreen() {
                         placeholder="Name"
                       />
                     </View>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.removeButton}
                       onPress={() => handleRemoveMilestone(item.id)}
                     >
@@ -337,7 +346,7 @@ export default function ManageMilestonesScreen() {
           <ThemedText style={styles.emptyText}>No milestones found for this event.</ThemedText>
         )}
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
@@ -444,7 +453,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   milestoneInputGroup: {
-		flexWrap: 'wrap',
+    flexWrap: 'wrap',
     flex: 1,
     flexDirection: 'row',
   },

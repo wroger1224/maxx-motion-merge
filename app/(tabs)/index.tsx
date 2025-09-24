@@ -69,6 +69,7 @@ export default function DashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [badges, setBadges] = useState<Badge[]>([]);
   const [userBadges, setUserBadges] = useState<UserBadge[]>([]);
+  const [achievementBadges, setAchievementBadges] = useState<any[]>([]);
   const [currentEvent, setCurrentEvent] = useState<any>(null);
   const [upcomingEvent, setUpcomingEvent] = useState<any>(null);
   const [hasActivities, setHasActivities] = useState(false);
@@ -218,6 +219,7 @@ export default function DashboardScreen() {
     if (user && userProfile && isFocused) {
       fetchDashboardData();
       fetchBadgeData();
+      fetchAchievementBadges();
     }
   }, [user, userProfile, isFocused]);
 
@@ -394,6 +396,88 @@ export default function DashboardScreen() {
     await calculateBadgeProgress(userProfile.id);
   };
 
+  const fetchAchievementBadges = async () => {
+    if (!userProfile?.id) return;
+
+    try {
+      // Fetch badges from database
+      const { data: badgesData, error: badgesError } = await supabase
+        .from("badges")
+        .select("*")
+        .order("category", { ascending: true });
+
+      if (badgesError) {
+        console.error("Error fetching badges:", badgesError);
+        return;
+      }
+
+      if (!badgesData || badgesData.length === 0) {
+        console.log("No badges found in database");
+        return;
+      }
+
+      // Fetch user's activities to calculate achievement progress
+      const { data: activities, error: activitiesError } = await supabase
+        .from("activities")
+        .select("activity_minutes, activity_date, activity_type")
+        .eq("user_id", userProfile.id);
+
+      if (activitiesError) {
+        console.error("Error fetching activities:", activitiesError);
+        return;
+      }
+
+      // Calculate progress for each badge
+      const progress: Record<string, number> = {};
+
+      if (activities && activities.length > 0) {
+        // Daily Minutes badges - Count days with activity
+        const daysWithActivity = new Set();
+        activities.forEach((activity) => {
+          const date = activity.activity_date;
+          daysWithActivity.add(date);
+        });
+        const totalDaysWithActivity = daysWithActivity.size;
+
+        // Total Minutes badges - Sum all activity minutes
+        const totalMinutes = activities.reduce((sum, activity) => sum + (activity.activity_minutes || 0), 0);
+
+        // Variety badges - Count unique activity types
+        const uniqueActivityTypes = new Set(
+          activities.map((activity) => activity.activity_type?.toLowerCase()).filter(Boolean)
+        );
+        const uniqueCount = uniqueActivityTypes.size;
+
+        // Map progress to badge IDs based on category
+        badgesData.forEach((badge) => {
+          if (badge.category === "Daily Minutes") {
+            progress[badge.id] = totalDaysWithActivity;
+          } else if (badge.category === "Total Minutes") {
+            progress[badge.id] = totalMinutes;
+          } else if (badge.category === "Variety") {
+            progress[badge.id] = uniqueCount;
+          }
+        });
+      }
+
+      // Create badges with progress and unlocked status
+      const badgesWithProgress = badgesData.map((badge) => ({
+        id: badge.id,
+        name: badge.name,
+        icon: badge.icon,
+        description: badge.description,
+        emoji: badge.emoji,
+        progress: progress[badge.id] || 0,
+        total: badge.total,
+        isUnlocked: (progress[badge.id] || 0) >= badge.total,
+      }));
+
+      setAchievementBadges(badgesWithProgress);
+    } catch (error) {
+      console.error("Error fetching achievement badges:", error);
+    }
+  };
+
   const checkUserActivities = async () => {
     if (!user || !currentEvent) return;
 
@@ -478,18 +562,8 @@ export default function DashboardScreen() {
   };
 
   const renderRecentBadges = () => {
-    const unlockedBadges = userBadges
-      .filter((ub) => ub.is_unlocked)
-      .map((ub) => ub.badge)
-      .filter((badge): badge is Badge => badge !== undefined)
-      .sort((a, b) => {
-        const badgeA = userBadges.find((ub) => ub.badge_id === a.id);
-        const badgeB = userBadges.find((ub) => ub.badge_id === b.id);
-        return (
-          new Date(badgeB?.unlocked_at || "").getTime() -
-          new Date(badgeA?.unlocked_at || "").getTime()
-        );
-      })
+    const unlockedBadges = achievementBadges
+      .filter((badge) => badge.isUnlocked)
       .slice(0, 3);
 
     if (unlockedBadges.length === 0) {
@@ -524,14 +598,13 @@ export default function DashboardScreen() {
                 overflow: "hidden",
                 backgroundColor: "#eee",
                 marginBottom: 4,
+                justifyContent: "center",
+                alignItems: "center",
               }}
             >
-              <FontAwesome5
-                name={badge.icon}
-                size={32}
-                color="#C41E3A"
-                style={{ textAlign: "center", marginTop: 12 }}
-              />
+              <Text style={{ fontSize: 24 }}>
+                {badge.emoji}
+              </Text>
             </View>
             <Text
               style={{

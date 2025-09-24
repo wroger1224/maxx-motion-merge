@@ -1,85 +1,73 @@
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
-import { useRouter, useSegments } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { ThemedText } from './ThemedText';
-
-const adminLinks = [
-  { label: 'Setup', route: '/admin/setup' },
-  { label: 'Reports', route: '/admin/reports' },
-  { label: 'Activity Types', route: '/admin/activity-types' },
-  { label: 'User Management', route: '/admin/users' },
-];
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { IconSymbol } from './ui/IconSymbol';
 
 export function AdminNav() {
   const router = useRouter();
-  const segments = useSegments();
-  const current = '/' + segments.slice(1).join('/');
+  const insets = useSafeAreaInsets();
 
   return (
-    <View style={styles.navBar}>
-      {adminLinks.map(link => (
-        <TouchableOpacity
-          key={link.route}
-          style={[
-            styles.navItem,
-            current === link.route && styles.activeNavItem
-          ]}
-          onPress={() => router.replace(link.route as any)}
-        >
-          <ThemedText style={[styles.navText, current === link.route && styles.activeNavText]}>{link.label}</ThemedText>
-        </TouchableOpacity>
-      ))}
+    <View style={[styles.navContainer, { paddingTop: insets.top }]}>
+      <TouchableOpacity
+        style={styles.menuButton}
+        onPress={() => {
+          // This will be handled by the drawer
+          console.log('Menu button pressed');
+        }}
+      >
+        <IconSymbol name="line.3.horizontal" color="#333" size={20} />
+      </TouchableOpacity>
+
+      <View style={styles.titleContainer}>
+        <ThemedText style={styles.title}>Admin</ThemedText>
+      </View>
+
       <TouchableOpacity
         style={styles.exitButton}
         onPress={() => router.replace('/')}
       >
-        <ThemedText style={styles.exitText}>Exit Admin</ThemedText>
+        <ThemedText style={styles.exitText}>Exit</ThemedText>
       </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  navBar: {
+  navContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    paddingVertical: 8,
-    paddingHorizontal: 10,
+    justifyContent: 'space-between',
+    backgroundColor: '#ffffff',
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    width: '100%',
+    borderBottomColor: '#e0e0e0',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    minHeight: 50,
   },
-  navItem: {
-    marginRight: 18,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 6,
+  menuButton: {
+    padding: 8,
   },
-  activeNavItem: {
-    backgroundColor: '#0a7ea4',
+  titleContainer: {
+    flex: 1,
+    alignItems: 'center',
   },
-  navText: {
-    fontSize: 16,
-    color: '#0a7ea4',
-  },
-  activeNavText: {
-    color: '#fff',
-    fontWeight: 'bold',
+  title: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
   },
   exitButton: {
     paddingVertical: 6,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     borderRadius: 6,
     backgroundColor: '#C41E3A',
-    marginLeft: 'auto',
-    marginTop: 8,
-    minWidth: 100,
-    alignItems: 'center',
   },
   exitText: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontSize: 14,
+    fontWeight: '600',
   },
 }); 

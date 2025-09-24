@@ -3,7 +3,7 @@ import { StyleSheet, View, ScrollView, TextInput, TouchableOpacity, Alert, Activ
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useUser } from '../../contexts/UserContext';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, Stack } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { showAlert } from '../utils/showAlert';
 
@@ -20,10 +20,19 @@ type CreateCaptainForm = {
 };
 
 export default function CreateTeamScreen() {
+  return (
+    <>
+      <Stack.Screen options={{ title: 'Create Team' }} />
+      <CreateTeamContent />
+    </>
+  );
+}
+
+function CreateTeamContent() {
   const params = useLocalSearchParams();
   const eventId = params.eventId as string;
   const { userProfile, loading: userLoading } = useUser();
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [teamName, setTeamName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -62,13 +71,13 @@ export default function CreateTeamScreen() {
         .select('name')
         .eq('id', eventId)
         .single();
-      
+
       if (error) {
         console.error('Error fetching event details:', error);
         showAlert('Error', 'Failed to load event details');
         return;
       }
-      
+
       setEventName(data.name);
     } catch (error) {
       console.error('Unexpected error:', error);
@@ -91,13 +100,13 @@ export default function CreateTeamScreen() {
         .select('id, full_name, email, avatar_url')
         .or(`full_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`)
         .limit(10);
-      
+
       if (error) {
         console.error('Error searching users:', error);
         showAlert('Error', 'Failed to search users');
         return;
       }
-      
+
       setSearchResults(data || []);
     } catch (error) {
       console.error('Unexpected error:', error);
@@ -169,10 +178,10 @@ export default function CreateTeamScreen() {
       // Create the auth user first (would normally happen through sign-up)
       // For admin purposes, we'll create a placeholder auth user
       // In a full implementation, you might send an invitation email instead
-      
+
       // Instead, let's create just a profile entry since we're adding this manually
       const userId = crypto.randomUUID(); // Generate a random UUID for the profile
-      
+
       const { data: newUser, error: createError } = await supabase
         .from('profiles')
         .insert({
@@ -207,10 +216,10 @@ export default function CreateTeamScreen() {
 
     try {
       setIsLoading(true);
-      
+
       // If trying to create a new captain, do that first
       let captainToUse = selectedCaptain;
-      
+
       if (showCreateCaptain && !selectedCaptain) {
         const newCaptainUser = await createCaptainProfile();
         if (newCaptainUser) {
@@ -242,7 +251,7 @@ export default function CreateTeamScreen() {
 
       // Show success message
       showAlert('Success', 'Team created successfully');
-      
+
       // Navigate back to setup
       console.log('Navigating to admin setup after team creation');
       setTimeout(() => {
@@ -273,7 +282,7 @@ export default function CreateTeamScreen() {
     <ScrollView style={styles.scrollView}>
       <ThemedView style={styles.container}>
         <ThemedText type="title" style={styles.title}>Create Team</ThemedText>
-        
+
         {eventName && (
           <ThemedText style={styles.subtitle}>For event: {eventName}</ThemedText>
         )}
@@ -290,7 +299,7 @@ export default function CreateTeamScreen() {
 
         <ThemedView style={styles.formGroup}>
           <ThemedText style={styles.label}>Team Captain</ThemedText>
-          
+
           {/* Selected captain display */}
           {selectedCaptain && (
             <View style={styles.selectedUserContainer}>
@@ -302,11 +311,11 @@ export default function CreateTeamScreen() {
               </TouchableOpacity>
             </View>
           )}
-          
+
           {/* Captain options when no captain is selected */}
           {!selectedCaptain && !showUserSearch && !showCreateCaptain && (
             <View style={styles.captainOptions}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.optionButton}
                 onPress={() => {
                   setShowUserSearch(true);
@@ -315,8 +324,8 @@ export default function CreateTeamScreen() {
               >
                 <ThemedText style={styles.optionButtonText}>Select Existing User</ThemedText>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={styles.optionButton}
                 onPress={() => {
                   setShowCreateCaptain(true);
@@ -327,7 +336,7 @@ export default function CreateTeamScreen() {
               </TouchableOpacity>
             </View>
           )}
-          
+
           {/* User search interface */}
           {showUserSearch && (
             <View style={styles.searchContainer}>
@@ -338,20 +347,20 @@ export default function CreateTeamScreen() {
                   onChangeText={setSearchQuery}
                   placeholder="Search by name or email"
                 />
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.searchButton}
                   onPress={searchUsers}
                 >
                   <ThemedText style={styles.searchButtonText}>Search</ThemedText>
                 </TouchableOpacity>
               </View>
-              
+
               {searchResults.length > 0 && (
                 <FlatList
                   data={searchResults}
                   keyExtractor={(item) => item.id}
                   renderItem={({ item }) => (
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.userItem}
                       onPress={() => handleSelectCaptain(item)}
                     >
@@ -364,8 +373,8 @@ export default function CreateTeamScreen() {
                   nestedScrollEnabled={true}
                 />
               )}
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={styles.cancelSearchButton}
                 onPress={() => setShowUserSearch(false)}
               >
@@ -373,39 +382,39 @@ export default function CreateTeamScreen() {
               </TouchableOpacity>
             </View>
           )}
-          
+
           {/* Create new captain form */}
           {showCreateCaptain && (
             <View style={styles.createCaptainContainer}>
               <ThemedText style={styles.sectionTitle}>Create New Captain</ThemedText>
-              
+
               <ThemedText style={styles.inputLabel}>Full Name</ThemedText>
               <TextInput
                 style={styles.input}
                 value={newCaptain.full_name}
-                onChangeText={(text) => setNewCaptain({...newCaptain, full_name: text})}
+                onChangeText={(text) => setNewCaptain({ ...newCaptain, full_name: text })}
                 placeholder="Enter captain's full name"
               />
-              
-              <ThemedText style={[styles.inputLabel, {marginTop: 12}]}>Email</ThemedText>
+
+              <ThemedText style={[styles.inputLabel, { marginTop: 12 }]}>Email</ThemedText>
               <TextInput
                 style={styles.input}
                 value={newCaptain.email}
-                onChangeText={(text) => setNewCaptain({...newCaptain, email: text})}
+                onChangeText={(text) => setNewCaptain({ ...newCaptain, email: text })}
                 placeholder="Enter captain's email"
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
-              
+
               <View style={styles.createCaptainActions}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.cancelButton}
                   onPress={() => setShowCreateCaptain(false)}
                 >
                   <ThemedText style={styles.cancelButtonText}>Cancel</ThemedText>
                 </TouchableOpacity>
-                
-                <TouchableOpacity 
+
+                <TouchableOpacity
                   style={styles.applyButton}
                   onPress={async () => {
                     const newUser = await createCaptainProfile();
@@ -422,15 +431,15 @@ export default function CreateTeamScreen() {
         </ThemedView>
 
         <View style={styles.buttonContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.cancelButton}
             onPress={() => router.back()}
             disabled={isLoading}
           >
             <ThemedText style={styles.cancelButtonText}>Cancel</ThemedText>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={styles.submitButton}
             onPress={handleCreateTeam}
             disabled={isLoading}

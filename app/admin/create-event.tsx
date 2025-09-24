@@ -3,7 +3,7 @@ import { StyleSheet, View, ScrollView, TextInput, TouchableOpacity, Alert, Activ
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useUser } from '../../contexts/UserContext';
-import { router } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { showAlert } from '../utils/showAlert';
@@ -35,6 +35,15 @@ type User = {
 };
 
 export default function CreateEventScreen() {
+  return (
+    <>
+      <Stack.Screen options={{ title: 'Create Event' }} />
+      <CreateEventContent />
+    </>
+  );
+}
+
+function CreateEventContent() {
   const { userProfile, loading: userLoading } = useUser();
   const [isLoading, setIsLoading] = useState(false);
   const [eventName, setEventName] = useState('');
@@ -55,7 +64,7 @@ export default function CreateEventScreen() {
   const [captainSearchQuery, setCaptainSearchQuery] = useState('');
   const [captainSearchResults, setCaptainSearchResults] = useState<User[]>([]);
   const [showCaptainSearch, setShowCaptainSearch] = useState(false);
-  
+
   const isWeb = Platform.OS === 'web';
 
   // Redirect non-admin users
@@ -73,7 +82,7 @@ export default function CreateEventScreen() {
     setShowStartDatePicker(false);
     if (selectedDate) {
       setStartDate(selectedDate);
-      
+
       // If end date is before the new start date, update end date too
       if (endDate < selectedDate) {
         const newEndDate = new Date(selectedDate);
@@ -95,7 +104,7 @@ export default function CreateEventScreen() {
     const newDate = new Date(e.target.value);
     if (!isNaN(newDate.getTime())) {
       setStartDate(newDate);
-      
+
       // If end date is before the new start date, update end date too
       if (endDate < newDate) {
         const newEndDate = new Date(newDate);
@@ -119,27 +128,27 @@ export default function CreateEventScreen() {
 
   const handleAddMilestone = () => {
     const newId = (milestones.length + 1).toString();
-    const newMinutes = milestones.length > 0 
-      ? milestones[milestones.length - 1].minutes + 500 
+    const newMinutes = milestones.length > 0
+      ? milestones[milestones.length - 1].minutes + 500
       : 500;
-      
+
     setMilestones([
-      ...milestones, 
-      { 
-        id: newId, 
-        minutes: newMinutes, 
-        name: `Milestone ${newId}` 
+      ...milestones,
+      {
+        id: newId,
+        minutes: newMinutes,
+        name: `Milestone ${newId}`
       }
     ]);
   };
 
   const handleUpdateMilestone = (id: string, field: 'minutes' | 'name', value: string) => {
-    setMilestones(milestones.map(milestone => 
-      milestone.id === id 
-        ? { 
-            ...milestone, 
-            [field]: field === 'minutes' ? parseInt(value) || 0 : value 
-          } 
+    setMilestones(milestones.map(milestone =>
+      milestone.id === id
+        ? {
+          ...milestone,
+          [field]: field === 'minutes' ? parseInt(value) || 0 : value
+        }
         : milestone
     ));
   };
@@ -163,13 +172,13 @@ export default function CreateEventScreen() {
         .select('id, full_name, email')
         .or(`full_name.ilike.%${captainSearchQuery}%,email.ilike.%${captainSearchQuery}%`)
         .limit(10);
-      
+
       if (error) {
         console.error('Error searching captains:', error);
         showAlert('Error', 'Failed to search users');
         return;
       }
-      
+
       setCaptainSearchResults(data || []);
     } catch (error) {
       console.error('Unexpected error:', error);
@@ -201,21 +210,21 @@ export default function CreateEventScreen() {
       return;
     }
 
-    setTeams(teams.map(team => 
+    setTeams(teams.map(team =>
       team.id === teamId ? { ...team, team_name: newName } : team
     ));
     setEditingTeamId(null);
   };
 
   const handleSetTeamCaptain = (teamId: string, captain: User) => {
-    setTeams(teams.map(team => 
-      team.id === teamId 
-        ? { 
-            ...team, 
-            captain_id: captain.id,
-            captain_name: captain.full_name,
-            captain_email: captain.email
-          } 
+    setTeams(teams.map(team =>
+      team.id === teamId
+        ? {
+          ...team,
+          captain_id: captain.id,
+          captain_name: captain.full_name,
+          captain_email: captain.email
+        }
         : team
     ));
     setShowCaptainSearch(false);
@@ -237,7 +246,7 @@ export default function CreateEventScreen() {
       showAlert('Error', 'End date must be after start date');
       return false;
     }
-    
+
     if (!eventYear || isNaN(parseInt(eventYear))) {
       showAlert('Error', 'Please enter a valid event year');
       return false;
@@ -313,14 +322,14 @@ export default function CreateEventScreen() {
 
       // Show success message
       showAlert('Success', 'Event created successfully');
-      
+
       // Perform direct navigation without depending on Alert's onPress
       console.log('Navigating to admin setup after event creation');
       // Use a small timeout to ensure Alert is visible before navigation
       setTimeout(() => {
         router.replace('/admin/setup' as any);
       }, 500);
-      
+
     } catch (error) {
       console.error('Unexpected error:', error);
       showAlert('Error', 'An unexpected error occurred');
@@ -356,7 +365,7 @@ export default function CreateEventScreen() {
             placeholder="Enter event name"
           />
         </ThemedView>
-        
+
         <ThemedView style={styles.formGroup}>
           <ThemedText style={styles.label}>Event Year</ThemedText>
           <TextInput
@@ -386,7 +395,7 @@ export default function CreateEventScreen() {
             </View>
           ) : (
             <>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.dateButton}
                 onPress={() => setShowStartDatePicker(true)}
               >
@@ -423,7 +432,7 @@ export default function CreateEventScreen() {
             </View>
           ) : (
             <>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.dateButton}
                 onPress={() => setShowEndDatePicker(true)}
               >
@@ -445,14 +454,14 @@ export default function CreateEventScreen() {
         <ThemedView style={styles.formGroup}>
           <View style={styles.sectionHeader}>
             <ThemedText style={styles.label}>Milestones</ThemedText>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.addButton}
               onPress={handleAddMilestone}
             >
               <ThemedText style={styles.addButtonText}>+ Add Milestone</ThemedText>
             </TouchableOpacity>
           </View>
-          
+
           {milestones.map(milestone => (
             <View key={milestone.id} style={styles.milestoneRow}>
               <View style={styles.milestoneInputGroup}>
@@ -470,7 +479,7 @@ export default function CreateEventScreen() {
                   placeholder="Name"
                 />
               </View>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.removeButton}
                 onPress={() => handleRemoveMilestone(milestone.id)}
               >
@@ -484,7 +493,7 @@ export default function CreateEventScreen() {
           <View style={styles.sectionHeader}>
             <ThemedText style={styles.label}>Teams</ThemedText>
             {!isAddingTeam && (
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.addButton}
                 onPress={() => setIsAddingTeam(true)}
               >
@@ -492,7 +501,7 @@ export default function CreateEventScreen() {
               </TouchableOpacity>
             )}
           </View>
-          
+
           {isAddingTeam && (
             <View style={styles.addTeamForm}>
               <TextInput
@@ -502,7 +511,7 @@ export default function CreateEventScreen() {
                 onChangeText={setNewTeamName}
               />
               <View style={styles.teamActionButtons}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.cancelActionButton}
                   onPress={() => {
                     setIsAddingTeam(false);
@@ -511,16 +520,16 @@ export default function CreateEventScreen() {
                 >
                   <ThemedText>Cancel</ThemedText>
                 </TouchableOpacity>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.addActionButton}
                   onPress={handleAddTeam}
                 >
-                  <ThemedText style={{color: 'white'}}>Add Team</ThemedText>
+                  <ThemedText style={{ color: 'white' }}>Add Team</ThemedText>
                 </TouchableOpacity>
               </View>
             </View>
           )}
-          
+
           {teams.length > 0 ? (
             <View style={styles.teamsList}>
               {teams.map(team => (
@@ -531,30 +540,30 @@ export default function CreateEventScreen() {
                         style={styles.input}
                         value={team.team_name}
                         onChangeText={(text) => {
-                          setTeams(teams.map(t => 
-                            t.id === team.id ? {...t, team_name: text} : t
+                          setTeams(teams.map(t =>
+                            t.id === team.id ? { ...t, team_name: text } : t
                           ));
                         }}
                       />
                       <View style={styles.teamActionButtons}>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                           style={styles.cancelActionButton}
                           onPress={() => setEditingTeamId(null)}
                         >
                           <ThemedText>Cancel</ThemedText>
                         </TouchableOpacity>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                           style={styles.addActionButton}
                           onPress={() => handleUpdateTeamName(team.id, team.team_name)}
                         >
-                          <ThemedText style={{color: 'white'}}>Save</ThemedText>
+                          <ThemedText style={{ color: 'white' }}>Save</ThemedText>
                         </TouchableOpacity>
                       </View>
                     </View>
                   ) : (
                     <View style={styles.teamNameRow}>
                       <ThemedText style={styles.teamName}>{team.team_name}</ThemedText>
-                      <TouchableOpacity 
+                      <TouchableOpacity
                         onPress={() => setEditingTeamId(team.id)}
                         style={styles.editButton}
                       >
@@ -562,14 +571,14 @@ export default function CreateEventScreen() {
                       </TouchableOpacity>
                     </View>
                   )}
-                  
+
                   <View style={styles.teamCaptainSection}>
                     <ThemedText style={styles.teamSectionTitle}>Captain:</ThemedText>
                     {team.captain_name ? (
                       <View style={styles.captainInfo}>
                         <ThemedText>{team.captain_name}</ThemedText>
                         <ThemedText style={styles.captainEmail}>{team.captain_email}</ThemedText>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                           onPress={() => {
                             setShowCaptainSearch(true);
                             setEditingTeamId(team.id);
@@ -580,7 +589,7 @@ export default function CreateEventScreen() {
                         </TouchableOpacity>
                       </View>
                     ) : (
-                      <TouchableOpacity 
+                      <TouchableOpacity
                         onPress={() => {
                           setShowCaptainSearch(true);
                           setEditingTeamId(team.id);
@@ -591,30 +600,30 @@ export default function CreateEventScreen() {
                       </TouchableOpacity>
                     )}
                   </View>
-                  
+
                   {showCaptainSearch && editingTeamId === team.id && (
                     <View style={styles.captainSearchContainer}>
                       <View style={styles.searchRow}>
                         <TextInput
-                          style={[styles.input, {flex: 1}]}
+                          style={[styles.input, { flex: 1 }]}
                           placeholder="Search by name or email"
                           value={captainSearchQuery}
                           onChangeText={setCaptainSearchQuery}
                         />
-                        <TouchableOpacity 
+                        <TouchableOpacity
                           style={styles.searchButton}
                           onPress={searchCaptains}
                         >
-                          <ThemedText style={{color: 'white'}}>Search</ThemedText>
+                          <ThemedText style={{ color: 'white' }}>Search</ThemedText>
                         </TouchableOpacity>
                       </View>
-                      
+
                       {captainSearchResults.length > 0 && (
                         <FlatList
                           data={captainSearchResults}
                           keyExtractor={item => item.id}
                           renderItem={({ item }) => (
-                            <TouchableOpacity 
+                            <TouchableOpacity
                               style={styles.searchResultItem}
                               onPress={() => handleSetTeamCaptain(team.id, item)}
                             >
@@ -627,8 +636,8 @@ export default function CreateEventScreen() {
                           nestedScrollEnabled={true}
                         />
                       )}
-                      
-                      <TouchableOpacity 
+
+                      <TouchableOpacity
                         style={styles.cancelButton}
                         onPress={() => {
                           setShowCaptainSearch(false);
@@ -640,8 +649,8 @@ export default function CreateEventScreen() {
                       </TouchableOpacity>
                     </View>
                   )}
-                  
-                  <TouchableOpacity 
+
+                  <TouchableOpacity
                     style={styles.removeTeamButton}
                     onPress={() => handleRemoveTeam(team.id)}
                   >
@@ -656,15 +665,15 @@ export default function CreateEventScreen() {
         </ThemedView>
 
         <View style={styles.buttonContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.cancelButton}
             onPress={() => router.back()}
             disabled={isLoading}
           >
             <ThemedText style={styles.cancelButtonText}>Cancel</ThemedText>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={styles.submitButton}
             onPress={handleCreateEvent}
             disabled={isLoading}
@@ -744,7 +753,7 @@ const styles = StyleSheet.create({
   },
   milestoneInputGroup: {
     flex: 1,
-		flexWrap: 'wrap',
+    flexWrap: 'wrap',
     flexDirection: 'row',
   },
   milestoneInput: {

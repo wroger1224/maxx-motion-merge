@@ -14,6 +14,7 @@ import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { updateUserAdminStatus } from "@/lib/services/auth";
 import { showAlert } from "../utils/showAlert";
+import { Colors } from "@/constants/Colors";
 
 type User = {
   id: string;
@@ -167,8 +168,7 @@ export default function UserManagementScreen() {
 
         if (updatedUser.is_admin === newAdminStatus) {
           setSuccessMessage(
-            `Successfully ${
-              newAdminStatus ? "granted" : "removed"
+            `Successfully ${newAdminStatus ? "granted" : "removed"
             } admin privileges for ${selectedUser.full_name}`
           );
           setShowSuccessPopup(true);
@@ -454,15 +454,15 @@ export default function UserManagementScreen() {
                 {confirmAction === "make"
                   ? "Make Admin?"
                   : confirmAction === "remove"
-                  ? "Remove Admin?"
-                  : "Remove User?"}
+                    ? "Remove Admin?"
+                    : "Remove User?"}
               </ThemedText>
               <ThemedText style={styles.popupMessage}>
                 {confirmAction === "make"
                   ? `Are you sure you want to make ${selectedUser?.full_name} an admin?`
                   : confirmAction === "remove"
-                  ? `Are you sure you want to remove admin privileges from ${selectedUser?.full_name}?`
-                  : `Are you sure you want to remove ${selectedUser?.full_name} from the system? This action cannot be undone.`}
+                    ? `Are you sure you want to remove admin privileges from ${selectedUser?.full_name}?`
+                    : `Are you sure you want to remove ${selectedUser?.full_name} from the system? This action cannot be undone.`}
               </ThemedText>
               <View style={styles.confirmButtons}>
                 <TouchableOpacity
@@ -484,8 +484,8 @@ export default function UserManagementScreen() {
                     {confirmAction === "make"
                       ? "Make Admin"
                       : confirmAction === "remove"
-                      ? "Remove Admin"
-                      : "Remove User"}
+                        ? "Remove Admin"
+                        : "Remove User"}
                   </ThemedText>
                 </TouchableOpacity>
               </View>
@@ -675,11 +675,12 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   deleteButton: {
-    backgroundColor: "#dc3545",
+    backgroundColor: Colors.light.redOrange,
     padding: 10,
     borderRadius: 5,
     marginHorizontal: 5,
     alignItems: "center",
+    justifyContent: "center",
   },
   deleteButtonText: {
     color: "#fff",

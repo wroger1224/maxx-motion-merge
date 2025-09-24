@@ -253,12 +253,37 @@ export default function LeaderboardScreen() {
 
     const startDate = new Date(activeEvent.start_date);
     const endDate = new Date(activeEvent.end_date);
+    const today = new Date();
 
     // Calculate total weeks in the event
     const diffTime = endDate.getTime() - startDate.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     const weeks = Math.ceil(diffDays / 7);
     setTotalWeeks(weeks);
+
+    // Calculate which week we're currently in
+    let currentWeekIndex = 0;
+    if (today >= startDate && today <= endDate) {
+      // Find which week contains today
+      const daysSinceStart = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      currentWeekIndex = Math.floor(daysSinceStart / 7);
+
+      // Ensure we don't exceed the total number of weeks
+      if (currentWeekIndex >= weeks) {
+        currentWeekIndex = weeks - 1;
+      }
+    } else if (today < startDate) {
+      // Event hasn't started yet, show first week
+      currentWeekIndex = 0;
+    } else {
+      // Event has ended, show last week
+      currentWeekIndex = weeks - 1;
+    }
+
+    // Set the current week index if it's the initial load (weekIndex is still 0)
+    if (weekIndex === 0) {
+      setWeekIndex(currentWeekIndex);
+    }
 
     // If week index is beyond total weeks, reset it
     if (weekIndex >= weeks) {
@@ -881,10 +906,6 @@ export default function LeaderboardScreen() {
       )}
 
       <View style={styles.filterRow}>
-        <TouchableOpacity style={styles.filterButton}>
-          <Text style={styles.filterButtonText}>Filter</Text>
-        </TouchableOpacity>
-
         {/* Week filter with selector */}
         <TouchableOpacity
           style={[

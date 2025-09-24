@@ -9,7 +9,7 @@ import {
   Text,
   TouchableOpacity,
   Platform,
-	Dimensions
+  Dimensions
 } from "react-native";
 import { supabase } from "@/lib/supabase";
 import { router } from "expo-router";
@@ -179,7 +179,7 @@ export default function ProfileScreen() {
       const { error } = await supabase.auth.signOut();
 
       if (error) {
-      showAlert('Error', error.message);
+        showAlert('Error', error.message);
       }
     } catch (error: any) {
       showAlert('Error', error.message);
@@ -265,25 +265,26 @@ export default function ProfileScreen() {
             </TouchableOpacity>
             <AdminMenu />
           </View>
-          <View style={styles.profileSection}>
-							<View style={styles.avatarContainer}>
-								{profile?.avatar_url ? (
-									<Image
-										source={{ uri: profile.avatar_url }}
-										style={styles.avatar}
-									/>
-								) : (
-									<View style={styles.avatarPlaceholder}>
-										<ThemedText style={styles.avatarText}>
-											{profile?.full_name?.charAt(0) || "U"}
-										</ThemedText>
-									</View>
-								)}
-							</View>
-							<ThemedText variant="h2" style={styles.userName}>
-								{profile?.full_name || "User"}
-							</ThemedText>
-            <ThemedText style={styles.userEmail}>{user?.email}</ThemedText>
+          <View style={styles.headerContent}>
+            <View style={styles.profileSection}>
+              <View style={styles.avatarContainer}>
+                {profile?.avatar_url ? (
+                  <Image
+                    source={{ uri: profile.avatar_url }}
+                    style={styles.avatar}
+                  />
+                ) : (
+                  <View style={styles.avatarPlaceholder}>
+                    <ThemedText style={styles.avatarText}>
+                      {profile?.full_name?.charAt(0) || "U"}
+                    </ThemedText>
+                  </View>
+                )}
+              </View>
+              <ThemedText variant="h1" style={styles.userName}>
+                {profile?.full_name || "User"}
+              </ThemedText>
+            </View>
           </View>
         </LinearGradient>
       </ResponsiveHeader>
@@ -334,18 +335,18 @@ export default function ProfileScreen() {
         {activeTab === "activities" && (
           <View style={styles.tabContent}>
 
-						{loading ? (
-                <ActivityIndicator size="large" color="#2196F3" />
-              ) : activities.length === 0 ? (
-								<View style={styles.emptyState}>
+            {loading ? (
+              <ActivityIndicator size="large" color="#2196F3" />
+            ) : activities.length === 0 ? (
+              <View style={styles.emptyState}>
                 <ThemedText style={styles.emptyStateText}>
                   No activities yet
                 </ThemedText>
               </View>
-              ) : (
-                activities.map(activity => (
-                  <ActivityCard key={activity.id} activity={activity} />
-                ))
+            ) : (
+              activities.map(activity => (
+                <ActivityCard key={activity.id} activity={activity} />
+              ))
             )}
           </View>
         )}
@@ -398,12 +399,11 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    padding: 16,
-    paddingBottom:5,
-    paddingTop: Platform.OS === "ios" ? 60 : 16,
-		paddingHorizontal:16,
+    paddingLeft: 16,
+    paddingTop: 16,
+    paddingRight: 16,
     zIndex: 1,
   },
   headerTitle: {
@@ -440,7 +440,7 @@ const styles = StyleSheet.create({
   pageTitle: {
     fontSize: 32,
     fontWeight: "700",
-		color: '#fff',
+    color: '#fff',
     textAlign: 'center',
     marginBottom: 8,
   },
@@ -448,6 +448,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   avatarContainer: {
+    marginTop: 20,
     marginBottom: 6,
   },
   avatar: {
@@ -488,8 +489,8 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
     marginTop: 16,
-    marginHorizontal:16,
-    borderRadius:8,
+    marginHorizontal: 16,
+    borderRadius: 8,
   },
   tab: {
     flex: 1,

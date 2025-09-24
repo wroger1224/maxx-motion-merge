@@ -3,7 +3,7 @@ import { StyleSheet, View, ScrollView, TextInput, TouchableOpacity, Alert, Activ
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useUser } from '../../contexts/UserContext';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, Stack } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { showAlert, showAlertWithButtons } from '../utils/showAlert';
 import {
@@ -37,10 +37,19 @@ type User = {
 };
 
 export default function EditEventScreen() {
+  return (
+    <>
+      <Stack.Screen options={{ title: 'Edit Event' }} />
+      <EditEventContent />
+    </>
+  );
+}
+
+function EditEventContent() {
   const params = useLocalSearchParams();
   const eventId = params.id as string;
   const { userProfile, loading: userLoading } = useUser();
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [eventName, setEventName] = useState('');
   const [startDate, setStartDate] = useState(new Date());
@@ -55,7 +64,7 @@ export default function EditEventScreen() {
   const [captainSearchQuery, setCaptainSearchQuery] = useState('');
   const [captainSearchResults, setCaptainSearchResults] = useState<User[]>([]);
   const [showCaptainSearch, setShowCaptainSearch] = useState(false);
-  
+
   const isWeb = Platform.OS === 'web';
 
   // Redirect non-admin users
@@ -84,13 +93,13 @@ export default function EditEventScreen() {
         .select('*')
         .eq('id', eventId)
         .single();
-      
+
       if (error) {
         console.error('Error fetching event details:', error);
         showAlert('Error', 'Failed to load event details');
         return;
       }
-      
+
       if (data) {
         setEventName(data.name);
         setStartDate(parseDateFromStorage(data.start_date));
@@ -116,13 +125,13 @@ export default function EditEventScreen() {
         .select('*')
         .eq('event_id', eventId)
         .order('milestone_minutes', { ascending: true });
-      
+
       if (error) {
         console.error('Error fetching milestones:', error);
         showAlert('Error', 'Failed to load milestones');
         return;
       }
-      
+
       setMilestones(data || []);
     } catch (error) {
       console.error('Unexpected error:', error);
@@ -137,12 +146,12 @@ export default function EditEventScreen() {
         .select('*')
         .eq('event_id', eventId)
         .order('team_name');
-      
+
       if (teamsError) {
         console.error('Error fetching teams:', teamsError);
         return;
       }
-      
+
       // Fetch captain details for each team
       const enhancedTeams = [];
       for (const team of teamsData || []) {
@@ -152,7 +161,7 @@ export default function EditEventScreen() {
             .select('full_name, email')
             .eq('id', team.captain_id)
             .single();
-          
+
           if (captainData) {
             enhancedTeams.push({
               ...team,
@@ -166,7 +175,7 @@ export default function EditEventScreen() {
           enhancedTeams.push(team);
         }
       }
-      
+
       setTeams(enhancedTeams);
     } catch (error) {
       console.error('Error fetching teams:', error);
@@ -182,7 +191,7 @@ export default function EditEventScreen() {
     const newDate = new Date(e.target.value);
     if (!isNaN(newDate.getTime())) {
       setStartDate(newDate);
-      
+
       // If end date is before the new start date, update end date too
       if (endDate < newDate) {
         const newEndDate = new Date(newDate);
@@ -207,30 +216,30 @@ export default function EditEventScreen() {
   const handleAddMilestone = () => {
     // Create a temporary ID (will be replaced by DB upon save)
     const tempId = `temp-${Date.now()}`;
-    
+
     // Calculate a reasonable milestone minute value based on existing ones
     let newMinutes = 500;
     if (milestones.length > 0) {
       newMinutes = Math.max(...milestones.map(m => m.milestone_minutes)) + 500;
     }
-    
+
     const newMilestone: Milestone = {
       id: tempId,
       event_id: eventId,
       milestone_minutes: newMinutes,
       milestone_name: 'New Milestone'
     };
-    
+
     setMilestones([...milestones, newMilestone]);
   };
 
   const handleUpdateMilestone = (id: string, field: 'milestone_minutes' | 'milestone_name', value: string) => {
-    setMilestones(milestones.map(milestone => 
-      milestone.id === id 
-        ? { 
-            ...milestone, 
-            [field]: field === 'milestone_minutes' ? parseInt(value) || 0 : value 
-          } 
+    setMilestones(milestones.map(milestone =>
+      milestone.id === id
+        ? {
+          ...milestone,
+          [field]: field === 'milestone_minutes' ? parseInt(value) || 0 : value
+        }
         : milestone
     ));
   };
@@ -240,14 +249,14 @@ export default function EditEventScreen() {
       'Remove Milestone',
       'Are you sure you want to remove this milestone?',
       () => {
-				if (id.startsWith('temp-')) {
-					// It's a new milestone that hasn't been saved, just remove from state
-					setMilestones(milestones.filter(m => m.id !== id));
-				} else {
-					// It's an existing milestone, need to delete from DB
-					deleteMilestone(id);
-				}
-      }  
+        if (id.startsWith('temp-')) {
+          // It's a new milestone that hasn't been saved, just remove from state
+          setMilestones(milestones.filter(m => m.id !== id));
+        } else {
+          // It's an existing milestone, need to delete from DB
+          deleteMilestone(id);
+        }
+      }
     );
   };
 
@@ -258,13 +267,13 @@ export default function EditEventScreen() {
         .from('milestones')
         .delete()
         .eq('id', id);
-      
+
       if (error) {
         console.error('Error deleting milestone:', error);
         showAlert('Error', 'Failed to delete milestone');
         return;
       }
-      
+
       setMilestones(milestones.filter(m => m.id !== id));
     } catch (error) {
       console.error('Unexpected error:', error);
@@ -284,7 +293,7 @@ export default function EditEventScreen() {
       showAlert('Error', 'End date must be after start date');
       return false;
     }
-    
+
     if (!eventYear || isNaN(parseInt(eventYear))) {
       showAlert('Error', 'Please enter a valid event year');
       return false;
@@ -344,7 +353,7 @@ export default function EditEventScreen() {
             milestone_name: milestone.milestone_name
           })
           .eq('id', milestone.id);
-        
+
         if (updateError) {
           console.error(`Error updating milestone ${milestone.id}:`, updateError);
         }
@@ -352,14 +361,14 @@ export default function EditEventScreen() {
 
       // Show success message
       showAlert('Success', 'Event updated successfully');
-      
+
       // Perform direct navigation without depending on Alert's onPress
       console.log('Navigating to admin setup after event update');
       // Use a small timeout to ensure Alert is visible before navigation
       setTimeout(() => {
         router.replace('/admin/setup' as any);
       }, 500);
-      
+
     } catch (error) {
       console.error('Unexpected error:', error);
       showAlert('Error', 'An unexpected error occurred');
@@ -381,13 +390,13 @@ export default function EditEventScreen() {
         .select('id, full_name, email')
         .or(`full_name.ilike.%${captainSearchQuery}%,email.ilike.%${captainSearchQuery}%`)
         .limit(10);
-      
+
       if (error) {
         console.error('Error searching captains:', error);
         showAlert('Error', 'Failed to search users');
         return;
       }
-      
+
       setCaptainSearchResults(data || []);
     } catch (error) {
       console.error('Unexpected error:', error);
@@ -412,13 +421,13 @@ export default function EditEventScreen() {
           team_name: newTeamName,
         })
         .select();
-      
+
       if (error) {
         console.error('Error adding team:', error);
         showAlert('Error', 'Failed to add team');
         return;
       }
-      
+
       // Reset form and fetch teams
       setNewTeamName('');
       setIsAddingTeam(false);
@@ -443,13 +452,13 @@ export default function EditEventScreen() {
         .from('teams')
         .update({ team_name: newName })
         .eq('id', teamId);
-      
+
       if (error) {
         console.error('Error updating team:', error);
         showAlert('Error', 'Failed to update team');
         return;
       }
-      
+
       setEditingTeamId(null);
       await fetchTeams();
     } catch (error) {
@@ -467,13 +476,13 @@ export default function EditEventScreen() {
         .from('teams')
         .update({ captain_id: captainId })
         .eq('id', teamId);
-      
+
       if (error) {
         console.error('Error setting team captain:', error);
         showAlert('Error', 'Failed to set team captain');
         return;
       }
-      
+
       setShowCaptainSearch(false);
       await fetchTeams();
     } catch (error) {
@@ -489,26 +498,26 @@ export default function EditEventScreen() {
       'Remove Team',
       'Are you sure you want to remove this team?',
       async () => {
-				try {
-					setIsLoading(true);
-					const { error } = await supabase
-						.from('teams')
-						.delete()
-						.eq('id', teamId);
-					
-					if (error) {
-						console.error('Error removing team:', error);
-						showAlert('Error', 'Failed to remove team');
-						return;
-					}
-					
-					await fetchTeams();
-				} catch (error) {
-					console.error('Unexpected error:', error);
-					showAlert('Error', 'An unexpected error occurred');
-				} finally {
-					setIsLoading(false);
-				}
+        try {
+          setIsLoading(true);
+          const { error } = await supabase
+            .from('teams')
+            .delete()
+            .eq('id', teamId);
+
+          if (error) {
+            console.error('Error removing team:', error);
+            showAlert('Error', 'Failed to remove team');
+            return;
+          }
+
+          await fetchTeams();
+        } catch (error) {
+          console.error('Unexpected error:', error);
+          showAlert('Error', 'An unexpected error occurred');
+        } finally {
+          setIsLoading(false);
+        }
       }
     );
   };
@@ -540,7 +549,7 @@ export default function EditEventScreen() {
             placeholder="Enter event name"
           />
         </ThemedView>
-        
+
         <ThemedView style={styles.formGroup}>
           <ThemedText style={styles.label}>Event Year</ThemedText>
           <TextInput
@@ -551,13 +560,13 @@ export default function EditEventScreen() {
             keyboardType="numeric"
           />
         </ThemedView>
-        
+
         <ThemedView style={styles.formGroup}>
           <ThemedText style={styles.label}>Status</ThemedText>
           <View style={styles.statusContainer}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[
-                styles.statusOption, 
+                styles.statusOption,
                 status === 'Upcoming' && styles.statusOptionActive
               ]}
               onPress={() => setStatus('Upcoming')}
@@ -566,10 +575,10 @@ export default function EditEventScreen() {
                 Upcoming
               </ThemedText>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={[
-                styles.statusOption, 
+                styles.statusOption,
                 status === 'Active' && styles.statusOptionActive
               ]}
               onPress={() => setStatus('Active')}
@@ -578,10 +587,10 @@ export default function EditEventScreen() {
                 Active
               </ThemedText>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={[
-                styles.statusOption, 
+                styles.statusOption,
                 status === 'Archive' && styles.statusOptionActive
               ]}
               onPress={() => setStatus('Archive')}
@@ -610,7 +619,7 @@ export default function EditEventScreen() {
               />
             </View>
           ) : (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.dateButton}
               onPress={() => showAlert('Use Native Date Picker', 'This feature is only available in native apps')}
             >
@@ -637,7 +646,7 @@ export default function EditEventScreen() {
               />
             </View>
           ) : (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.dateButton}
               onPress={() => showAlert('Use Native Date Picker', 'This feature is only available in native apps')}
             >
@@ -649,14 +658,14 @@ export default function EditEventScreen() {
         <ThemedView style={styles.formGroup}>
           <View style={styles.sectionHeader}>
             <ThemedText style={styles.label}>Milestones</ThemedText>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.addButton}
               onPress={handleAddMilestone}
             >
               <ThemedText style={styles.addButtonText}>+ Add Milestone</ThemedText>
             </TouchableOpacity>
           </View>
-          
+
           {milestones.map((milestone) => (
             <View key={milestone.id} style={styles.milestoneRow}>
               <View style={styles.milestoneInputGroup}>
@@ -674,7 +683,7 @@ export default function EditEventScreen() {
                   placeholder="Name"
                 />
               </View>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.removeButton}
                 onPress={() => handleRemoveMilestone(milestone.id)}
               >
@@ -682,7 +691,7 @@ export default function EditEventScreen() {
               </TouchableOpacity>
             </View>
           ))}
-          
+
           {milestones.length === 0 && (
             <ThemedText style={styles.emptyText}>No milestones found. Add one to get started.</ThemedText>
           )}
@@ -692,7 +701,7 @@ export default function EditEventScreen() {
           <View style={styles.sectionHeader}>
             <ThemedText style={styles.label}>Teams</ThemedText>
             {!isAddingTeam && (
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.addButton}
                 onPress={() => setIsAddingTeam(true)}
               >
@@ -700,7 +709,7 @@ export default function EditEventScreen() {
               </TouchableOpacity>
             )}
           </View>
-          
+
           {/* Add team form */}
           {isAddingTeam && (
             <View style={styles.addTeamForm}>
@@ -711,7 +720,7 @@ export default function EditEventScreen() {
                 onChangeText={setNewTeamName}
               />
               <View style={styles.teamActionButtons}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.cancelActionButton}
                   onPress={() => {
                     setIsAddingTeam(false);
@@ -720,16 +729,16 @@ export default function EditEventScreen() {
                 >
                   <ThemedText>Cancel</ThemedText>
                 </TouchableOpacity>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.addActionButton}
                   onPress={handleAddTeam}
                 >
-                  <ThemedText style={{color: 'white'}}>Add Team</ThemedText>
+                  <ThemedText style={{ color: 'white' }}>Add Team</ThemedText>
                 </TouchableOpacity>
               </View>
             </View>
           )}
-          
+
           {/* Teams list */}
           {teams.length > 0 ? (
             <View style={styles.teamsList}>
@@ -742,30 +751,30 @@ export default function EditEventScreen() {
                         style={styles.input}
                         value={team.team_name}
                         onChangeText={(text) => {
-                          setTeams(teams.map(t => 
-                            t.id === team.id ? {...t, team_name: text} : t
+                          setTeams(teams.map(t =>
+                            t.id === team.id ? { ...t, team_name: text } : t
                           ));
                         }}
                       />
                       <View style={styles.teamActionButtons}>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                           style={styles.cancelActionButton}
                           onPress={() => setEditingTeamId(null)}
                         >
                           <ThemedText>Cancel</ThemedText>
                         </TouchableOpacity>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                           style={styles.addActionButton}
                           onPress={() => handleUpdateTeamName(team.id, team.team_name)}
                         >
-                          <ThemedText style={{color: 'white'}}>Save</ThemedText>
+                          <ThemedText style={{ color: 'white' }}>Save</ThemedText>
                         </TouchableOpacity>
                       </View>
                     </View>
                   ) : (
                     <View style={styles.teamNameRow}>
                       <ThemedText style={styles.teamName}>{team.team_name}</ThemedText>
-                      <TouchableOpacity 
+                      <TouchableOpacity
                         onPress={() => setEditingTeamId(team.id)}
                         style={styles.editButton}
                       >
@@ -773,7 +782,7 @@ export default function EditEventScreen() {
                       </TouchableOpacity>
                     </View>
                   )}
-                  
+
                   {/* Team captain */}
                   <View style={styles.teamCaptainSection}>
                     <ThemedText style={styles.teamSectionTitle}>Captain:</ThemedText>
@@ -781,7 +790,7 @@ export default function EditEventScreen() {
                       <View style={styles.captainInfo}>
                         <ThemedText>{team.captain_name}</ThemedText>
                         <ThemedText style={styles.captainEmail}>{team.captain_email}</ThemedText>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                           onPress={() => {
                             setShowCaptainSearch(true);
                             setEditingTeamId(team.id);
@@ -792,7 +801,7 @@ export default function EditEventScreen() {
                         </TouchableOpacity>
                       </View>
                     ) : (
-                      <TouchableOpacity 
+                      <TouchableOpacity
                         onPress={() => {
                           setShowCaptainSearch(true);
                           setEditingTeamId(team.id);
@@ -803,31 +812,31 @@ export default function EditEventScreen() {
                       </TouchableOpacity>
                     )}
                   </View>
-                  
+
                   {/* Captain search UI */}
                   {showCaptainSearch && editingTeamId === team.id && (
                     <View style={styles.captainSearchContainer}>
                       <View style={styles.searchRow}>
                         <TextInput
-                          style={[styles.input, {flex: 1}]}
+                          style={[styles.input, { flex: 1 }]}
                           placeholder="Search by name or email"
                           value={captainSearchQuery}
                           onChangeText={setCaptainSearchQuery}
                         />
-                        <TouchableOpacity 
+                        <TouchableOpacity
                           style={styles.searchButton}
                           onPress={searchCaptains}
                         >
-                          <ThemedText style={{color: 'white'}}>Search</ThemedText>
+                          <ThemedText style={{ color: 'white' }}>Search</ThemedText>
                         </TouchableOpacity>
                       </View>
-                      
+
                       {captainSearchResults.length > 0 && (
                         <FlatList
                           data={captainSearchResults}
                           keyExtractor={item => item.id}
                           renderItem={({ item }) => (
-                            <TouchableOpacity 
+                            <TouchableOpacity
                               style={styles.searchResultItem}
                               onPress={() => handleSetTeamCaptain(team.id, item.id)}
                             >
@@ -840,8 +849,8 @@ export default function EditEventScreen() {
                           nestedScrollEnabled={true}
                         />
                       )}
-                      
-                      <TouchableOpacity 
+
+                      <TouchableOpacity
                         style={styles.cancelButton}
                         onPress={() => {
                           setShowCaptainSearch(false);
@@ -853,10 +862,10 @@ export default function EditEventScreen() {
                       </TouchableOpacity>
                     </View>
                   )}
-                  
+
                   {/* Team actions */}
                   <View style={styles.teamActions}>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.removeTeamButton}
                       onPress={() => handleRemoveTeam(team.id)}
                     >
@@ -878,15 +887,15 @@ export default function EditEventScreen() {
         </ThemedView>
 
         <View style={styles.buttonContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.cancelButton}
             onPress={() => router.back()}
             disabled={isLoading}
           >
             <ThemedText style={styles.cancelButtonText}>Cancel</ThemedText>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={styles.submitButton}
             onPress={handleSaveEvent}
             disabled={isLoading}
@@ -989,7 +998,7 @@ const styles = StyleSheet.create({
   },
   milestoneInputGroup: {
     flex: 1,
-		flexWrap: 'wrap',
+    flexWrap: 'wrap',
     flexDirection: 'row',
   },
   milestoneInput: {
